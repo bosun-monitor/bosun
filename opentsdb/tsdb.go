@@ -899,8 +899,8 @@ func (r *Request) SetTime(t time.Time) error {
 
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
 // form hostname:port. Uses DefaultClient. Can return a RequestError.
-func (r *Request) Query(host string) (ResponseSet, error) {
-	resp, err := r.QueryResponse(host, nil)
+func (r *Request) Query(host string, httpHeader http.Header) (ResponseSet, error) {
+	resp, err := r.QueryResponse(host, httpHeader, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -919,7 +919,7 @@ var DefaultClient = &http.Client{
 
 // QueryResponse performs a v2 OpenTSDB request to the given host. host should
 // be of the form hostname:port. A nil client uses DefaultClient.
-func (r *Request) QueryResponse(host string, client *http.Client) (*http.Response, error) {
+func (r *Request) QueryResponse(host string, httpHeader http.Header, client *http.Client) (*http.Response, error) {
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
@@ -932,7 +932,16 @@ func (r *Request) QueryResponse(host string, client *http.Client) (*http.Respons
 	if client == nil {
 		client = DefaultClient
 	}
-	resp, err := client.Post(u.String(), "application/json", bytes.NewReader(b))
+
+	req, err := http.NewRequest("POST", u.String(), bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+	if httpHeader != nil {
+		req.Header = httpHeader
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -968,7 +977,7 @@ func (r *RequestError) Error() string {
 
 // Context is the interface for querying an OpenTSDB server.
 type Context interface {
-	Query(*Request) (ResponseSet, error)
+	Query(*Request, http.Header) (ResponseSet, error)
 	Version() Version
 }
 
@@ -976,8 +985,8 @@ type Context interface {
 type Host string
 
 // Query performs the request to the OpenTSDB server.
-func (h Host) Query(r *Request) (ResponseSet, error) {
-	return r.Query(string(h))
+func (h Host) Query(r *Request, httpHeader http.Header) (ResponseSet, error) {
+	return r.Query(string(h), httpHeader)
 }
 
 // OpenTSDB 2.1 version struct
@@ -1040,8 +1049,8 @@ func (c *LimitContext) Version() Version {
 
 // Query returns the result of the request. r may be cached. The request is
 // byte-limited and filtered by c's properties.
-func (c *LimitContext) Query(r *Request) (tr ResponseSet, err error) {
-	resp, err := r.QueryResponse(c.Host, nil)
+func (c *LimitContext) Query(r *Request, httpHeader http.Header) (tr ResponseSet, err error) {
+	resp, err := r.QueryResponse(c.Host, httpHeader, nil)
 	if err != nil {
 		return
 	}
@@ -1084,4 +1093,16 @@ func FilterTags(r *Request, tr ResponseSet) {
 			delete(resp.Tags, k)
 		}
 	}
+}
+
+// CreateForwardHeader creates an http.Header, adding useful X-Headers from r to forward
+// to opentsdb for logging purposes
+func CreateForwardHeader(r *http.Request) http.Header {
+	header := make(http.Header)
+	header.Set("X-Referer", r.Header.Get("Referer"))
+	header.Set("X-Origin", r.Header.Get("Origin"))
+	header.Set("X-Host", r.Header.Get("Host"))
+	header.Set("X-Cookie", r.Header.Get("Cookie"))
+
+	return header
 }

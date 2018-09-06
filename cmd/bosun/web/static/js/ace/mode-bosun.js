@@ -9,7 +9,7 @@ var BosunHighlightRules = function() {
 	var globals = "checkFrequency|tsdbHost|graphiteHost|logstashElasticHosts|httpListen|hostname|relayListen|smtpHost|smtpUsername|smtpPassword|emailFrom|stateFile|ping|pingDuration|noSleep|blockedPutIPs|allowedPutIPs|unknownThreshold|timeAndDate|responseLimit|searchSince|unknownTemplate|squelch|shortURLKey|tsdbVersion|elasticHosts|annotateElasticHosts|defaultRunEvery|redisHost|influxHost|influxUsername|influxPassword|influxTLS|influxTimeout|ledisDir";
 
 	var inAlertKeywords = "macro|template|crit|warn|depends|squelch|critNotification|" +
-	"warnNotification|unknown|unjoinedOk|ignoreUnknown|log|maxLogFrequency"
+	"warnNotification|normNotification|unknown|unjoinedOk|ignoreUnknown|log|maxLogFrequency"
 
 	var inNotificationKeywords = "email|post|get|print|contentType|next|timeout|bodyTemplate|postTemplate|getTemplate|emailSubjectTemplate|runOnActions|groupActions|unknownMinGroupSize|unknownThreshold";
 	for (var action of ["Get","Post","Body","EmailSubject"]){

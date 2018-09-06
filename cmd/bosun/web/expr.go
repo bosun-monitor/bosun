@@ -82,11 +82,12 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
 	backends := &expr.Backends{
-		TSDBContext:     schedule.SystemConf.GetTSDBContext(),
-		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
-		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
-		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
-		AzureMonitor:    schedule.SystemConf.GetAzureMonitorContext(),
+		TSDBContext:       schedule.SystemConf.GetTSDBContext(),
+		GraphiteContext:   schedule.SystemConf.GetGraphiteContext(),
+		InfluxConfig:      schedule.SystemConf.GetInfluxContext(),
+		ElasticHosts:      schedule.SystemConf.GetElasticContext(),
+		AzureMonitor:      schedule.SystemConf.GetAzureMonitorContext(),
+		CloudWatchContext: schedule.SystemConf.GetCloudWatchContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,
@@ -95,7 +96,8 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		History:   nil,
 		Annotate:  AnnotateBackend,
 	}
-	res, queries, err := e.Execute(backends, providers, t, now, 0, false)
+	httpHeader := opentsdb.CreateForwardHeader(r)
+	res, queries, err := e.Execute(backends, providers, t, now, 0, false, httpHeader)
 	if err != nil {
 		return nil, err
 	}

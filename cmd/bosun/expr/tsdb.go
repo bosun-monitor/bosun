@@ -79,7 +79,7 @@ func timeTSDBRequest(e *State, req *opentsdb.Request) (s opentsdb.ResponseSet, e
 	for {
 		e.Timer.StepCustomTiming("tsdb", "query", string(b), func() {
 			getFn := func() (interface{}, error) {
-				return e.TSDBContext.Query(req)
+				return e.TSDBContext.Query(req, e.httpHeader)
 			}
 			var val interface{}
 			var hit bool

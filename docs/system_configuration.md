@@ -535,6 +535,30 @@ User agent that Bosun should identify itself as when querying Influx.
 	Timeout = "5m"
 	UnsafeSSL = true
 ```
+### CloudWatchConf
+Enables querying CloudWatch metrics and exposes the query functions to the expression language.
+This functionality relies on bosun having assumed an iam role with the following capabilities
+```
+ListMetrics
+GetMetricData
+GetMetricStatistics
+```
+You can supply credentials using any of the standard methods such as passing an iam role to the ec2 instance bosun is running on, 
+in the aws shared credentials file or via environment variables.
+
+For complete details see the `Specifying Credentials` section of the [aws documentation](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html)
+
+
+#### Enabled
+Should the cloudwatch functionality be loaded.
+
+#### Example:
+
+```
+[CloudWatchConf]
+  Enabled = true
+
+```
 
 ### AuthConf
 Bosun authentication settings. If not specified, your instance will have

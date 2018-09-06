@@ -531,7 +531,7 @@ type ElasticClusterStats struct {
 			Fielddata ElasticBreakersStat `json:"fielddata"`
 			Parent    ElasticBreakersStat `json:"parent"`
 			Request   ElasticBreakersStat `json:"request"`
-		} `json:"breakers" exclude:"true"`
+		} `json:"breakers"`
 		FS struct {
 			Data []struct {
 				AvailableInBytes     int    `json:"available_in_bytes"`

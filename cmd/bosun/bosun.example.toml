@@ -122,3 +122,7 @@ ExampleExpression = 'avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'
 	URL = "https://myInfluxServer:1234"
 	Timeout = "5m"
 	UnsafeSSL = true
+	
+# Configuration to enable the CloudWatch backend
+[CloudWatchConf]
+	Enabled = true

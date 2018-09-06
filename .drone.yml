@@ -1,0 +1,131 @@
+clone:
+  clone:
+    image: 325714046698.dkr.ecr.eu-west-1.amazonaws.com/dmx/drone-git:next
+    pull: true
+
+matrix:
+  BOSUN_VERSION:
+    - 0.6.4
+  GOPATH:
+    - /drone
+
+pipeline:
+  test:
+    image: golang:1.10.3-alpine
+    environment:
+      - AWS_ACCESS_KEY_ID=$$CLOUDWATCH_ACCESSKEY
+      - AWS_SECRET_ACCESS_KEY=$$CLOUDWATCH_SECRET_ACCESSKEY
+    commands:
+      - cp -r . ${GOPATH}/src/bosun.org
+      - cd ${GOPATH}/src/bosun.org/cmd/bosun
+      - go test -v bosun.org/...
+
+  build_bosun:
+    image: golang:1.10.3-alpine
+    commands:
+      - cp -r . ${GOPATH}/src/bosun.org
+      - cd ${GOPATH}/src/bosun.org/cmd/bosun
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bosun -tags esv5
+
+  build_scollector:
+    image: golang:1.10.3-alpine
+    commands:
+      - cd ${GOPATH}/src/bosun.org/cmd/scollector
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o scollector -tags esv5
+
+  prod_bosun_full_version:
+    image: plugins/s3
+    region: eu-west-1
+    bucket: skyscanner-prod-skymetrics-deploymentsupport
+    acl: bucket-owner-full-control
+    secrets:
+      - source: prod_accesskey
+        target: aws_access_key_id
+      - source: prod_secretkey
+        target: aws_secret_access_key
+    source: /drone/src/bosun.org/cmd/bosun/bosun
+    target: /artifacts/bosun/${DRONE_BRANCH}-${BOSUN_VERSION}-1.0.${DRONE_BUILD_NUMBER}/bosun
+    strip_prefix: /drone/src/bosun.org/cmd/bosun/bosun
+    when:
+      branch:
+        exclude: master
+      event:
+        exclude: pull_request
+
+
+  prod_bosun:
+    image: plugins/s3
+    region: eu-west-1
+    bucket: skyscanner-prod-skymetrics-deploymentsupport
+    acl: bucket-owner-full-control
+    secrets:
+      - source: prod_accesskey
+        target: aws_access_key_id
+      - source: prod_secretkey
+        target: aws_secret_access_key
+    source: /drone/src/bosun.org/cmd/bosun/bosun
+    target: /artifacts/bosun/${BOSUN_VERSION}/bosun
+    strip_prefix: /drone/src/bosun.org/cmd/bosun/bosun
+    when:
+      branch: master
+      event:
+        exclude: pull_request
+
+
+  sandbox_scollector_full_version:
+    image: plugins/s3
+    region: eu-west-1
+    bucket: skyscanner-sandbox-skymetrics-deploymentsupport
+    acl: bucket-owner-full-control
+    secrets:
+      - source: sandbox_accesskey
+        target: aws_access_key_id
+      - source: sandbox_secretkey
+        target: aws_secret_access_key
+    source: /drone/src/bosun.org/cmd/scollector/scollector
+    target: /artifacts/scollector/${DRONE_BRANCH}-${BOSUN_VERSION}-1.0.${DRONE_BUILD_NUMBER}/scollector
+    strip_prefix: /drone/src/bosun.org/cmd/scollector/scollector
+    when:
+      branch:
+        exclude: master
+      event:
+        exclude: pull_request
+
+
+  sandbox_scollector:
+    image: plugins/s3
+    region: eu-west-1
+    bucket: skyscanner-sandbox-skymetrics-deploymentsupport
+    acl: bucket-owner-full-control
+    secrets:
+      - source: sandbox_accesskey
+        target: aws_access_key_id
+      - source: sandbox_secretkey
+        target: aws_secret_access_key
+    source: /drone/src/bosun.org/cmd/scollector/scollector
+    target: /artifacts/scollector/${BOSUN_VERSION}/scollector
+    strip_prefix: /drone/src/bosun.org/cmd/scollector/scollector
+    when:
+      branch: master
+      event:
+        exclude: pull_request
+
+  prod_scollector:
+    image: plugins/s3
+    region: eu-west-1
+    bucket: skyscanner-prod-skymetrics-deploymentsupport
+    acl: bucket-owner-full-control
+    secrets:
+      - source: prod_accesskey
+        target: aws_access_key_id
+      - source: prod_secretkey
+        target: aws_secret_access_key
+    source: /drone/src/bosun.org/cmd/scollector/scollector
+    target: /artifacts/scollector/${BOSUN_VERSION}/scollector
+    strip_prefix: /drone/src/bosun.org/cmd/scollector/scollector
+    when:
+      branch: master
+      event:
+        exclude: pull_request
+
+

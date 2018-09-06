@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
 	"reflect"
 	"runtime"
 	"runtime/debug"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"bosun.org/annotate/backend"
+	"bosun.org/cloudwatch"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
@@ -23,7 +25,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/influxdata/influxdb/client/v2"
+	client "github.com/influxdata/influxdb/client/v2"
 )
 
 type State struct {
@@ -46,15 +48,22 @@ type State struct {
 
 	// OpenTSDB
 	tsdbQueries []opentsdb.Request
+
+	// CloudWatch
+	cloudwatchQueries []cloudwatch.Request
+
+	// Map of custom HTTP headers
+	httpHeader http.Header
 }
 
 type Backends struct {
-	TSDBContext     opentsdb.Context
-	GraphiteContext graphite.Context
-	ElasticHosts    ElasticHosts
-	InfluxConfig    client.HTTPConfig
-	ElasticConfig   ElasticConfig
-	AzureMonitor    AzureMonitorClients
+	TSDBContext       opentsdb.Context
+	GraphiteContext   graphite.Context
+	ElasticHosts      ElasticHosts
+	InfluxConfig      client.HTTPConfig
+	ElasticConfig     ElasticConfig
+	AzureMonitor      AzureMonitorClients
+	CloudWatchContext cloudwatch.Context
 }
 
 type BosunProviders struct {
@@ -96,7 +105,7 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, httpHeader http.Header) (r *Results, queries []opentsdb.Request, err error) {
 	if providers.Squelched == nil {
 		providers.Squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -109,20 +118,35 @@ func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprof
 		unjoinedOk:     unjoinedOk,
 		Backends:       backends,
 		BosunProviders: providers,
+		httpHeader:    httpHeader,
 		Timer:          T,
 	}
 	return e.ExecuteState(s)
+}
+
+// Skyscanner: custom log for computations
+func LogComputations(r *Results) {
+	slice := r.Results
+	for _, result := range slice {
+		slog.Infof("Group tags %v\n", result.Group)
+		for _, z := range result.Computations {
+			slog.Infof("%v = %v \n", z.Text, z.Value)
+		}
+	}
 }
 
 func (e *Expr) ExecuteState(s *State) (r *Results, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	if s.Timer == nil {
 		s.Timer = new(miniprofiler.Profile)
-	} else {
-		s.enableComputations = true
 	}
+	// Skyscanner: always enable computations
+	s.enableComputations = true
+
 	s.Timer.Step("expr execute", func(T miniprofiler.Timer) {
 		r = s.walk(e.Tree.Root)
+		// Skyscanner: custom log
+		// LogComputations(r)
 	})
 	queries = s.tsdbQueries
 	return
