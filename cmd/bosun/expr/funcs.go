@@ -58,7 +58,11 @@ func aggrFuncTags(args []parse.Node) (parse.Tags, error) {
 		return nil, errors.New("aggr: expect group to be string")
 	}
 	s := args[1].(*parse.StringNode).Text
-	return tagsFromString(s)
+	tags := strings.Split(s, ",")
+	for i := range tags {
+		tags[i] += "=*"
+	}
+	return tagsFromString(strings.Join(tags, ","))
 }
 
 func tagsFromString(text string) (parse.Tags, error) {

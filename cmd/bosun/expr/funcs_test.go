@@ -453,6 +453,64 @@ func TestAggrWithGroups(t *testing.T) {
 	}
 }
 
+func TestAggrWithGroupsAndMathOperation(t *testing.T) {
+	seriesA := `series("color=blue,type=apple,name=bob", 0, 1)`
+	seriesB := `series("color=blue,type=apple", 1, 3)`
+	seriesC := `series("color=green,type=apple", 0, 5)`
+
+	// test aggregator with single group
+	err := testExpression(exprInOut{
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"color\", \"p.50\") * 2", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 2,
+						time.Unix(1, 0): 6,
+					},
+					Group: opentsdb.TagSet{"color": "blue"},
+				},
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 10,
+					},
+					Group: opentsdb.TagSet{"color": "green"},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// test aggregator with multiple groups and math operation
+	err = testExpression(exprInOut{
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"color,type\", \"p.50\") * 2", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 2,
+						time.Unix(1, 0): 6,
+					},
+					Group: opentsdb.TagSet{"color": "blue", "type": "apple"},
+				},
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 10,
+					},
+					Group: opentsdb.TagSet{"color": "green", "type": "apple"},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestAggrNaNHandling(t *testing.T) {
 	// test behavior when NaN is encountered.
 	seriesD := `series("foo=bar", 0, 0 / 0, 100, 1)`
