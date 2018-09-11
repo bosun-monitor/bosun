@@ -378,7 +378,7 @@ func TestAggr(t *testing.T) {
 			name: "check that unknown aggregator errors out",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
 			want: Results{},
-			shouldErr: false,
+			shouldErr: true,
 		},
 		{
 			name: "single group",
@@ -492,7 +492,7 @@ func TestAggr(t *testing.T) {
 			out: tc.want,
 			shouldParseErr: false,
 		})
-		if tc.shouldErr && err != nil {
+		if !tc.shouldErr && err != nil {
 			t.Errorf("Case %q: Got error: %v", tc.name, err)
 		} else if tc.shouldErr && err == nil {
 			t.Errorf("Case %q: Expected parse error, but got nil", tc.name)
