@@ -218,6 +218,63 @@ template os_cpu_idle_web {
 }
 ~~~
 
+### Cloudwatch: Percentage error rate for an elb.
+
+This rule checks the percentage error rate for all requests through an elastic load balancer.
+
+We warn if more than 0.1% of requests returned a 5xx status code and send a critical notification if the error rate exceeds 1%.
+
+Using the ratio of errors to total requests allows us to have a much lower threshold without false positives than simply trying
+to alert on the count of errors because it compensates for daily traffic level variations.
+
+![CloudWatch Image](public/elb_error_rate.png)
+
+<p class="h4">Rule</p>
+
+~~~
+alert elb_error_rate {
+    critNotification = default
+    template = elb_error_rate
+    $region="eu-west-1"
+    $namespace="AWS/ELB"
+    $period="60"
+    $statistics="Sum"
+    $dimensions="LoadBalancerName:prod-webservers"
+
+
+    $requests = cw($region, $namespace, "RequestCount", $period, $statistics, $dimensions, "15m", "")
+    $500s = cw($region, $namespace, "HTTPCode_Backend_5XX", $period, $statistics, $dimensions, "15m", "")
+    $percentage = ( $500s/$requests * 100 )
+
+    #Calculate the historic error rate to put in the notification graph
+    $hPeriod = "360"
+    $hRequests = cw($region, $namespace, "RequestCount", $hPeriod, $statistics, $dimensions, "24h", "")
+    $h500s=cw($region, $namespace, "HTTPCode_Backend_5XX", $hPeriod, $statistics, $dimensions, "24h", "")
+    $hPercentage = ( $h500s/$hRequests * 100 )
+
+    $avg=avg($percentage)
+    warn = $avg > 0.1
+    crit = $avg > 1
+}
+~~~
+
+<p class="h4">Template</p>
+
+~~~
+
+template elb_error_rate {
+    body = `<a href="{{.Ack}}">Acknowledge alert</a>
+    <br>
+    <br>
+    <b>High error rate for ELB</b>
+
+    <br>
+    {{.Graph .Alert.Vars.hPercentage | printf "%.2f"}}
+    `
+    subject = {{.Last.Status}}: {{.Alert.Name}} : Increase error rate for elb : {{.Eval .Alert.Vars.avg | printf "%.2f"}}% 
+}
+~~~
+
 ## Forecasting Alerts
 
 ### Forecast Disk space

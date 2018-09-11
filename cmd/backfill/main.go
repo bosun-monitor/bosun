@@ -79,7 +79,7 @@ func main() {
 			}
 		}()
 		req := opentsdb.Request{Start: startTimeString, End: endTimeString, Queries: []*opentsdb.Query{query}}
-		resp, err := req.Query(*tsdbHost)
+		resp, err := req.Query(*tsdbHost, nil)
 		if err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ func queryForAggregateTags(query *opentsdb.Query) (opentsdb.TagSet, error) {
 	req := opentsdb.Request{}
 	req.Queries = []*opentsdb.Query{query}
 	req.Start = "1h-ago"
-	resp, err := req.Query(*tsdbHost)
+	resp, err := req.Query(*tsdbHost, nil)
 	if err != nil {
 		return nil, err
 	}

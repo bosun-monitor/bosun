@@ -32,7 +32,8 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
-	"gopkg.in/fsnotify.v1"
+
+	fsnotify "gopkg.in/fsnotify.v1"
 )
 
 type bosunHttpTransport struct {

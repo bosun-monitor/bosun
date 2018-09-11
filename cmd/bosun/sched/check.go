@@ -69,11 +69,12 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 		Events:   make(map[models.AlertKey]*models.Event),
 		schedule: s,
 		Backends: &expr.Backends{
-			TSDBContext:     s.SystemConf.GetTSDBContext(),
-			GraphiteContext: s.SystemConf.GetGraphiteContext(),
-			InfluxConfig:    s.SystemConf.GetInfluxContext(),
-			ElasticHosts:    s.SystemConf.GetElasticContext(),
-			AzureMonitor:    s.SystemConf.GetAzureMonitorContext(),
+			TSDBContext:       s.SystemConf.GetTSDBContext(),
+			GraphiteContext:   s.SystemConf.GetGraphiteContext(),
+			InfluxConfig:      s.SystemConf.GetInfluxContext(),
+			ElasticHosts:      s.SystemConf.GetElasticContext(),
+			AzureMonitor:      s.SystemConf.GetAzureMonitorContext(),
+			CloudWatchContext: s.SystemConf.GetCloudWatchContext(),
 		},
 	}
 	return r
@@ -219,6 +220,25 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		newIncident = true
 		shouldNotify = true
 	}
+
+	// VICTOROPS INTEGRATION: Enables notification of incidents which have returned to normal (Sends normNotification defined in config)
+	if event.Status <= models.StNormal && (incident.CurrentStatus == models.StWarning || incident.CurrentStatus == models.StCritical) {
+		slog.Infof("TRIGGER_RESOLVED: from %s to %s", incident.CurrentStatus, event.Status)
+		shouldNotify = true
+	}
+
+	// VICTOROPS INTEGRATION:  Enables notification of Incidents which have returned to normal but are now back to warning or critical. i.e. enable Flapping
+	if incident.CurrentStatus <= models.StNormal && (event.Status == models.StCritical || event.Status == models.StWarning) {
+		slog.Infof("TRIGGER_REALERT: from %s to %s", incident.CurrentStatus, event.Status)
+		shouldNotify = true
+	}
+
+	// VICTOROPS INTEGRATION:  Enables notification of Incidents which have gone from warning to critical
+	if incident.WorstStatus < event.Status {
+		slog.Infof("TRIGGER_ALERT: from %s to %s", incident.CurrentStatus, event.Status)
+		shouldNotify = true
+	}
+
 	// set state.Result according to event result
 	if event.Status == models.StCritical {
 		incident.Result = event.Crit
@@ -234,6 +254,12 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		incident.WorstStatus = event.Status
 		shouldNotify = true
 	}
+
+	// VICTOROPS INTEGRATION: set worst to normal if return to normal status
+	if event.Status <= models.StNormal {
+		incident.WorstStatus = event.Status
+	}
+
 	if event.Status != incident.CurrentStatus {
 		incident.Events = append(incident.Events, *event)
 	}
@@ -292,12 +318,19 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			}
 			return
 		}
-		incident.NeedAck = true
+
+		// VICTOROPS INTEGRATION
+		// incident.NeedAck = true
+		incident.NeedAck = false
+
 		switch event.Status {
 		case models.StCritical, models.StUnknown:
 			notify(a.CritNotification)
 		case models.StWarning:
 			notify(a.WarnNotification)
+		// VICTOROPS INTEGRATION
+		case models.StNormal:
+			notify(a.NormNotification)
 		}
 	}
 
@@ -643,7 +676,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 		History:   s,
 		Annotate:  s.annotate,
 	}
-	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
+	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK, nil)
 	return results, err
 }
 

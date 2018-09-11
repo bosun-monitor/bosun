@@ -12,8 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	client "github.com/influxdata/influxdb/client/v2"
 
+	"bosun.org/cloudwatch"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
@@ -79,6 +80,7 @@ type SystemConfProvider interface {
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts
 	GetAzureMonitorContext() expr.AzureMonitorClients
+	GetCloudWatchContext() cloudwatch.Context
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string
@@ -432,6 +434,8 @@ type Alert struct {
 	Squelch          Squelches  `json:"-"`
 	CritNotification *Notifications
 	WarnNotification *Notifications
+	// VICTOROPS INTEGRATION
+	NormNotification *Notifications
 	Unknown          time.Duration
 	MaxLogFrequency  time.Duration
 	IgnoreUnknown    bool

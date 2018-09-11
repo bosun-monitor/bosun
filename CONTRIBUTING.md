@@ -2,7 +2,7 @@
 
 Bosun and scollector are open source projects. We appreciate your help.
 
-## Contributing code
+## Contributing code 
 
 Use GitHub pull requests to submit code. General submission guidelines:
 
