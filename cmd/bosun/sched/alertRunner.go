@@ -19,8 +19,14 @@ func (s *Schedule) Run() error {
 	type alertCh struct {
 		ch     chan<- *checkContext
 		modulo int
+		shift  int // used to distribute alert runs
 	}
 	chs := []alertCh{}
+
+	// Every alert gets a small shift in time.
+	// This way the alerts with the same period are not fired
+	// simultaneously, but are distributed.
+	circular_shifts := make(map[int]int) // the map is *run period* -> *time shift to add*
 	for _, a := range s.RuleConf.GetAlerts() {
 		ch := make(chan *checkContext, 1)
 		re := a.RunEvery
@@ -28,7 +34,16 @@ func (s *Schedule) Run() error {
 			re = s.SystemConf.GetDefaultRunEvery()
 		}
 		go s.runAlert(a, ch)
-		chs = append(chs, alertCh{ch: ch, modulo: re})
+
+		if s.SystemConf.GetAlertCheckDistribution() == "simple" { // only apply shifts if the respective option is set
+			chs = append(chs, alertCh{ch: ch, modulo: re, shift: circular_shifts[re]})
+		} else {
+			// there are no shifts if option is off
+			chs = append(chs, alertCh{ch: ch, modulo: re, shift: 0})
+		}
+
+		// the shifts for a given period range 0..(period - 1)
+		circular_shifts[re] = (circular_shifts[re] + 1) % re
 	}
 	i := 0
 	for {
@@ -40,7 +55,7 @@ func (s *Schedule) Run() error {
 		ctx := &checkContext{utcNow(), cache.New("alerts", 0)}
 		s.LastCheck = utcNow()
 		for _, a := range chs {
-			if i%a.modulo != 0 {
+			if (i+a.shift)%a.modulo != 0 {
 				continue
 			}
 			// Put on channel. If that fails, the alert is backed up pretty bad.

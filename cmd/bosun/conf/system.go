@@ -40,9 +40,10 @@ type SystemConf struct {
 	InternetProxy string
 	MinGroupSize  int
 
-	UnknownThreshold int
-	CheckFrequency   Duration // Time between alert checks: 5m
-	DefaultRunEvery  int      // Default number of check intervals to run each alert: 1
+	UnknownThreshold       int
+	CheckFrequency         Duration // Time between alert checks: 5m
+	DefaultRunEvery        int      // Default number of check intervals to run each alert: 1
+	AlertCheckDistribution string   // Method to distribute alet checks. No distribution if equals ""
 
 	DBConf DBConf
 
@@ -280,10 +281,11 @@ const (
 // NewSystemConf retruns a system conf with default values set
 func newSystemConf() *SystemConf {
 	return &SystemConf{
-		Scheme:          "http",
-		CheckFrequency:  Duration{Duration: time.Minute * 5},
-		DefaultRunEvery: 1,
-		HTTPListen:      defaultHTTPListen,
+		Scheme:                 "http",
+		CheckFrequency:         Duration{Duration: time.Minute * 5},
+		DefaultRunEvery:        1,
+		HTTPListen:             defaultHTTPListen,
+		AlertCheckDistribution: "",
 		DBConf: DBConf{
 			LedisDir:      "ledis_data",
 			LedisBindAddr: "127.0.0.1:9565",
@@ -324,6 +326,10 @@ func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 	}
 	if len(decodeMeta.Undecoded()) > 0 {
 		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
+	}
+
+	if sc.GetAlertCheckDistribution() != "" && sc.GetAlertCheckDistribution() != "simple" {
+		return sc, fmt.Errorf("invalid value %v for AlertCheckDistribution", sc.GetAlertCheckDistribution())
 	}
 
 	// iterate over each hosts
@@ -463,6 +469,11 @@ func (sc *SystemConf) GetCheckFrequency() time.Duration {
 // the CheckFrequency. Checks by default will run at CheckFrequency * RunEvery
 func (sc *SystemConf) GetDefaultRunEvery() int {
 	return sc.DefaultRunEvery
+}
+
+// GetAlertCheckDistribution returns if the alert rule checks are scattered over check period
+func (sc *SystemConf) GetAlertCheckDistribution() string {
+	return sc.AlertCheckDistribution
 }
 
 // GetUnknownThreshold returns the threshold in which multiple unknown alerts in a check iteration
