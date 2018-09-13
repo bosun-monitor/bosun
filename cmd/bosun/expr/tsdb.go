@@ -23,6 +23,12 @@ var TSDB = map[string]parse.Func{
 		Tags:   tagQuery,
 		F:      Band,
 	},
+	"bandQuery": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
+		Return: models.TypeSeriesSet,
+		Tags:   tagQuery,
+		F:      BandQuery,
+	},
 	"shiftBand": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
 		Return: models.TypeSeriesSet,
@@ -34,6 +40,12 @@ var TSDB = map[string]parse.Func{
 		Return: models.TypeSeriesSet,
 		Tags:   tagQuery,
 		F:      Over,
+	},
+	"overQuery": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
+		Return: models.TypeSeriesSet,
+		Tags:   tagQuery,
+		F:      OverQuery,
 	},
 	"change": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
@@ -102,7 +114,7 @@ func timeTSDBRequest(e *State, req *opentsdb.Request) (s opentsdb.ResponseSet, e
 	return
 }
 
-func bandTSDB(e *State, query, duration, period string, num float64, rfunc func(*Results, *opentsdb.Response, time.Duration) error) (r *Results, err error) {
+func bandTSDB(e *State, query, duration, period, eduration string, num float64, rfunc func(*Results, *opentsdb.Response, time.Duration) error) (r *Results, err error) {
 	r = new(Results)
 	r.IgnoreOtherUnjoined = true
 	r.IgnoreUnjoined = true
@@ -132,16 +144,23 @@ func bandTSDB(e *State, query, duration, period string, num float64, rfunc func(
 		req := opentsdb.Request{
 			Queries: []*opentsdb.Query{q},
 		}
-		now := e.now
-		req.End = now.Unix()
-		req.Start = now.Add(time.Duration(-d)).Unix()
+		end := e.now
+		if eduration != "" {
+			var ed opentsdb.Duration
+			ed, err = opentsdb.ParseDuration(eduration)
+			if err != nil {
+				return
+			}
+			end = end.Add(time.Duration(-ed))
+		}
+		req.End = end.Unix()
+		req.Start = end.Add(time.Duration(-d)).Unix()
 		if err = req.SetTime(e.now); err != nil {
 			return
 		}
 		for i := 0; i < int(num); i++ {
-			now = now.Add(time.Duration(-p))
-			req.End = now.Unix()
-			req.Start = now.Add(time.Duration(-d)).Unix()
+			req.End = end.Unix()
+			req.Start = end.Add(time.Duration(-d)).Unix()
 			var s opentsdb.ResponseSet
 			s, err = timeTSDBRequest(e, &req)
 			if err != nil {
@@ -152,11 +171,12 @@ func bandTSDB(e *State, query, duration, period string, num float64, rfunc func(
 					continue
 				}
 				//offset := e.now.Sub(now.Add(time.Duration(p-d)))
-				offset := e.now.Sub(now)
+				offset := e.now.Sub(end)
 				if err = rfunc(r, res, offset); err != nil {
 					return
 				}
 			}
+			end = end.Add(time.Duration(-p))
 		}
 	})
 	return
@@ -236,7 +256,7 @@ func Window(e *State, query, duration, period string, num float64, rfunc string)
 		}
 		return nil
 	}
-	r, err := bandTSDB(e, query, duration, period, num, bandFn)
+	r, err := bandTSDB(e, query, duration, period, period, num, bandFn)
 	if err != nil {
 		err = fmt.Errorf("expr: Window: %v", err)
 	}
@@ -269,7 +289,12 @@ func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 }
 
 func Band(e *State, query, duration, period string, num float64) (r *Results, err error) {
-	r, err = bandTSDB(e, query, duration, period, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
+	// existing Band behaviour is to end 'period' ago, so pass period as eduration.
+	return BandQuery(e, query, duration, period, period, num)
+}
+
+func BandQuery(e *State, query, duration, period, eduration string, num float64) (r *Results, err error) {
+	r, err = bandTSDB(e, query, duration, period, eduration, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
 		newarr := true
 		for _, a := range r.Results {
 			if !a.Group.Equal(res.Tags) {
@@ -307,7 +332,7 @@ func Band(e *State, query, duration, period string, num float64) (r *Results, er
 }
 
 func ShiftBand(e *State, query, duration, period string, num float64) (r *Results, err error) {
-	r, err = bandTSDB(e, query, duration, period, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
+	r, err = bandTSDB(e, query, duration, period, period, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
 		values := make(Series)
 		a := &Result{Group: res.Tags.Merge(opentsdb.TagSet{"shift": offset.String()})}
 		for k, v := range res.DPS {
@@ -328,6 +353,10 @@ func ShiftBand(e *State, query, duration, period string, num float64) (r *Result
 }
 
 func Over(e *State, query, duration, period string, num float64) (r *Results, err error) {
+	return OverQuery(e, query, duration, period, "", num)
+}
+
+func OverQuery(e *State, query, duration, period, eduration string, num float64) (r *Results, err error) {
 	r = new(Results)
 	r.IgnoreOtherUnjoined = true
 	r.IgnoreUnjoined = true
@@ -357,16 +386,24 @@ func Over(e *State, query, duration, period string, num float64) (r *Results, er
 		req := opentsdb.Request{
 			Queries: []*opentsdb.Query{q},
 		}
-		now := e.now
-		req.End = now.Unix()
-		req.Start = now.Add(time.Duration(-d)).Unix()
+		end := e.now
+		if eduration != "" {
+			var ed opentsdb.Duration
+			ed, err = opentsdb.ParseDuration(eduration)
+			if err != nil {
+				return
+			}
+			end = end.Add(time.Duration(-ed))
+		}
+		req.End = end.Unix()
+		req.Start = end.Add(time.Duration(-d)).Unix()
 		for i := 0; i < int(num); i++ {
 			var s opentsdb.ResponseSet
 			s, err = timeTSDBRequest(e, &req)
 			if err != nil {
 				return
 			}
-			offset := e.now.Sub(now)
+			offset := e.now.Sub(end)
 			for _, res := range s {
 				if e.Squelched(res.Tags) {
 					continue
@@ -383,9 +420,9 @@ func Over(e *State, query, duration, period string, num float64) (r *Results, er
 				a.Value = values
 				r.Results = append(r.Results, a)
 			}
-			now = now.Add(time.Duration(-p))
-			req.End = now.Unix()
-			req.Start = now.Add(time.Duration(-d)).Unix()
+			end = end.Add(time.Duration(-p))
+			req.End = end.Unix()
+			req.Start = end.Add(time.Duration(-d)).Unix()
 		}
 	})
 	return
