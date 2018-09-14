@@ -40,6 +40,13 @@ func init() {
 			var indexInterval = time.Minute * 15
 			var clusterInterval = DefaultFreq
 			var err error
+			if instance.Name == "" {
+				instance.Name = fmt.Sprintf("%v_%v", instance.Host, instance.Port)
+			}
+			if instance.Disable {
+				slog.Infof("Elastic instance %v is disabled. Skipping.", instance.Name)
+				continue
+			}
 			// preserve defaults of localhost:9200
 			if instance.Host == "" {
 				instance.Host = "localhost"
@@ -47,8 +54,22 @@ func init() {
 			if instance.Port == 0 {
 				instance.Port = 9200
 			}
-			url := fmt.Sprintf("http://%v:%v", instance.Host, instance.Port)
-			instanceName := fmt.Sprintf("%v_%v", instance.Host, instance.Port)
+			if instance.Scheme == "" {
+				instance.Scheme = "http"
+			}
+			var creds string
+			if instance.User != "" || instance.Password != "" {
+				creds = fmt.Sprintf("%v:%v@", instance.User, instance.Password)
+			} else {
+				creds = ""
+			}
+			url := fmt.Sprintf("%v://%v%v:%v", instance.Scheme, creds, instance.Host, instance.Port)
+			var instanceName string
+			if instance.Name == "" {
+				instanceName = fmt.Sprintf("%v_%v", instance.Host, instance.Port)
+			} else {
+				instanceName = instance.Name
+			}
 			if instance.IndexInterval != "" {
 				indexInterval, err = time.ParseDuration(instance.IndexInterval)
 				if err != nil {
@@ -309,14 +330,17 @@ func esSkipIndex(index string) bool {
 }
 
 func esReq(instance conf.Elastic, path, query string, v interface{}) error {
+	up := url.UserPassword(instance.User, instance.Password)
 	u := &url.URL{
-		Scheme:   "http",
+		Scheme:   instance.Scheme,
+		User:     up,
 		Host:     fmt.Sprintf("%v:%v", instance.Host, instance.Port),
 		Path:     path,
 		RawQuery: query,
 	}
 	resp, err := http.Get(u.String())
 	if err != nil {
+		slog.Errorf("Error querying Elasticsearch: %v", err)
 		return nil
 	}
 	defer resp.Body.Close()
