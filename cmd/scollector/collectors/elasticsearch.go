@@ -64,36 +64,30 @@ func init() {
 				creds = ""
 			}
 			url := fmt.Sprintf("%v://%v%v:%v", instance.Scheme, creds, instance.Host, instance.Port)
-			var instanceName string
-			if instance.Name == "" {
-				instanceName = fmt.Sprintf("%v_%v", instance.Host, instance.Port)
-			} else {
-				instanceName = instance.Name
-			}
 			if instance.IndexInterval != "" {
 				indexInterval, err = time.ParseDuration(instance.IndexInterval)
 				if err != nil {
 					panic(fmt.Errorf("Failed to parse IndexInterval: %v, err: %v", instance.IndexInterval, err))
 				}
-				slog.Infof("Using IndexInterval: %v for %v", indexInterval, instanceName)
+				slog.Infof("Using IndexInterval: %v for %v", indexInterval, instance.Name)
 			} else {
-				slog.Infof("Using default IndexInterval: %v for %v", indexInterval, instanceName)
+				slog.Infof("Using default IndexInterval: %v for %v", indexInterval, instance.Name)
 			}
 			if instance.ClusterInterval != "" {
 				clusterInterval, err = time.ParseDuration(instance.ClusterInterval)
 				if err != nil {
 					panic(fmt.Errorf("Failed to parse ClusterInterval: %v, err: %v", instance.ClusterInterval, err))
 				}
-				slog.Infof("Using ClusterInterval: %v for %v", clusterInterval, instanceName)
+				slog.Infof("Using ClusterInterval: %v for %v", clusterInterval, instance.Name)
 			} else {
-				slog.Infof("Using default ClusterInterval: %v for %v", clusterInterval, instanceName)
+				slog.Infof("Using default ClusterInterval: %v for %v", clusterInterval, instance.Name)
 			}
 			// for legacy reasons, keep localhost:9200 named elasticsearch / elasticsearch-indices
 			var name string
-			if instanceName == "localhost_9200" {
+			if instance.Name == "localhost_9200" {
 				name = "elasticsearch"
 			} else {
-				name = fmt.Sprintf("elasticsearch-%v", instanceName)
+				name = fmt.Sprintf("elasticsearch-%v", instance.Name)
 			}
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
@@ -104,10 +98,10 @@ func init() {
 				Enable:   enableURL(url),
 			})
 			// keep legacy collector name if localhost_9200
-			if instanceName == "localhost_9200" {
+			if instance.Name == "localhost_9200" {
 				name = "elasticsearch-indices"
 			} else {
-				name = fmt.Sprintf("elasticsearch-indices-%v", instanceName)
+				name = fmt.Sprintf("elasticsearch-indices-%v", instance.Name)
 			}
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
