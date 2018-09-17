@@ -40,13 +40,6 @@ func init() {
 			var indexInterval = time.Minute * 15
 			var clusterInterval = DefaultFreq
 			var err error
-			if instance.Name == "" {
-				instance.Name = fmt.Sprintf("%v_%v", instance.Host, instance.Port)
-			}
-			if instance.Disable {
-				slog.Infof("Elastic instance %v is disabled. Skipping.", instance.Name)
-				continue
-			}
 			// preserve defaults of localhost:9200
 			if instance.Host == "" {
 				instance.Host = "localhost"
@@ -56,6 +49,13 @@ func init() {
 			}
 			if instance.Scheme == "" {
 				instance.Scheme = "http"
+			}
+			if instance.Name == "" {
+				instance.Name = fmt.Sprintf("%v_%v", instance.Host, instance.Port)
+			}
+			if instance.Disable {
+				slog.Infof("Elastic instance %v is disabled. Skipping.", instance.Name)
+				continue
 			}
 			var creds string
 			if instance.User != "" || instance.Password != "" {
