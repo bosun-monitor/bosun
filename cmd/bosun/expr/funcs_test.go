@@ -272,7 +272,7 @@ func TestAggr(t *testing.T) {
 	seriesMathB := `series("color=blue,type=apple", 1, 3)`
 	seriesMathC := `series("color=green,type=apple", 0, 5)`
 
-	aggrTestCases := []struct{
+	aggrTestCases := []struct {
 		name      string
 		expr      string
 		want      Results
@@ -375,9 +375,9 @@ func TestAggr(t *testing.T) {
 			shouldErr: false,
 		},
 		{
-			name: "check that unknown aggregator errors out",
-			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
-			want: Results{},
+			name:      "check that unknown aggregator errors out",
+			expr:      fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
+			want:      Results{},
 			shouldErr: true,
 		},
 		{
@@ -488,8 +488,8 @@ func TestAggr(t *testing.T) {
 
 	for _, tc := range aggrTestCases {
 		err := testExpression(exprInOut{
-			expr: tc.expr,
-			out: tc.want,
+			expr:           tc.expr,
+			out:            tc.want,
 			shouldParseErr: false,
 		})
 		if !tc.shouldErr && err != nil {
