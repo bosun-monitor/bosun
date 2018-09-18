@@ -359,7 +359,7 @@ func TestSeriesOperations(t *testing.T) {
 				Results: ResultSlice{
 					&Result{
 						Value: Series{
-						// Should be empty
+							// Should be empty
 						},
 						Group: opentsdb.TagSet{"key": "a"},
 					},
