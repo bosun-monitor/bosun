@@ -59,7 +59,7 @@ func ESAll(e *State, T miniprofiler.Timer) (*Results, error) {
 	return &r, nil
 }
 
-func ESAnd(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error) {
+func ESAnd(e *State, esqueries ...ESQuery) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -90,7 +90,7 @@ func ESAnd(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, erro
 	return &r, nil
 }
 
-func ESNot(e *State, T miniprofiler.Timer, query ESQuery) (*Results, error) {
+func ESNot(e *State, query ESQuery) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -109,7 +109,7 @@ func ESNot(e *State, T miniprofiler.Timer, query ESQuery) (*Results, error) {
 	return &r, nil
 }
 
-func ESOr(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error) {
+func ESOr(e *State, esqueries ...ESQuery) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -140,7 +140,7 @@ func ESOr(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error
 	return &r, nil
 }
 
-func ESRegexp(e *State, T miniprofiler.Timer, key string, regex string) (*Results, error) {
+func ESRegexp(e *State, key string, regex string) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -159,7 +159,7 @@ func ESRegexp(e *State, T miniprofiler.Timer, key string, regex string) (*Result
 	return &r, nil
 }
 
-func ESQueryString(e *State, T miniprofiler.Timer, key string, query string) (*Results, error) {
+func ESQueryString(e *State, key string, query string) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		// Query: qs
@@ -191,7 +191,7 @@ func ESQueryString(e *State, T miniprofiler.Timer, key string, query string) (*R
 	return &r, nil
 }
 
-func ESExists(e *State, T miniprofiler.Timer, field string) (*Results, error) {
+func ESExists(e *State, field string) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -210,7 +210,7 @@ func ESExists(e *State, T miniprofiler.Timer, field string) (*Results, error) {
 	return &r, nil
 }
 
-func ESGT(e *State, T miniprofiler.Timer, key string, gt float64) (*Results, error) {
+func ESGT(e *State, key string, gt float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -229,7 +229,7 @@ func ESGT(e *State, T miniprofiler.Timer, key string, gt float64) (*Results, err
 	return &r, nil
 }
 
-func ESGTE(e *State, T miniprofiler.Timer, key string, gte float64) (*Results, error) {
+func ESGTE(e *State, key string, gte float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -248,7 +248,7 @@ func ESGTE(e *State, T miniprofiler.Timer, key string, gte float64) (*Results, e
 	return &r, nil
 }
 
-func ESLT(e *State, T miniprofiler.Timer, key string, lt float64) (*Results, error) {
+func ESLT(e *State, key string, lt float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -267,7 +267,7 @@ func ESLT(e *State, T miniprofiler.Timer, key string, lt float64) (*Results, err
 	return &r, nil
 }
 
-func ESLTE(e *State, T miniprofiler.Timer, key string, lte float64) (*Results, error) {
+func ESLTE(e *State, key string, lte float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -375,7 +375,7 @@ func createVersionedESClient(prefix string, cfg ElasticConfig) error {
 	return err
 }
 
-func ESIndicies(e *State, T miniprofiler.Timer, timeField string, literalIndices ...string) *Results {
+func ESIndicies(e *State, timeField string, literalIndices ...string) *Results {
 	var r Results
 	indexer := ESIndexer{}
 	// Don't check for existing indexes in this case, just pass through and let elastic return
@@ -388,11 +388,11 @@ func ESIndicies(e *State, T miniprofiler.Timer, timeField string, literalIndices
 	return &r
 }
 
-func ESLS(e *State, T miniprofiler.Timer, indexRoot string) (*Results, error) {
-	return ESDaily(e, T, "@timestamp", indexRoot+"-", "2006.01.02")
+func ESLS(e *State, indexRoot string) (*Results, error) {
+	return ESDaily(e, "@timestamp", indexRoot+"-", "2006.01.02")
 }
 
-func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
+func ESDaily(e *State, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
@@ -409,7 +409,7 @@ func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string
 	return &r, nil
 }
 
-func ESMonthly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
+func ESMonthly(e *State, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
@@ -426,27 +426,27 @@ func ESMonthly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout stri
 	return &r, nil
 }
 
-func ESCount(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, interval, sduration, eduration string) (r *Results, err error) {
+func ESCount(prefix string, e *State, indexer ESIndexer, keystring string, filter ESQuery, interval, sduration, eduration string) (r *Results, err error) {
 	switch ver := e.ElasticHosts.Hosts[prefix].Version; ver {
 	case ESV2:
-		return ESDateHistogram2(prefix, e, T, indexer, keystring, filter.Query(ver).(elastic2.Query), interval, sduration, eduration, "", "", 0)
+		return ESDateHistogram2(prefix, e, indexer, keystring, filter.Query(ver).(elastic2.Query), interval, sduration, eduration, "", "", 0)
 	case ESV5:
-		return ESDateHistogram5(prefix, e, T, indexer, keystring, filter.Query(ver).(elastic5.Query), interval, sduration, eduration, "", "", 0)
+		return ESDateHistogram5(prefix, e, indexer, keystring, filter.Query(ver).(elastic5.Query), interval, sduration, eduration, "", "", 0)
 	case ESV6:
-		return ESDateHistogram6(prefix, e, T, indexer, keystring, filter.Query(ver).(elastic6.Query), interval, sduration, eduration, "", "", 0)
+		return ESDateHistogram6(prefix, e, indexer, keystring, filter.Query(ver).(elastic6.Query), interval, sduration, eduration, "", "", 0)
 	}
 	return nil, errors.New("unknown version")
 }
 
 // ESStat returns a bucketed statistical reduction for the specified field.
-func ESStat(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, field, rstat, interval, sduration, eduration string) (r *Results, err error) {
+func ESStat(prefix string, e *State, indexer ESIndexer, keystring string, filter ESQuery, field, rstat, interval, sduration, eduration string) (r *Results, err error) {
 	switch ver := e.ElasticHosts.Hosts[prefix].Version; ver {
 	case ESV2:
-		return ESDateHistogram2(prefix, e, T, indexer, keystring, filter.Query(ver).(elastic2.Query), interval, sduration, eduration, field, rstat, 0)
+		return ESDateHistogram2(prefix, e, indexer, keystring, filter.Query(ver).(elastic2.Query), interval, sduration, eduration, field, rstat, 0)
 	case ESV5:
-		return ESDateHistogram5(prefix, e, T, indexer, keystring, filter.Query(ver).(elastic5.Query), interval, sduration, eduration, field, rstat, 0)
+		return ESDateHistogram5(prefix, e, indexer, keystring, filter.Query(ver).(elastic5.Query), interval, sduration, eduration, field, rstat, 0)
 	case ESV6:
-		return ESDateHistogram6(prefix, e, T, indexer, keystring, filter.Query(ver).(elastic6.Query), interval, sduration, eduration, field, rstat, 0)
+		return ESDateHistogram6(prefix, e, indexer, keystring, filter.Query(ver).(elastic6.Query), interval, sduration, eduration, field, rstat, 0)
 	}
 	return nil, errors.New("unknown version")
 }

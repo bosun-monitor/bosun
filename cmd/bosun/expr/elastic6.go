@@ -7,148 +7,9 @@ import (
 	"strings"
 	"time"
 
-	elastic "github.com/olivere/elastic"
-
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
+	elastic "github.com/olivere/elastic"
 )
-
-// type ESQuery struct {
-// 	Query elastic.Query
-// }
-
-// // Map of prefixes to corresponding clients
-// var esClients struct {
-// 	sync.Mutex
-// 	m map[string]*elastic.Client
-// }
-
-// func init() {
-// 	esClients.m = make(map[string]*elastic.Client)
-// }
-
-// func ESAll(e *State, T miniprofiler.Timer) (*Results, error) {
-// 	var r Results
-// 	q := ESQuery{
-// 		Query: elastic.NewMatchAllQuery(),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESAnd(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error) {
-// 	var r Results
-// 	queries := make([]elastic.Query, len(esqueries))
-// 	for i, q := range esqueries {
-// 		queries[i] = q.Query
-// 	}
-// 	q := ESQuery{
-// 		Query: elastic.NewBoolQuery().Must(queries...),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESNot(e *State, T miniprofiler.Timer, query ESQuery) (*Results, error) {
-// 	var r Results
-// 	q := ESQuery{
-// 		Query: elastic.NewBoolQuery().MustNot(query.Query),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESOr(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error) {
-// 	var r Results
-// 	queries := make([]elastic.Query, len(esqueries))
-// 	for i, q := range esqueries {
-// 		queries[i] = q.Query
-// 	}
-// 	q := ESQuery{
-// 		Query: elastic.NewBoolQuery().Should(queries...).MinimumNumberShouldMatch(1),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESRegexp(e *State, T miniprofiler.Timer, key string, regex string) (*Results, error) {
-// 	var r Results
-// 	q := ESQuery{
-// 		Query: elastic.NewRegexpQuery(key, regex),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESQueryString(e *State, T miniprofiler.Timer, key string, query string) (*Results, error) {
-// 	var r Results
-// 	qs := elastic.NewQueryStringQuery(query)
-// 	if key != "" {
-// 		qs.Field(key)
-// 	}
-// 	q := ESQuery{Query: qs}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESExists(e *State, T miniprofiler.Timer, field string) (*Results, error) {
-// 	var r Results
-// 	qs := elastic.NewExistsQuery(field)
-// 	q := ESQuery{Query: qs}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESGT(e *State, T miniprofiler.Timer, key string, gt float64) (*Results, error) {
-// 	var r Results
-// 	q := ESQuery{
-// 		Query: elastic.NewRangeQuery(key).Gt(gt),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESGTE(e *State, T miniprofiler.Timer, key string, gte float64) (*Results, error) {
-// 	var r Results
-// 	q := ESQuery{
-// 		Query: elastic.NewRangeQuery(key).Gte(gte),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESLT(e *State, T miniprofiler.Timer, key string, lt float64) (*Results, error) {
-// 	var r Results
-// 	q := ESQuery{
-// 		Query: elastic.NewRangeQuery(key).Lt(lt),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// func ESLTE(e *State, T miniprofiler.Timer, key string, lte float64) (*Results, error) {
-// 	var r Results
-// 	q := ESQuery{
-// 		Query: elastic.NewRangeQuery(key).Lte(lte),
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: q})
-// 	return &r, nil
-// }
-
-// // ElasticHosts is an array of Logstash hosts and exists as a type for something to attach
-// // methods to.  The elasticsearch library will use the listed to hosts to discover all
-// // of the hosts in the config
-// // type ElasticHosts []string
-// type ElasticHosts struct {
-// 	Hosts map[string]ElasticConfig
-// }
-
-// type ElasticConfig struct {
-// 	Hosts             []string
-// 	Version           string
-// 	SimpleClient      bool
-// 	ClientOptionFuncs []elastic.ClientOptionFunc
-// }
 
 // InitClient sets up the elastic client. If the client has already been
 // initialized it is a noop
@@ -250,7 +111,7 @@ func (r *ElasticRequest6) CacheKey() (string, error) {
 
 // timeESRequest execute the elasticsearch query (which may set or hit cache) and returns
 // the search results.
-func timeESRequest6(e *State, T miniprofiler.Timer, req *ElasticRequest6) (resp *elastic.SearchResult, err error) {
+func timeESRequest6(e *State, req *ElasticRequest6) (resp *elastic.SearchResult, err error) {
 	var source interface{}
 	source, err = req.Source.Source()
 	if err != nil {
@@ -264,81 +125,20 @@ func timeESRequest6(e *State, T miniprofiler.Timer, req *ElasticRequest6) (resp 
 	if err != nil {
 		return nil, err
 	}
-	T.StepCustomTiming("elastic", "query", fmt.Sprintf("%s:%v\n%s", req.HostKey, req.Indices, b), func() {
+	e.Timer.StepCustomTiming("elastic", "query", fmt.Sprintf("%s:%v\n%s", req.HostKey, req.Indices, b), func() {
 		getFn := func() (interface{}, error) {
 			return e.ElasticHosts.Query6(req)
 		}
 		var val interface{}
-		val, err = e.Cache.Get(key, getFn)
+		var hit bool
+		val, err, hit = e.Cache.Get(key, getFn)
+		collectCacheHit(e.Cache, "elastic", hit)
 		resp = val.(*elastic.SearchResult)
 	})
 	return
 }
 
-// func ESIndicies(e *State, T miniprofiler.Timer, timeField string, literalIndices ...string) *Results {
-// 	var r Results
-// 	indexer := ESIndexer{}
-// 	// Don't check for existing indexes in this case, just pass through and let elastic return
-// 	// an error at query time if the index does not exist
-// 	indexer.Generate = func(start, end *time.Time) []string {
-// 		return literalIndices
-// 	}
-// 	indexer.TimeField = timeField
-// 	r.Results = append(r.Results, &Result{Value: indexer})
-// 	return &r
-// }
-
-// func ESLS(e *State, T miniprofiler.Timer, indexRoot string) (*Results, error) {
-// 	return ESDaily(e, T, "@timestamp", indexRoot+"-", "2006.01.02")
-// }
-
-// func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
-// 	var r Results
-// 	indexer := ESIndexer{}
-// 	indexer.TimeField = timeField
-// 	indexer.Generate = func(start, end *time.Time) []string {
-// 		var indices []string
-// 		truncStart := now.New(*start).BeginningOfDay()
-// 		truncEnd := now.New(*end).BeginningOfDay()
-// 		for d := truncStart; !d.After(truncEnd); d = d.AddDate(0, 0, 1) {
-// 			indices = append(indices, fmt.Sprintf("%v%v", indexRoot, d.Format(layout)))
-// 		}
-// 		return indices
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: indexer})
-// 	return &r, nil
-// }
-
-// func ESMonthly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
-// 	var r Results
-// 	indexer := ESIndexer{}
-// 	indexer.TimeField = timeField
-// 	indexer.Generate = func(start, end *time.Time) []string {
-// 		var indices []string
-// 		truncStart := now.New(*start).BeginningOfMonth()
-// 		truncEnd := now.New(*end).BeginningOfMonth()
-// 		for d := truncStart; !d.After(truncEnd); d = d.AddDate(0, 1, 0) {
-// 			indices = append(indices, fmt.Sprintf("%v%v", indexRoot, d.Format(layout)))
-// 		}
-// 		return indices
-// 	}
-// 	r.Results = append(r.Results, &Result{Value: indexer})
-// 	return &r, nil
-// }
-
-// func ESCount(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, interval, sduration, eduration string) (r *Results, err error) {
-// 	return ESDateHistogram(prefix, e, T, indexer, keystring, filter.Query, interval, sduration, eduration, "", "", 0)
-// }
-
-// // ESStat returns a bucketed statistical reduction for the specified field.
-// func ESStat(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, field, rstat, interval, sduration, eduration string) (r *Results, err error) {
-// 	return ESDateHistogram(prefix, e, T, indexer, keystring, filter.Query, interval, sduration, eduration, field, rstat, 0)
-// }
-
-// // 2016-09-22T22:26:14.679270711Z
-// const elasticRFC3339 = "date_optional_time"
-
-func ESDateHistogram6(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
+func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
 	req, err := ESBaseQuery6(e.now, indexer, filter, sduration, eduration, size, prefix)
 	if err != nil {
@@ -356,7 +156,7 @@ func ESDateHistogram6(prefix string, e *State, T miniprofiler.Timer, indexer ESI
 	}
 	if keystring == "" {
 		req.Source = req.Source.Aggregation("ts", ts)
-		result, err := timeESRequest6(e, T, req)
+		result, err := timeESRequest6(e, req)
 		if err != nil {
 			return nil, err
 		}
@@ -387,7 +187,7 @@ func ESDateHistogram6(prefix string, e *State, T miniprofiler.Timer, indexer ESI
 		aggregation = elastic.NewTermsAggregation().Field(keys[i]).SubAggregation("g_"+keys[i+1], aggregation)
 	}
 	req.Source = req.Source.Aggregation("g_"+keys[0], aggregation)
-	result, err := timeESRequest6(e, T, req)
+	result, err := timeESRequest6(e, req)
 	if err != nil {
 		return nil, err
 	}
