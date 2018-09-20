@@ -50,6 +50,7 @@ type SystemConfProvider interface {
 
 	GetCheckFrequency() time.Duration
 	GetDefaultRunEvery() int
+	GetAlertCheckDistribution() string
 	GetUnknownThreshold() int
 	GetMinGroupSize() int
 
@@ -78,6 +79,7 @@ type SystemConfProvider interface {
 	GetGraphiteContext() graphite.Context
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts
+	GetAzureMonitorContext() expr.AzureMonitorClients
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string

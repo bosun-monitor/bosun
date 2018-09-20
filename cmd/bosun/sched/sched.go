@@ -72,7 +72,7 @@ type Schedule struct {
 	checksRunning sync.WaitGroup
 }
 
-func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, skipLast, quiet bool) error {
+func (s *Schedule) Init(name string, systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, skipLast, quiet bool) error {
 	//initialize all variables and collections so they are ready to use.
 	//this will be called once at app start, and also every time the rule
 	//page runs, so be careful not to spawn long running processes that can't
@@ -86,7 +86,7 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 	s.pendingUnknowns = make(map[notificationGroupKey][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
 	s.LastCheck = utcNow()
-	s.ctx = &checkContext{utcNow(), cache.New(0)}
+	s.ctx = &checkContext{utcNow(), cache.New(name, 0)}
 	s.DataAccess = dataAccess
 	// Initialize the context and waitgroup used to gracefully shutdown bosun as well as reload
 	s.runnerContext, s.cancelChecks = context.WithCancel(context.Background())
@@ -494,7 +494,7 @@ var DefaultSched = &Schedule{}
 
 // Load loads a configuration into the default schedule.
 func Load(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, skipLast, quiet bool) error {
-	return DefaultSched.Init(systemConf, ruleConf, dataAccess, annotate, skipLast, quiet)
+	return DefaultSched.Init("alerts", systemConf, ruleConf, dataAccess, annotate, skipLast, quiet)
 }
 
 // Run runs the default schedule.
@@ -734,4 +734,12 @@ func (s *Schedule) GetCheckFrequency(alertName string) (time.Duration, error) {
 	}
 	return time.Duration(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency()), nil
 
+}
+
+func (s *Schedule) GetSilence(T miniprofiler.Timer, ak models.AlertKey) *models.Silence {
+	var silenced SilenceTester
+	T.Step("Silenced", func(miniprofiler.Timer) {
+		silenced = s.Silenced()
+	})
+	return silenced(ak)
 }

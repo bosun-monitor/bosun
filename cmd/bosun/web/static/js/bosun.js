@@ -588,10 +588,30 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
         $scope.date = search.date || '';
         $scope.time = search.time || '';
         $scope.expr = current;
+        $scope.aceMode = 'bosun';
+        $scope.aceTheme = 'chrome';
+        $scope.aceLoaded = function (editor) {
+            $scope.editor = editor;
+            editor.focus();
+            editor.getSession().setUseWrapMode(true);
+            editor.getSession().setMode({
+                path: 'ace/mode/' + $scope.aceMode,
+                v: Date.now()
+            });
+            editor.$blockScrolling = Infinity;
+        };
+        $scope.$on('$viewContentLoaded', function () {
+            setTimeout(function () {
+                var editor = $scope.editor;
+                var row = editor.session.getLength() - 1;
+                var column = editor.session.getLine(row).length;
+                editor.selection.moveTo(row, column);
+            });
+        });
         $scope.tab = search.tab || 'results';
-        $scope.animate();
         if ($scope.expr) {
             $scope.running = $scope.expr;
+            $scope.animate();
             $http.post('/api/expr?' +
                 'date=' + encodeURIComponent($scope.date) +
                 '&time=' + encodeURIComponent($scope.time), current)
@@ -668,6 +688,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
         $scope.keydown = function ($event) {
             if ($event.shiftKey && $event.keyCode == 13) {
                 $scope.set();
+                $event.preventDefault();
             }
         };
     }]);
@@ -1048,7 +1069,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 set.Results = data.Sets[0].Results;
             })
                 .error(function (error) {
-                $scope.error = error;
+                $scope.errors = [error];
             })["finally"](function () {
                 $scope.stop();
                 delete (set.show);
@@ -1179,7 +1200,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             });
         };
         $scope.test = function () {
-            $scope.error = '';
+            $scope.errors = [];
             $scope.running = true;
             $scope.warning = [];
             $location.search('fromDate', $scope.fromDate || null);
@@ -1233,7 +1254,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 procResults(data);
             })
                 .error(function (error) {
-                $scope.error = error;
+                $scope.errors = [error];
             })["finally"](function () {
                 $scope.running = false;
                 $scope.stop();
@@ -1311,7 +1332,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             });
             $scope.actionNotifications = aNots;
             $scope.data = JSON.stringify(data.Data, null, '  ');
-            $scope.error = data.Errors;
+            $scope.errors = data.Errors;
             $scope.warning = data.Warnings;
         }
         $scope.downloadConfig = function () {
@@ -1448,7 +1469,7 @@ bosunApp.directive('tsComputations', function () {
     };
 });
 function fmtDuration(v) {
-    var diff = moment.duration(v, 'milliseconds');
+    var diff = (moment.duration(v, 'milliseconds'));
     var f;
     if (Math.abs(v) < 60000) {
         return diff.format('ss[s]');
@@ -1467,7 +1488,7 @@ function fmtTime(v) {
     else {
         inn = 'in ';
     }
-    return m.format() + ' UTC (' + inn + fmtDuration(msdiff) + ago + ')';
+    return m.format() + ' UTC (' + inn + fmtDuration(Math.abs(msdiff)) + ago + ')';
 }
 function parseDuration(v) {
     var pattern = /(\d+)(d|y|n|h|m|s)(-ago)?/;
@@ -2811,7 +2832,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 $scope.canAuto[metric] = true;
                 return;
             }
-            $http.get('/api/tagk/' + metric)
+            $http.get('/api/tagk/' + encodeURIComponent(metric))
                 .success(function (data) {
                 var q = $scope.query_p[index];
                 var tags = new TagSet;
@@ -2867,7 +2888,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 .error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
-            $http.get('/api/metadata/metrics?metric=' + metric)
+            $http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric))
                 .success(function (data) {
                 var canAuto = data && data.Rate;
                 $scope.canAuto[metric] = canAuto;
@@ -2887,7 +2908,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
         function GetTagVs(k, index) {
-            $http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
+            $http.get('/api/tagv/' + encodeURIComponent(k) + '/' + $scope.query_p[index].metric)
                 .success(function (data) {
                 data.sort();
                 $scope.tagvs[index][k] = data;
@@ -3271,7 +3292,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             $scope.fsdata = tmp;
         });
     }]);
-bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', '$sce', function ($scope, $http, $location, $route, $sce) {
+bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', '$sce', 'linkService', function ($scope, $http, $location, $route, $sce, linkService) {
         var search = $location.search();
         var id = search.id;
         if (!id) {
@@ -3285,6 +3306,9 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
         $scope.action = function (type) {
             var key = encodeURIComponent($scope.state.AlertKey);
             return '/action?type=' + type + '&key=' + key;
+        };
+        $scope.getEditSilenceLink = function () {
+            return linkService.GetEditSilenceLink($scope.silence, $scope.silenceId);
         };
         $scope.loadTimelinePanel = function (v, i) {
             if (v.doneLoading && !v.error) {
@@ -3318,6 +3342,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
                 $scope.loadTimelinePanel(v, i);
             }
         };
+        $scope.time = function (v) {
+            var m = moment(v).utc();
+            return m.format();
+        };
         $http.get('/api/incidents/events?id=' + id)
             .success(function (data) {
             $scope.incident = data;
@@ -3326,6 +3354,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             $scope.body = $sce.trustAsHtml(data.Body);
             $scope.events = data.Events.reverse();
             $scope.configLink = configUrl($scope.incident.AlertKey, moment.unix($scope.incident.LastAbnormalTime));
+            $scope.isActive = data.IsActive;
+            $scope.silence = data.Silence;
+            $scope.silenceId = data.SilenceId;
+            $scope.editSilenceLink = linkService.GetEditSilenceLink($scope.silence, $scope.silenceId);
             for (var i = 0; i < $scope.events.length; i++) {
                 var e = $scope.events[i];
                 if (e.Status != 'normal' && e.Status != 'unknown' && $scope.body) {
@@ -3357,6 +3389,29 @@ bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function ($scope, $
             $scope.status = 'Unable to fetch hosts: ' + error;
         });
     }]);
+/// <reference path="0-bosun.ts" />
+var LinkService = (function () {
+    function LinkService() {
+    }
+    LinkService.prototype.GetEditSilenceLink = function (silence, silenceId) {
+        if (!(silence && silenceId)) {
+            return "";
+        }
+        var forget = silence.Forget ? '&forget' : '';
+        return "/silence?start=" + this.time(silence.Start) +
+            "&end=" + this.time(silence.End) +
+            "&alert=" + silence.Alert +
+            "&tags=" + encodeURIComponent(silence.TagString) +
+            forget +
+            "&edit=" + silenceId;
+    };
+    LinkService.prototype.time = function (v) {
+        var m = moment(v).utc();
+        return m.format();
+    };
+    return LinkService;
+}());
+bosunApp.service("linkService", LinkService);
 var Tag = (function () {
     function Tag() {
     }
@@ -3444,7 +3499,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         };
     }]);
 /// <reference path="0-bosun.ts" />
-bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', 'linkService', function ($scope, $http, $location, $route, linkService) {
         var search = $location.search();
         $scope.start = search.start;
         $scope.end = search.end;
@@ -3577,6 +3632,9 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $scope.time = function (v) {
             var m = moment(v).utc();
             return m.format();
+        };
+        $scope.getEditSilenceLink = function (silence, silenceId) {
+            return linkService.GetEditSilenceLink(silence, silenceId);
         };
     }]);
 bosunApp.directive('tsAckGroup', ['$location', '$timeout', function ($location, $timeout) {

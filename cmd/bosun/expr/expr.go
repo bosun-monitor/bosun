@@ -16,7 +16,9 @@ import (
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
+	"bosun.org/collect"
 	"bosun.org/graphite"
+	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -32,6 +34,8 @@ type State struct {
 	autods             int
 	vValue             float64
 	supplicant         interface{}
+
+	Timer miniprofiler.Timer
 
 	*Backends
 
@@ -51,6 +55,7 @@ type Backends struct {
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.HTTPConfig
 	ElasticConfig   ElasticConfig
+	AzureMonitor    AzureMonitorClients
 }
 
 type BosunProviders struct {
@@ -106,19 +111,20 @@ func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprof
 		Backends:       backends,
 		BosunProviders: providers,
 		supplicant:     supplicant,
+		Timer:          T,
 	}
-	return e.ExecuteState(s, T)
+	return e.ExecuteState(s)
 }
 
-func (e *Expr) ExecuteState(s *State, T miniprofiler.Timer) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) ExecuteState(s *State) (r *Results, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
-	if T == nil {
-		T = new(miniprofiler.Profile)
+	if s.Timer == nil {
+		s.Timer = new(miniprofiler.Profile)
 	} else {
 		s.enableComputations = true
 	}
-	T.Step("expr execute", func(T miniprofiler.Timer) {
-		r = s.walk(e.Tree.Root, T)
+	s.Timer.Step("expr execute", func(T miniprofiler.Timer) {
+		r = s.walk(e.Tree.Root)
 	})
 	queries = s.tsdbQueries
 	return
@@ -231,6 +237,9 @@ type Table struct {
 func (t Table) Type() models.FuncType { return models.TypeTable }
 func (t Table) Value() interface{}    { return t }
 
+func (a AzureResources) Type() models.FuncType { return models.TypeAzureResourceList }
+func (a AzureResources) Value() interface{}    { return a }
+
 type SortablePoint struct {
 	T time.Time
 	V float64
@@ -283,7 +292,7 @@ func (a *Results) Equal(b *Results) (bool, error) {
 	if a.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
 		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
 	}
-	if a.NaNValue != a.NaNValue {
+	if a.NaNValue != b.NaNValue {
 		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", a.NaNValue, b.NaNValue)
 	}
 	sortedA := ResultSliceByGroup(a.Results)
@@ -462,28 +471,28 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 	return us
 }
 
-func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
+func (e *State) walk(node parse.Node) *Results {
 	var res *Results
 	switch node := node.(type) {
 	case *parse.NumberNode:
 		res = wrap(node.Float64)
 	case *parse.BinaryNode:
-		res = e.walkBinary(node, T)
+		res = e.walkBinary(node)
 	case *parse.UnaryNode:
-		res = e.walkUnary(node, T)
+		res = e.walkUnary(node)
 	case *parse.FuncNode:
-		res = e.walkFunc(node, T)
+		res = e.walkFunc(node)
 	case *parse.ExprNode:
-		res = e.walkExpr(node, T)
+		res = e.walkExpr(node)
 	case *parse.PrefixNode:
-		res = e.walkPrefix(node, T)
+		res = e.walkPrefix(node)
 	default:
 		panic(fmt.Errorf("expr: unknown node type"))
 	}
 	return res
 }
 
-func (e *State) walkExpr(node *parse.ExprNode, T miniprofiler.Timer) *Results {
+func (e *State) walkExpr(node *parse.ExprNode) *Results {
 	return &Results{
 		Results: ResultSlice{
 			&Result{
@@ -493,14 +502,14 @@ func (e *State) walkExpr(node *parse.ExprNode, T miniprofiler.Timer) *Results {
 	}
 }
 
-func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
-	ar := e.walk(node.Args[0], T)
-	br := e.walk(node.Args[1], T)
+func (e *State) walkBinary(node *parse.BinaryNode) *Results {
+	ar := e.walk(node.Args[0])
+	br := e.walk(node.Args[1])
 	res := Results{
 		IgnoreUnjoined:      ar.IgnoreUnjoined || br.IgnoreUnjoined,
 		IgnoreOtherUnjoined: ar.IgnoreOtherUnjoined || br.IgnoreOtherUnjoined,
 	}
-	T.Step("walkBinary: "+node.OpStr, func(T miniprofiler.Timer) {
+	e.Timer.Step("walkBinary: "+node.OpStr, func(T miniprofiler.Timer) {
 		u := e.union(ar, br, node.String())
 		for _, v := range u {
 			var value Value
@@ -659,9 +668,9 @@ func operate(op string, a, b float64) (r float64) {
 	return
 }
 
-func (e *State) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) *Results {
-	a := e.walk(node.Arg, T)
-	T.Step("walkUnary: "+node.OpStr, func(T miniprofiler.Timer) {
+func (e *State) walkUnary(node *parse.UnaryNode) *Results {
+	a := e.walk(node.Arg)
+	e.Timer.Step("walkUnary: "+node.OpStr, func(T miniprofiler.Timer) {
 		for _, r := range a.Results {
 			if an, aok := r.Value.(Scalar); aok && math.IsNaN(float64(an)) {
 				r.Value = Scalar(math.NaN())
@@ -702,7 +711,7 @@ func uoperate(op string, a float64) (r float64) {
 	return
 }
 
-func (e *State) walkPrefix(node *parse.PrefixNode, T miniprofiler.Timer) *Results {
+func (e *State) walkPrefix(node *parse.PrefixNode) *Results {
 	key := strings.TrimPrefix(node.Text, "[")
 	key = strings.TrimSuffix(key, "]")
 	key, _ = strconv.Unquote(key)
@@ -712,15 +721,15 @@ func (e *State) walkPrefix(node *parse.PrefixNode, T miniprofiler.Timer) *Result
 			node.Prefix = key
 			node.F.PrefixKey = true
 		}
-		return e.walk(node, T)
+		return e.walk(node)
 	default:
 		panic(fmt.Errorf("expr: prefix can only be append to a FuncNode"))
 	}
 }
 
-func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
+func (e *State) walkFunc(node *parse.FuncNode) *Results {
 	var res *Results
-	T.Step("func: "+node.Name, func(T miniprofiler.Timer) {
+	e.Timer.Step("func: "+node.Name, func(T miniprofiler.Timer) {
 		var in []reflect.Value
 		for i, a := range node.Args {
 			var v interface{}
@@ -730,15 +739,15 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			case *parse.NumberNode:
 				v = t.Float64
 			case *parse.FuncNode:
-				v = extract(e.walkFunc(t, T))
+				v = extract(e.walkFunc(t))
 			case *parse.UnaryNode:
-				v = extract(e.walkUnary(t, T))
+				v = extract(e.walkUnary(t))
 			case *parse.BinaryNode:
-				v = extract(e.walkBinary(t, T))
+				v = extract(e.walkBinary(t))
 			case *parse.ExprNode:
-				v = e.walkExpr(t, T)
+				v = e.walkExpr(t)
 			case *parse.PrefixNode:
-				v = e.walkPrefix(t, T)
+				v = extract(e.walkPrefix(t))
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
@@ -763,12 +772,12 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 
 		if node.F.PrefixEnabled {
 			if !node.F.PrefixKey {
-				fr = f.Call(append([]reflect.Value{reflect.ValueOf("default"), reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+				fr = f.Call(append([]reflect.Value{reflect.ValueOf("default"), reflect.ValueOf(e)}, in...))
 			} else {
-				fr = f.Call(append([]reflect.Value{reflect.ValueOf(node.Prefix), reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+				fr = f.Call(append([]reflect.Value{reflect.ValueOf(node.Prefix), reflect.ValueOf(e)}, in...))
 			}
 		} else {
-			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e)}, in...))
 		}
 
 		res = fr[0].Interface().(*Results)
@@ -795,6 +804,9 @@ func extract(res *Results) interface{} {
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESQuery {
 		return res.Results[0].Value.Value()
 	}
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeAzureResourceList {
+		return res.Results[0].Value.Value()
+	}
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESIndexer {
 		return res.Results[0].Value.Value()
 	}
@@ -805,4 +817,25 @@ func extract(res *Results) interface{} {
 		return res.Results[0].Value.Value()
 	}
 	return res
+}
+
+// collectCache is a helper function for collecting metrics on
+// the expression cache
+func collectCacheHit(c *cache.Cache, qType string, hit bool) {
+	if c == nil {
+		return // if no cache
+	}
+	tags := opentsdb.TagSet{"query_type": qType, "name": c.Name}
+	if hit {
+		collect.Add("expr_cache.hit_by_type", tags, 1)
+		return
+	}
+	collect.Add("expr_cache.miss_by_type", tags, 1)
+}
+
+func init() {
+	metadata.AddMetricMeta("bosun.expr_cache.hit_by_type", metadata.Counter, metadata.Request,
+		"The number of hits to Bosun's expression query cache that resulted in a cache hit.")
+	metadata.AddMetricMeta("bosun.expr_cache.miss_by_type", metadata.Counter, metadata.Request,
+		"The number of hits to Bosun's expression query cache that resulted in a cache miss.")
 }
