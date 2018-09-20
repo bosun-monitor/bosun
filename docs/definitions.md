@@ -196,6 +196,8 @@ Variables and function available to the unknown template:
 * Group: list of names of alerts
 * Name: group name
 * Time: [time](http://golang.org/pkg/time/#Time) this group triggered unknown
+* States: unknown incident states (only use when grouping unknown disabled using [unknownMinGroupSize](http://bosun.org/definitions#unknownmingroupsize))
+* IncidentUnknownLink: creates a link to Bosun’s incident view same as `.Incident` (require incident id)
 
 Example:
 
@@ -212,6 +214,21 @@ template ut {
 }
 
 unknownTemplate = ut
+```
+
+```
+template testunknownBody {
+    subject = {{.Name}}{{ if .States.Tags }}.{{ replace .States.Tags "," "." -1 }}{{else}}{{end}}
+    body = `
+    <p>Time: {{.Time}}
+    <p>Name: {{.Name}}
+    <p>AlertKey: {{.States.AlertKey}}
+    <p>Incident Id: {{.States.Id}}
+    <p>Link: {{.IncidentUnknownLink .States.Id}}
+    `
+}
+
+unknownBody = testunknownBody
 ```
 
 In general it is better to stick with the system default by not defining an unknown template. The system default is:
