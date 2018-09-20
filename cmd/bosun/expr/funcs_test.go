@@ -264,192 +264,239 @@ func TestAggr(t *testing.T) {
 	seriesB := `series("foo=baz", 0, 3, 100, 4)`
 	seriesC := `series("foo=bat", 0, 5, 100, 6)`
 
-	// test median aggregator
-	err := testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p.50\")", seriesA, seriesB, seriesC),
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: Series{
-						time.Unix(0, 0):   3,
-						time.Unix(100, 0): 4,
+	seriesGroupsA := `series("color=blue,type=apple,name=bob", 0, 1)`
+	seriesGroupsB := `series("color=blue,type=apple", 1, 3)`
+	seriesGroupsC := `series("color=green,type=apple", 0, 5)`
+
+	seriesMathA := `series("color=blue,type=apple,name=bob", 0, 1)`
+	seriesMathB := `series("color=blue,type=apple", 1, 3)`
+	seriesMathC := `series("color=green,type=apple", 0, 5)`
+
+	aggrTestCases := []struct {
+		name      string
+		expr      string
+		want      Results
+		shouldErr bool
+	}{
+		{
+			name: "median aggregator",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p.50\")", seriesA, seriesB, seriesC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0):   3,
+							time.Unix(100, 0): 4,
+						},
+						Group: opentsdb.TagSet{},
 					},
-					Group: opentsdb.TagSet{},
 				},
 			},
+			shouldErr: false,
 		},
-		false,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// test average aggregator
-	err = testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"avg\")", seriesA, seriesB, seriesC),
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: Series{
-						time.Unix(0, 0):   3,
-						time.Unix(100, 0): 4,
+		{
+			name: "average aggregator",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"avg\")", seriesA, seriesB, seriesC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0):   3,
+							time.Unix(100, 0): 4,
+						},
+						Group: opentsdb.TagSet{},
 					},
-					Group: opentsdb.TagSet{},
 				},
 			},
+			shouldErr: false,
 		},
-		false,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// test min aggregator
-	err = testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"min\")", seriesA, seriesB, seriesC),
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: Series{
-						time.Unix(0, 0):   1,
-						time.Unix(100, 0): 2,
+		{
+			name: "min aggregator",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"min\")", seriesA, seriesB, seriesC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0):   1,
+							time.Unix(100, 0): 2,
+						},
+						Group: opentsdb.TagSet{},
 					},
-					Group: opentsdb.TagSet{},
 				},
 			},
+			shouldErr: false,
 		},
-		false,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// test max aggregator
-	err = testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"max\")", seriesA, seriesB, seriesC),
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: Series{
-						time.Unix(0, 0):   5,
-						time.Unix(100, 0): 6,
+		{
+			name: "max aggregator",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"max\")", seriesA, seriesB, seriesC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0):   5,
+							time.Unix(100, 0): 6,
+						},
+						Group: opentsdb.TagSet{},
 					},
-					Group: opentsdb.TagSet{},
 				},
 			},
+			shouldErr: false,
 		},
-		false,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// check that min == p0
-	err = testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p0\")", seriesA, seriesB, seriesC),
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: Series{
-						time.Unix(0, 0):   1,
-						time.Unix(100, 0): 2,
+		{
+			name: "check p0 == min",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p0\")", seriesA, seriesB, seriesC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0):   1,
+							time.Unix(100, 0): 2,
+						},
+						Group: opentsdb.TagSet{},
 					},
-					Group: opentsdb.TagSet{},
 				},
 			},
+			shouldErr: false,
 		},
-		false,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// check that sum aggregator sums up the aligned points in the series
-	err = testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"sum\")", seriesA, seriesB, seriesC),
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: Series{
-						time.Unix(0, 0):   9,
-						time.Unix(100, 0): 12,
+		{
+			name: "check that sum aggregator sums up the aligned points in the series",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"sum\")", seriesA, seriesB, seriesC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0):   9,
+							time.Unix(100, 0): 12,
+						},
+						Group: opentsdb.TagSet{},
 					},
-					Group: opentsdb.TagSet{},
 				},
 			},
+			shouldErr: false,
 		},
-		false,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// check that unknown aggregator errors out
-	err = testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
-		Results{},
-		false,
-	})
-	if err == nil {
-		t.Errorf("expected unknown aggregator to return error")
-	}
-}
-
-func TestAggrWithGroups(t *testing.T) {
-	seriesA := `series("color=blue,type=apple,name=bob", 0, 1)`
-	seriesB := `series("color=blue,type=apple", 1, 3)`
-	seriesC := `series("color=green,type=apple", 0, 5)`
-
-	// test aggregator with single group
-	err := testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"color\", \"p.50\")", seriesA, seriesB, seriesC),
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: Series{
-						time.Unix(0, 0): 1,
-						time.Unix(1, 0): 3,
+		{
+			name:      "check that unknown aggregator errors out",
+			expr:      fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
+			want:      Results{},
+			shouldErr: true,
+		},
+		{
+			name: "single group",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"color\", \"p.50\")", seriesGroupsA, seriesGroupsB, seriesGroupsC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 1,
+							time.Unix(1, 0): 3,
+						},
+						Group: opentsdb.TagSet{"color": "blue"},
 					},
-					Group: opentsdb.TagSet{"color": "blue"},
-				},
-				&Result{
-					Value: Series{
-						time.Unix(0, 0): 5,
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 5,
+						},
+						Group: opentsdb.TagSet{"color": "green"},
 					},
-					Group: opentsdb.TagSet{"color": "green"},
 				},
 			},
+			shouldErr: false,
 		},
-		false,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// test aggregator with multiple groups
-	err = testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"color,type\", \"p.50\")", seriesA, seriesB, seriesC),
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: Series{
-						time.Unix(0, 0): 1,
-						time.Unix(1, 0): 3,
+		{
+			name: "multiple groups",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"color,type\", \"p.50\")", seriesGroupsA, seriesGroupsB, seriesGroupsC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 1,
+							time.Unix(1, 0): 3,
+						},
+						Group: opentsdb.TagSet{"color": "blue", "type": "apple"},
 					},
-					Group: opentsdb.TagSet{"color": "blue", "type": "apple"},
-				},
-				&Result{
-					Value: Series{
-						time.Unix(0, 0): 5,
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 5,
+						},
+						Group: opentsdb.TagSet{"color": "green", "type": "apple"},
 					},
-					Group: opentsdb.TagSet{"color": "green", "type": "apple"},
 				},
 			},
+			shouldErr: false,
 		},
-		false,
-	})
-	if err != nil {
-		t.Error(err)
+		{
+			name: "aggregator with no groups and math operation",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p.50\") * 2", seriesMathA, seriesMathB, seriesMathC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 10,
+							time.Unix(1, 0): 6,
+						},
+						Group: opentsdb.TagSet{},
+					},
+				},
+			},
+			shouldErr: false,
+		},
+		{
+			name: "aggregator with one group and math operation",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"color\", \"p.50\") * 2", seriesMathA, seriesMathB, seriesMathC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 2,
+							time.Unix(1, 0): 6,
+						},
+						Group: opentsdb.TagSet{"color": "blue"},
+					},
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 10,
+						},
+						Group: opentsdb.TagSet{"color": "green"},
+					},
+				},
+			},
+			shouldErr: false,
+		},
+		{
+			name: "aggregator with multiple groups and math operation",
+			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"color,type\", \"p.50\") * 2", seriesMathA, seriesMathB, seriesMathC),
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 2,
+							time.Unix(1, 0): 6,
+						},
+						Group: opentsdb.TagSet{"color": "blue", "type": "apple"},
+					},
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 10,
+						},
+						Group: opentsdb.TagSet{"color": "green", "type": "apple"},
+					},
+				},
+			},
+			shouldErr: false,
+		},
+	}
+
+	for _, tc := range aggrTestCases {
+		err := testExpression(exprInOut{
+			expr:           tc.expr,
+			out:            tc.want,
+			shouldParseErr: false,
+		})
+		if !tc.shouldErr && err != nil {
+			t.Errorf("Case %q: Got error: %v", tc.name, err)
+		} else if tc.shouldErr && err == nil {
+			t.Errorf("Case %q: Expected parse error, but got nil", tc.name)
+		}
 	}
 }
 
