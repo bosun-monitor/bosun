@@ -33,7 +33,7 @@ bosunApp.directive('tsComputations', () => {
 
 
 function fmtDuration(v: any) {
-    var diff = moment.duration(v, 'milliseconds');
+    var diff = (moment.duration(v, 'milliseconds'));
     var f;
     if (Math.abs(v) < 60000) {
         return diff.format('ss[s]');
@@ -53,7 +53,7 @@ function fmtTime(v: any) {
     } else {
         inn = 'in ';
     }
-    return m.format() + ' UTC (' + inn + fmtDuration(msdiff) + ago + ')';
+    return m.format() + ' UTC (' + inn + fmtDuration(Math.abs(msdiff)) + ago + ')';
 }
 
 function parseDuration(v: string) {

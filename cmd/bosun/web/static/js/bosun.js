@@ -1469,7 +1469,7 @@ bosunApp.directive('tsComputations', function () {
     };
 });
 function fmtDuration(v) {
-    var diff = moment.duration(v, 'milliseconds');
+    var diff = (moment.duration(v, 'milliseconds'));
     var f;
     if (Math.abs(v) < 60000) {
         return diff.format('ss[s]');
@@ -1488,7 +1488,7 @@ function fmtTime(v) {
     else {
         inn = 'in ';
     }
-    return m.format() + ' UTC (' + inn + fmtDuration(msdiff) + ago + ')';
+    return m.format() + ' UTC (' + inn + fmtDuration(Math.abs(msdiff)) + ago + ')';
 }
 function parseDuration(v) {
     var pattern = /(\d+)(d|y|n|h|m|s)(-ago)?/;
