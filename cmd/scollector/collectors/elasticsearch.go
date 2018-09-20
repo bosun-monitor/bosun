@@ -47,32 +47,47 @@ func init() {
 			if instance.Port == 0 {
 				instance.Port = 9200
 			}
-			url := fmt.Sprintf("http://%v:%v", instance.Host, instance.Port)
-			instanceName := fmt.Sprintf("%v_%v", instance.Host, instance.Port)
+			if instance.Scheme == "" {
+				instance.Scheme = "http"
+			}
+			if instance.Name == "" {
+				instance.Name = fmt.Sprintf("%v_%v", instance.Host, instance.Port)
+			}
+			if instance.Disable {
+				slog.Infof("Elastic instance %v is disabled. Skipping.", instance.Name)
+				continue
+			}
+			var creds string
+			if instance.User != "" || instance.Password != "" {
+				creds = fmt.Sprintf("%v:%v@", instance.User, instance.Password)
+			} else {
+				creds = ""
+			}
+			url := fmt.Sprintf("%v://%v%v:%v", instance.Scheme, creds, instance.Host, instance.Port)
 			if instance.IndexInterval != "" {
 				indexInterval, err = time.ParseDuration(instance.IndexInterval)
 				if err != nil {
 					panic(fmt.Errorf("Failed to parse IndexInterval: %v, err: %v", instance.IndexInterval, err))
 				}
-				slog.Infof("Using IndexInterval: %v for %v", indexInterval, instanceName)
+				slog.Infof("Using IndexInterval: %v for %v", indexInterval, instance.Name)
 			} else {
-				slog.Infof("Using default IndexInterval: %v for %v", indexInterval, instanceName)
+				slog.Infof("Using default IndexInterval: %v for %v", indexInterval, instance.Name)
 			}
 			if instance.ClusterInterval != "" {
 				clusterInterval, err = time.ParseDuration(instance.ClusterInterval)
 				if err != nil {
 					panic(fmt.Errorf("Failed to parse ClusterInterval: %v, err: %v", instance.ClusterInterval, err))
 				}
-				slog.Infof("Using ClusterInterval: %v for %v", clusterInterval, instanceName)
+				slog.Infof("Using ClusterInterval: %v for %v", clusterInterval, instance.Name)
 			} else {
-				slog.Infof("Using default ClusterInterval: %v for %v", clusterInterval, instanceName)
+				slog.Infof("Using default ClusterInterval: %v for %v", clusterInterval, instance.Name)
 			}
 			// for legacy reasons, keep localhost:9200 named elasticsearch / elasticsearch-indices
 			var name string
-			if instanceName == "localhost_9200" {
+			if instance.Name == "localhost_9200" {
 				name = "elasticsearch"
 			} else {
-				name = fmt.Sprintf("elasticsearch-%v", instanceName)
+				name = fmt.Sprintf("elasticsearch-%v", instance.Name)
 			}
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
@@ -83,10 +98,10 @@ func init() {
 				Enable:   enableURL(url),
 			})
 			// keep legacy collector name if localhost_9200
-			if instanceName == "localhost_9200" {
+			if instance.Name == "localhost_9200" {
 				name = "elasticsearch-indices"
 			} else {
-				name = fmt.Sprintf("elasticsearch-indices-%v", instanceName)
+				name = fmt.Sprintf("elasticsearch-indices-%v", instance.Name)
 			}
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
@@ -309,14 +324,17 @@ func esSkipIndex(index string) bool {
 }
 
 func esReq(instance conf.Elastic, path, query string, v interface{}) error {
+	up := url.UserPassword(instance.User, instance.Password)
 	u := &url.URL{
-		Scheme:   "http",
+		Scheme:   instance.Scheme,
+		User:     up,
 		Host:     fmt.Sprintf("%v:%v", instance.Host, instance.Port),
 		Path:     path,
 		RawQuery: query,
 	}
 	resp, err := http.Get(u.String())
 	if err != nil {
+		slog.Errorf("Error querying Elasticsearch: %v", err)
 		return nil
 	}
 	defer resp.Body.Close()

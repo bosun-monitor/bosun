@@ -275,4 +275,9 @@ type Elastic struct {
 	Port            uint16 // default is 9200
 	ClusterInterval string // default is DefaultFreq
 	IndexInterval   string // default is 15 mins
+	User            string // default is empty
+	Password        string // default is empty
+	Disable         bool   // default is false.
+	Name            string // default is host_port
+	Scheme          string // default is http
 }
