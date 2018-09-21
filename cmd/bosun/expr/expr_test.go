@@ -122,6 +122,19 @@ var queryTime = time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
 
 func TestQueryExpr(t *testing.T) {
 	queries := map[string]opentsdb.ResponseSet{
+		`q("avg:m{a=*}", "9.467277e+08", "9.46728e+08")`: {
+			{
+				Metric: "m",
+				Tags:   opentsdb.TagSet{"a": "b"},
+				DPS:    map[string]opentsdb.Point{"0": 0, "1": 3},
+			},
+			{
+				Metric: "m",
+				Tags:   opentsdb.TagSet{"a": "c"},
+				DPS:    map[string]opentsdb.Point{"5": 1, "7": 4},
+			},
+		},
+
 		`q("avg:m{a=*}", "9.467241e+08", "9.467244e+08")`: {
 			{
 				Metric: "m",
@@ -151,7 +164,7 @@ func TestQueryExpr(t *testing.T) {
 	tests := map[string]map[string]Value{
 		`window("avg:m{a=*}", "5m", "1h", 2, "max")`: {
 			"a=b": Series{
-				d: 2,
+				d:                      2,
 				d.Add(time.Second * 2): 6,
 			},
 			"a=c": Series{
@@ -163,7 +176,7 @@ func TestQueryExpr(t *testing.T) {
 		},
 		`window("avg:m{a=*}", "5m", "1h", 2, "avg")`: {
 			"a=b": Series{
-				d: 1.5,
+				d:                      1.5,
 				d.Add(time.Second * 2): 5,
 			},
 			"a=c": Series{
@@ -171,6 +184,66 @@ func TestQueryExpr(t *testing.T) {
 			},
 			"a=d": Series{
 				d.Add(time.Second * 8): 8.5,
+			},
+		},
+		`over("avg:m{a=*}", "5m", "1h", 3)`: {
+			"a=b,shift=0s": Series{
+				d:                      0,
+				d.Add(time.Second * 1): 3,
+			},
+			"a=b,shift=1h0m0s": Series{
+				d.Add(time.Hour):                 1,
+				d.Add(time.Hour + time.Second*1): 2,
+			},
+			"a=b,shift=2h0m0s": Series{
+				d.Add(time.Hour*2 + time.Second*2): 6,
+				d.Add(time.Hour*2 + time.Second*3): 4,
+			},
+			"a=c,shift=0s": Series{
+				d.Add(time.Second * 5): 1,
+				d.Add(time.Second * 7): 4,
+			},
+			"a=c,shift=1h0m0s": Series{
+				d.Add(time.Hour + time.Second*3): 7,
+				d.Add(time.Hour + time.Second*1): 8,
+			},
+			"a=d,shift=2h0m0s": Series{
+				d.Add(time.Hour*2 + time.Second*8): 8,
+				d.Add(time.Hour*2 + time.Second*9): 9,
+			},
+		},
+		`band("avg:m{a=*}", "5m", "1h", 2)`: {
+			"a=b": Series{
+				d:                      1,
+				d.Add(time.Second * 1): 2,
+				d.Add(time.Second * 2): 6,
+				d.Add(time.Second * 3): 4,
+			},
+			"a=c": Series{
+				d.Add(time.Second * 3): 7,
+				d.Add(time.Second * 1): 8,
+			},
+			"a=d": Series{
+				d.Add(time.Second * 8): 8,
+				d.Add(time.Second * 9): 9,
+			},
+		},
+		`shiftBand("avg:m{a=*}", "5m", "1h", 2)`: {
+			"a=b,shift=1h0m0s": Series{
+				d.Add(time.Hour):                 1,
+				d.Add(time.Hour + time.Second*1): 2,
+			},
+			"a=b,shift=2h0m0s": Series{
+				d.Add(time.Hour*2 + time.Second*2): 6,
+				d.Add(time.Hour*2 + time.Second*3): 4,
+			},
+			"a=c,shift=1h0m0s": Series{
+				d.Add(time.Hour + time.Second*3): 7,
+				d.Add(time.Hour + time.Second*1): 8,
+			},
+			"a=d,shift=2h0m0s": Series{
+				d.Add(time.Hour*2 + time.Second*8): 8,
+				d.Add(time.Hour*2 + time.Second*9): 9,
 			},
 		},
 		`abs(-1)`: {"": Number(1)},
