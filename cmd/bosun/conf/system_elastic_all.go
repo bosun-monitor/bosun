@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"bosun.org/cmd/bosun/expr"
-	"github.com/bosun-monitor/bosun/slog"
+	"bosun.org/slog"
 )
 
 // ParseESConfig return expr.ElasticHost
