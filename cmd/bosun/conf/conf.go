@@ -449,6 +449,10 @@ type Alert struct {
 	AlertTemplateKeys map[string]*template.Template `json:"-"`
 }
 
+func (a *Alert) GetName() string {
+	return a.Name
+}
+
 // A Locator stores the information about the location of the rule in the underlying
 // rule store
 type Locator interface{}

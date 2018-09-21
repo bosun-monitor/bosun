@@ -15,10 +15,11 @@ const requestErrFmt = "graphite RequestError (%s): %s"
 
 // Request holds query objects. Currently only absolute times are supported.
 type Request struct {
-	Start   *time.Time
-	End     *time.Time
-	Targets []string
-	URL     *url.URL
+	Start    *time.Time
+	End      *time.Time
+	Targets  []string
+	URL      *url.URL
+	DataProv interface{}
 }
 
 type Response []Series
@@ -124,6 +125,7 @@ var DefaultClient = &http.Client{
 // Context is the interface for querying a Graphite server.
 type Context interface {
 	Query(*Request) (Response, error)
+	SubstitueHeaders(*Request)
 }
 
 // Host is a simple Graphite Context with no additional features.
@@ -134,6 +136,13 @@ func (h Host) Query(r *Request) (Response, error) {
 	return r.Query(string(h), nil)
 }
 
+func (h Host) SubstitueHeaders(r *Request) {
+}
+
+type SubstitutionData interface {
+	GetName() string
+}
+
 type HostHeader struct {
 	Host   string
 	Header http.Header
@@ -141,4 +150,16 @@ type HostHeader struct {
 
 func (h HostHeader) Query(r *Request) (Response, error) {
 	return r.Query(h.Host, h.Header)
+}
+
+func (h HostHeader) SubstitueHeaders(r *Request) {
+	dataProvider, implemented := r.DataProv.(SubstitutionData)
+	if implemented && h.Header != nil {
+		ownerName := dataProvider.GetName()
+		for _, values := range h.Header {
+			for idx, hvalue := range values {
+				values[idx] = strings.Replace(hvalue, "{alert-name}", ownerName, -1)
+			}
+		}
+	}
 }

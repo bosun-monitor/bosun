@@ -32,7 +32,7 @@ func testExpression(eio exprInOut) error {
 		InfluxConfig: client.HTTPConfig{},
 	}
 	providers := &BosunProviders{}
-	r, _, err := e.Execute(backends, providers, nil, queryTime, 0, false)
+	r, _, err := e.Execute(backends, providers, nil, queryTime, 0, false, nil)
 	if err != nil {
 		return err
 	}

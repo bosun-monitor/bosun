@@ -33,6 +33,7 @@ type State struct {
 	unjoinedOk         bool
 	autods             int
 	vValue             float64
+	supplicant         interface{}
 
 	Timer miniprofiler.Timer
 
@@ -96,7 +97,7 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, supplicant interface{}) (r *Results, queries []opentsdb.Request, err error) {
 	if providers.Squelched == nil {
 		providers.Squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -109,7 +110,9 @@ func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprof
 		unjoinedOk:     unjoinedOk,
 		Backends:       backends,
 		BosunProviders: providers,
+		supplicant:     supplicant,
 		Timer:          T,
+		supplicant:     supplicant,
 	}
 	return e.ExecuteState(s)
 }

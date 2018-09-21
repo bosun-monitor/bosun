@@ -643,7 +643,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 		History:   s,
 		Annotate:  s.annotate,
 	}
-	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
+	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK, a)
 	return results, err
 }
 
