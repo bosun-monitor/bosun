@@ -130,7 +130,7 @@
 			<h4 class="panel-title">
 				<a href>
 					<span ng-bind="v.Status"></span>
-					<span class="pull-right" ng-show="v.Time" ts-time="v.Time" ts-end-time="events[$index-1].Time" no-link="true"></span>
+					<span class="pull-right" ng-show="v.Time" ts-time="v.Time" ts-end-time="events[$index-1].Time ? events[$index-1].Time : (incident.Open ? undefined : incident.End) " no-link="true"></span>
 				</a>
 			</h4>
 		</div>
