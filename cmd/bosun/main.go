@@ -114,6 +114,13 @@ func main() {
 	if err != nil {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
+
+	// Check if ES version is set by getting configs on start-up.
+	// Because the current APIs don't return error so calling slog.Fatalf
+	// inside these functions (for multiple-es support).
+	systemConf.GetElasticContext()
+	systemConf.GetAnnotateElasticHosts()
+
 	sysProvider, err := systemConf.GetSystemConfProvider()
 	if err != nil {
 		slog.Fatal(err)
