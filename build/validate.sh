@@ -80,6 +80,8 @@ echo -e "\nTesting that bosun starts and stops cleanly"
 cd $GOPATH/src/bosun.org/cmd/bosun
 go build .
 echo -e 'RuleFilePath = "rule.conf"' > bosun.toml
+echo -e '[AnnotateConf]' >> bosun.toml
+echo -e '	Version = "v6"' >> bosun.toml
 echo "" > rule.conf
 timeout 30 ./bosun & bosunpid=$! #Run bosun in background with a 30s timeout and capture the pid
 BOSUN_START_RESULT=$?
