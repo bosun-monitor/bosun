@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"bosun.org/cmd/bosun/expr"
+	"github.com/bosun-monitor/bosun/slog"
 )
 
 // ParseESConfig return expr.ElasticHost
@@ -20,7 +21,7 @@ func parseESConfig(sc *SystemConf) expr.ElasticHosts {
 		case expr.ESV6:
 			cfg = parseESConfig6(value)
 		default:
-			panic(fmt.Errorf("conf: invalid elastic version: %s (supported versions are: v2, v5, v6)", value.Version))
+			slog.Fatal(fmt.Errorf("conf: invalid elastic version: %s (supported versions are: v2, v5, v6)", value.Version))
 		}
 
 		cfg.Version = expr.ESVersion(value.Version)
@@ -41,7 +42,7 @@ func parseESAnnoteConfig(sc *SystemConf) expr.ElasticConfig {
 	case expr.ESV6:
 		cfg = parseESConfig6(ElasticConf(sc.AnnotateConf))
 	default:
-		panic(fmt.Errorf("conf: invalid elastic version: %s (supported versions are: v2, v5, v6)", sc.AnnotateConf.Version))
+		slog.Fatal(fmt.Errorf("conf: invalid elastic version: %s (supported versions are: v2, v5, v6)", sc.AnnotateConf.Version))
 	}
 
 	cfg.Version = expr.ESVersion(sc.AnnotateConf.Version)
