@@ -529,7 +529,7 @@ func TestAggrNaNHandling(t *testing.T) {
 		InfluxConfig: client.HTTPConfig{},
 	}
 	providers := &BosunProviders{}
-	_, _, err = e.Execute(backends, providers, nil, queryTime, 0, false)
+	_, _, err = e.Execute(backends, providers, nil, queryTime, 0, false, nil)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

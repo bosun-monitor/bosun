@@ -110,7 +110,6 @@ func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprof
 		unjoinedOk:     unjoinedOk,
 		Backends:       backends,
 		BosunProviders: providers,
-		supplicant:     supplicant,
 		Timer:          T,
 		supplicant:     supplicant,
 	}
