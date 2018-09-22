@@ -34,6 +34,9 @@ func parseESConfig(sc *SystemConf) expr.ElasticHosts {
 // ParseESConfig return expr.ElasticHost
 func parseESAnnoteConfig(sc *SystemConf) expr.ElasticConfig {
 	var cfg expr.ElasticConfig
+	if len(sc.AnnotateConf.Hosts) == 0 {
+		return cfg
+	}
 	switch expr.ESVersion(sc.AnnotateConf.Version) {
 	case expr.ESV2:
 		cfg = parseESConfig2(ElasticConf(sc.AnnotateConf))
