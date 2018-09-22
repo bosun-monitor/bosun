@@ -790,7 +790,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 			return nil, err
 		}
 	} else {
-		slog.Infoln(fmt.Sprintf("action without notification. user: %s, type: %s, keys: %v, ids: %v", data.User, data.Type, data.Keys, data.Ids))
+		slog.Infof("action without notification. user: %s, type: %s, keys: %v, ids: %v", data.User, data.Type, data.Keys, data.Ids)
 	}
 	return nil, nil
 }
