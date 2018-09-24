@@ -20,8 +20,10 @@ func parseESConfig(sc *SystemConf) expr.ElasticHosts {
 			cfg = parseESConfig5(value)
 		case expr.ESV6:
 			cfg = parseESConfig6(value)
+		case "":
+			slog.Fatal(fmt.Errorf("conf: [ElasticConf.%s]: Version is required (supported versions are: v2, v5, v6)", hostPrefix))
 		default:
-			slog.Fatal(fmt.Errorf("conf: invalid elastic version: %s (supported versions are: v2, v5, v6)", value.Version))
+			slog.Fatal(fmt.Errorf("conf: [ElasticConf.%s]: invalid elastic version: %s (supported versions are: v2, v5, v6)", hostPrefix, value.Version))
 		}
 
 		cfg.Version = expr.ESVersion(value.Version)
@@ -44,8 +46,10 @@ func parseESAnnoteConfig(sc *SystemConf) expr.ElasticConfig {
 		cfg = parseESConfig5(ElasticConf(sc.AnnotateConf))
 	case expr.ESV6:
 		cfg = parseESConfig6(ElasticConf(sc.AnnotateConf))
+	case "":
+		slog.Fatal(fmt.Errorf("conf: [AnnotateConf]: Version is required (supported versions are: v2, v5, v6)"))
 	default:
-		slog.Fatal(fmt.Errorf("conf: invalid elastic version: %s (supported versions are: v2, v5, v6)", sc.AnnotateConf.Version))
+		slog.Fatal(fmt.Errorf("conf: [AnnotateConf]: invalid elastic version: %s (supported versions are: v2, v5, v6)", value.Version))
 	}
 
 	cfg.Version = expr.ESVersion(sc.AnnotateConf.Version)
