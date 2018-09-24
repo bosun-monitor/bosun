@@ -22,7 +22,7 @@ func parseESConfig6(value ElasticConf) expr.ElasticConfig {
 	if !options.Enabled {
 		esConf.SimpleClient = value.SimpleClient
 		esConf.Hosts = value.Hosts
-		opts = opts[0:0]
+		esConf.ClientOptionFuncs = opts[0:0]
 		return esConf
 	}
 
