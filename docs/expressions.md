@@ -374,10 +374,19 @@ Generic query from endDuration to startDuration ago. If endDuration is the empty
 
 Band performs `num` queries of `duration` each, `period` apart and concatenates them together, starting `period` ago. So `band("avg:os.cpu", "1h", "1d", 7)` will return a series comprising of the given metric from 1d to 1d-1h-ago, 2d to 2d-1h-ago, etc, until 8d. This is a good way to get a time block from a certain hour of a day or certain day of a week over a long time period.
 
+Note: this function wraps a more general version `bandQuery(query string, duration string, period string, eduration string, num scalar) seriesSet`, where `eduration` specifies the end duration for the query to stop at, as with `q()`.
+
 ### over(query string, duration string, period string, num scalar) seriesSet
 {: .exprFunc}
 
-Over's arguments behave the same way as band. However over shifts the time of previous periods to be now, tags them with duration that each period was shifted, and merges those shifted periods into a single seriesSet. This is useful for displaying time over time graphs. For example, the same day week over week would be `over("avg:1h-avg:rate:os.cpu{host=ny-bosun01}", "1d", "1w", 4)`.
+Over's arguments behave the same way as band. However over shifts the time of previous periods to be now, tags them with duration that each period was shifted, and merges those shifted periods into a single seriesSet, which includes the most recent period. This is useful for displaying time over time graphs. For example, the same day week over week would be `over("avg:1h-avg:rate:os.cpu{host=ny-bosun01}", "1d", "1w", 4)`.
+
+Note: this function wraps a more general version `overQuery(query string, duration string, period string, eduration string, num scalar) seriesSet`, where `eduration` specifies the end duration for the query to stop at, as with `q`. Results are still shifted to end at current time.
+
+### shiftBand(query string, duration string, period string, num scalar) seriesSet
+{: .exprFunc}
+
+shiftBand's behaviour is very similar to `over`, however the most recent period is not included in the seriesSet. This function could be useful for anomaly detection when used with `aggr`, to calculate historical distributions to compare against.
 
 ### change(query string, startDuration string, endDuration string) numberSet
 {: .exprFunc}
