@@ -20,6 +20,12 @@ import (
 	"github.com/jordan-wright/email"
 )
 
+const (
+	sendLogSuccessFmt = "%s; name: %s; transport: %s; dst: %s; body: %s"
+	sendLogErrorFmt   = "%s; name: %s; transport: %s; dst: %s; body: %s; error: %s"
+	httpSendErrorFmt  = "bad response for '%s' %s notification using template key '%s' for alert keys %v method %s: %d"
+)
+
 func init() {
 	metadata.AddMetricMeta(
 		"bosun.email.sent", metadata.Counter, metadata.PerSecond,
@@ -38,33 +44,72 @@ func init() {
 type PreparedNotifications struct {
 	Email  *PreparedEmail
 	HTTP   []*PreparedHttp
-	Print  string
+	Print  bool
+	Name   string
 	Errors []string
 }
 
 func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 	if p.Email != nil {
 		if err := p.Email.Send(c); err != nil {
-			slog.Errorf("sending email: %s", err)
+			slog.Errorf(
+				sendLogErrorFmt,
+				fmt.Sprintf("subject: %s", p.Email.Subject),
+				p.Name,
+				"email",
+				strings.Join(p.Email.To, ","),
+				p.Email.Body,
+				err.Error(),
+			)
 			errs = append(errs, err)
+		} else if p.Print {
+			slog.Infof(
+				sendLogSuccessFmt,
+				fmt.Sprintf("subject: %s", p.Email.Subject),
+				p.Name,
+				"email",
+				strings.Join(p.Email.To, ","),
+				p.Email.Body,
+			)
 		}
 	}
 	for _, h := range p.HTTP {
+		var logPrefix string
+		if h.Details.At != "" {
+			logPrefix = fmt.Sprintf("action_type: %s", h.Details.At)
+		} else {
+			logPrefix = "type: alert"
+		}
 		if _, err := h.Send(); err != nil {
-			slog.Errorf("sending http: %s", err)
+			slog.Errorf(
+				sendLogErrorFmt,
+				logPrefix,
+				h.Details.NotifyName,
+				"http_"+h.Method,
+				h.URL,
+				h.Body,
+				err.Error(),
+			)
 			errs = append(errs, err)
+		} else if p.Print {
+			slog.Infof(
+				sendLogSuccessFmt,
+				logPrefix,
+				h.Details.NotifyName,
+				"http_"+h.Method,
+				h.URL,
+				h.Body,
+			)
 		}
 	}
-	if p.Print != "" {
-		slog.Infoln(p.Print)
-	}
+
 	return
 }
 
 // PrepareAlert does all of the work of selecting what content to send to which sources. It does not actually send any notifications,
 // but the returned object can be used to send them.
 func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, attachments ...*models.Attachment) *PreparedNotifications {
-	pn := &PreparedNotifications{}
+	pn := &PreparedNotifications{Name: n.Name, Print: n.Print}
 	if len(n.Email) > 0 {
 		subject := rt.GetDefault(n.EmailSubjectTemplate, "emailSubject")
 		body := rt.GetDefault(n.BodyTemplate, "emailBody")
@@ -100,13 +145,6 @@ func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, att
 			NotifyType:  1,
 		}
 		pn.HTTP = append(pn.HTTP, n.PrepHttp("GET", url, "", details))
-	}
-	if n.Print {
-		if n.BodyTemplate != "" {
-			pn.Print = "Subject: " + rt.Subject + ", Body: " + rt.Get(n.BodyTemplate)
-		} else {
-			pn.Print = rt.Subject
-		}
 	}
 	return pn
 }
@@ -163,17 +201,45 @@ func (p *PreparedHttp) Send() (int, error) {
 		collect.Add("post.sent_failed", nil, 1)
 		switch p.Details.NotifyType {
 		case alert:
-			return resp.StatusCode, fmt.Errorf("bad response for '%s' alert notification using template key '%s' for alert keys %v method %s: %d",
-				p.Details.NotifyName, p.Details.TemplateKey, strings.Join(p.Details.Ak, ","), p.Method, resp.StatusCode)
+			return resp.StatusCode, fmt.Errorf(
+				httpSendErrorFmt,
+				p.Details.NotifyName,
+				"alert",
+				p.Details.TemplateKey,
+				strings.Join(p.Details.Ak, ","),
+				p.Method,
+				resp.StatusCode,
+			)
 		case unknown:
-			return resp.StatusCode, fmt.Errorf("bad response for '%s' unknown notification using template key '%s' for alert keys %v method %s: %d",
-				p.Details.NotifyName, p.Details.TemplateKey, strings.Join(p.Details.Ak, ","), p.Method, resp.StatusCode)
+			return resp.StatusCode, fmt.Errorf(
+				httpSendErrorFmt,
+				p.Details.NotifyName,
+				"unknown",
+				p.Details.TemplateKey,
+				strings.Join(p.Details.Ak, ","),
+				p.Method,
+				resp.StatusCode,
+			)
 		case multiunknown:
-			return resp.StatusCode, fmt.Errorf("bad response for '%s' multi-unknown notification using template key '%s' for alert keys %v method %s: %d",
-				p.Details.NotifyName, p.Details.TemplateKey, strings.Join(p.Details.Ak, ","), p.Method, resp.StatusCode)
+			return resp.StatusCode, fmt.Errorf(
+				httpSendErrorFmt,
+				p.Details.NotifyName,
+				"multi-unknown",
+				p.Details.TemplateKey,
+				strings.Join(p.Details.Ak, ","),
+				p.Method,
+				resp.StatusCode,
+			)
 		default:
-			return resp.StatusCode, fmt.Errorf("bad response for '%s' action '%s' notification using template key '%s' for alert keys %v method %s: %d",
-				p.Details.NotifyName, p.Details.At, p.Details.TemplateKey, strings.Join(p.Details.Ak, ","), p.Method, resp.StatusCode)
+			return resp.StatusCode, fmt.Errorf(
+				httpSendErrorFmt,
+				p.Details.NotifyName,
+				fmt.Sprintf("action '%s'", p.Details.At),
+				p.Details.TemplateKey,
+				strings.Join(p.Details.Ak, ","),
+				p.Method,
+				resp.StatusCode,
+			)
 		}
 	}
 	collect.Add("post.sent", nil, 1)
