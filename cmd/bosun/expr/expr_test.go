@@ -397,7 +397,7 @@ func TestSetVariant(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		err := testExpression(test)
+		err := testExpression(test, t)
 		if err != nil {
 			t.Error(err)
 		}
@@ -458,7 +458,7 @@ func TestSeriesOperations(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		err := testExpression(test)
+		err := testExpression(test, t)
 		if err != nil {
 			t.Error(err)
 		}
