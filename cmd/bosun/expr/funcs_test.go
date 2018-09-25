@@ -17,7 +17,7 @@ type exprInOut struct {
 	shouldParseErr bool
 }
 
-func testExpression(eio exprInOut) error {
+func testExpression(eio exprInOut, t *testing.T) error {
 	e, err := New(eio.expr, builtins)
 	if eio.shouldParseErr {
 		if err == nil {
@@ -32,7 +32,7 @@ func testExpression(eio exprInOut) error {
 		InfluxConfig: client.HTTPConfig{},
 	}
 	providers := &BosunProviders{}
-	r, _, err := e.Execute(backends, providers, nil, queryTime, 0, false)
+	r, _, err := e.Execute(backends, providers, nil, queryTime, 0, false, t.Name())
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func TestDuration(t *testing.T) {
 		},
 		false,
 	}
-	err := testExpression(d)
+	err := testExpression(d, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -92,7 +92,7 @@ func TestToDuration(t *testing.T) {
 			},
 			false,
 		}
-		err := testExpression(d)
+		err := testExpression(d, t)
 		if err != nil {
 			t.Error(err)
 		}
@@ -114,7 +114,7 @@ func TestUngroup(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 
 	if err != nil {
 		t.Error(err)
@@ -143,7 +143,7 @@ func TestMerge(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -168,7 +168,7 @@ func TestMerge(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err == nil {
 		t.Errorf("error expected due to identical groups in merge but did not get one")
 	}
@@ -205,7 +205,7 @@ func TestTimedelta(t *testing.T) {
 				},
 			},
 			false,
-		})
+		}, t)
 
 		if err != nil {
 			t.Error(err)
@@ -251,7 +251,7 @@ func TestTail(t *testing.T) {
 				},
 			},
 			false,
-		})
+		}, t)
 
 		if err != nil {
 			t.Error(err)
@@ -491,7 +491,7 @@ func TestAggr(t *testing.T) {
 			expr:           tc.expr,
 			out:            tc.want,
 			shouldParseErr: false,
-		})
+		}, t)
 		if !tc.shouldErr && err != nil {
 			t.Errorf("Case %q: Got error: %v", tc.name, err)
 		} else if tc.shouldErr && err == nil {
@@ -529,7 +529,7 @@ func TestAggrNaNHandling(t *testing.T) {
 		InfluxConfig: client.HTTPConfig{},
 	}
 	providers := &BosunProviders{}
-	_, _, err = e.Execute(backends, providers, nil, queryTime, 0, false)
+	_, _, err = e.Execute(backends, providers, nil, queryTime, 0, false, t.Name())
 	if err != nil {
 		t.Fatal(err.Error())
 	}
