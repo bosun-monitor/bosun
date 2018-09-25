@@ -168,8 +168,8 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				TimedOutLastUpdated:    timestamp,
 				DNSResolved:            dnsLookup == 1 && dnsErr == nil,
 				DNSResolvedLastUpdated: dnsTimestamp,
-				RTTMS:          rtt,
-				RTTLastUpdated: rttTimestamp,
+				RTTMS:                  rtt,
+				RTTLastUpdated:         rttTimestamp,
 			}
 
 		}
