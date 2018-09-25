@@ -424,6 +424,9 @@ var defaultFuncs = template.FuncMap{
 		}
 		return &d
 	},
+	"append": func(a []interface{}, b interface{}) interface{} {
+		return append(a, b)
+	},
 	"makeSlice": func(vals ...interface{}) interface{} {
 		return vals
 	},
