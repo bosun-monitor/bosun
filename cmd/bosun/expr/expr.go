@@ -209,11 +209,12 @@ func (a Series) Equal(b Series) bool {
 func (e ESQuery) Type() models.FuncType { return models.TypeESQuery }
 func (e ESQuery) Value() interface{}    { return e }
 func (e ESQuery) MarshalJSON() ([]byte, error) {
-	source, err := e.Query.Source()
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(source)
+	// source, err := e.Query(esV2).Source()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return json.Marshal(source)
+	return json.Marshal("ESQuery")
 }
 
 type ESIndexer struct {

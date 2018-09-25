@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_version"
+	version "bosun.org/_version"
 	"bosun.org/annotate/backend"
 	"bosun.org/annotate/web"
 	"bosun.org/cmd/bosun/conf"
@@ -789,6 +789,8 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		slog.Infof("action without notification. user: %s, type: %s, keys: %v, ids: %v", data.User, data.Type, data.Keys, data.Ids)
 	}
 	return nil, nil
 }

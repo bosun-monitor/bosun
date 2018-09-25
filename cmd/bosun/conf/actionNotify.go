@@ -75,7 +75,7 @@ func (n *Notification) RunOnActionType(at models.ActionType) bool {
 
 // Prepate an action notification, but don't send yet.
 func (n *Notification) PrepareAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string) *PreparedNotifications {
-	pn := &PreparedNotifications{}
+	pn := &PreparedNotifications{Name: n.Name, Print: n.Print}
 	// get template keys to use for actions. Merge with default sets
 	tks := n.ActionTemplateKeys[at].Combine(n.ActionTemplateKeys[models.ActionNone])
 	buf := &bytes.Buffer{}
