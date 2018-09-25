@@ -303,7 +303,8 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 		Squelched: c.schedule.RuleConf.AlertSquelched(c.Alert),
 		History:   c.schedule,
 	}
-	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK)
+	origin := fmt.Sprintf("Template: Alert Key: %v", c.AlertKey)
+	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, origin)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}

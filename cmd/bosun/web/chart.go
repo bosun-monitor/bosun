@@ -253,7 +253,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		Squelched: nil,
 		History:   nil,
 	}
-	res, _, err := e.Execute(backends, providers, t, now, autods, false)
+	res, _, err := e.Execute(backends, providers, t, now, autods, false, "Web: chart creation")
 	if err != nil {
 		return nil, err
 	}

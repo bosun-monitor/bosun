@@ -68,7 +68,7 @@ func TestExprSimple(t *testing.T) {
 			InfluxConfig: client.HTTPConfig{},
 		}
 		providers := &BosunProviders{}
-		r, _, err := e.Execute(backends, providers, nil, time.Now(), 0, false)
+		r, _, err := e.Execute(backends, providers, nil, time.Now(), 0, false, t.Name())
 		if err != nil {
 			t.Error(err)
 			break
@@ -287,7 +287,7 @@ func TestQueryExpr(t *testing.T) {
 			InfluxConfig: client.HTTPConfig{},
 		}
 		providers := &BosunProviders{}
-		results, _, err := e.Execute(backends, providers, nil, queryTime, 0, false)
+		results, _, err := e.Execute(backends, providers, nil, queryTime, 0, false, t.Name())
 		if err != nil {
 			t.Fatal(err)
 		}
