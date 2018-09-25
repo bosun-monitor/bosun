@@ -643,48 +643,37 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 }
 
 func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
-	newFilter := expr.ScopeES(c.Group(), filter.Query)
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size, c.ElasticHost)
-	if err != nil {
-		c.addError(err)
+	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
+	if !ok {
 		return nil
 	}
-	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
-	if err != nil {
-		c.addError(err)
-		return nil
+
+	switch cfg.Version {
+	case expr.ESV2:
+		return c.esQuery2(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV5:
+		return c.esQuery5(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV6:
+		return c.esQuery6(indexRoot, filter, sduration, eduration, size)
 	}
-	r := make([]interface{}, len(results.Hits.Hits))
-	for i, h := range results.Hits.Hits {
-		var err error
-		err = json.Unmarshal(*h.Source, &r[i])
-		if err != nil {
-			c.addError(err)
-			return nil
-		}
-	}
-	return r
+
+	return nil
 }
 
 func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, filter.Query, sduration, eduration, size, c.ElasticHost)
-	if err != nil {
-		c.addError(err)
+	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
+	if !ok {
 		return nil
 	}
-	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
-	if err != nil {
-		c.addError(err)
-		return nil
+
+	switch cfg.Version {
+	case expr.ESV2:
+		return c.esQueryAll2(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV5:
+		return c.esQueryAll5(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV6:
+		return c.esQueryAll6(indexRoot, filter, sduration, eduration, size)
 	}
-	r := make([]interface{}, len(results.Hits.Hits))
-	for i, h := range results.Hits.Hits {
-		var err error
-		err = json.Unmarshal(*h.Source, &r[i])
-		if err != nil {
-			c.addError(err)
-			return nil
-		}
-	}
-	return r
+
+	return nil
 }

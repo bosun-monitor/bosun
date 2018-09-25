@@ -117,7 +117,8 @@ type GraphiteConf struct {
 
 // AnnotateConf contains the elastic configuration to enable Annotations support
 type AnnotateConf struct {
-	Hosts         []string        // CSV of Elastic Hosts, currently the only backend in annotate
+	Hosts         []string // CSV of Elastic Hosts, currently the only backend in annotate
+	Version       string
 	SimpleClient  bool            // If true ES will connect over NewSimpleClient
 	ClientOptions ESClientOptions // ES client options
 	Index         string          // name of index / table
@@ -144,11 +145,7 @@ type ESClientOptions struct {
 }
 
 // ElasticConf contains configuration for an elastic host that Bosun can query
-type ElasticConf struct {
-	Hosts         []string
-	SimpleClient  bool
-	ClientOptions ESClientOptions
-}
+type ElasticConf AnnotateConf
 
 // AzureConf contains configuration for an Azure metrics
 type AzureMonitorConf struct {

@@ -1,5 +1,3 @@
-// +build !esv5
-
 package backend
 
 import (
@@ -14,7 +12,7 @@ import (
 	elastic "gopkg.in/olivere/elastic.v3"
 )
 
-type Elastic struct {
+type Elastic2 struct {
 	*elastic.Client
 	index             string
 	urls              []string
@@ -24,11 +22,11 @@ type Elastic struct {
 	initialized       bool
 }
 
-func NewElastic(urls []string, simpleclient bool, index string, clientoptions []elastic.ClientOptionFunc) *Elastic {
-	return &Elastic{&elastic.Client{}, index, urls, simpleclient, clientoptions, 200, false}
+func NewElastic2(urls []string, simpleclient bool, index string, clientoptions []elastic.ClientOptionFunc) *Elastic2 {
+	return &Elastic2{&elastic.Client{}, index, urls, simpleclient, clientoptions, 200, false}
 }
 
-func (e *Elastic) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFilter) (annotate.Annotations, error) {
+func (e *Elastic2) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFilter) (annotate.Annotations, error) {
 	if !e.initialized {
 		return nil, unInitErr
 	}
@@ -82,7 +80,7 @@ func (e *Elastic) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFil
 	return annotations, nil
 }
 
-func (e *Elastic) GetFieldValues(field string) ([]string, error) {
+func (e *Elastic2) GetFieldValues(field string) ([]string, error) {
 	if !e.initialized {
 		return nil, unInitErr
 	}
@@ -110,7 +108,7 @@ func (e *Elastic) GetFieldValues(field string) ([]string, error) {
 	return terms, nil
 }
 
-func (e *Elastic) InitBackend() error {
+func (e *Elastic2) InitBackend() error {
 	var err error
 	var ec *elastic.Client
 
@@ -166,7 +164,7 @@ func (e *Elastic) InitBackend() error {
 	return nil
 }
 
-func (e *Elastic) InsertAnnotation(a *annotate.Annotation) error {
+func (e *Elastic2) InsertAnnotation(a *annotate.Annotation) error {
 	if !e.initialized {
 		return unInitErr
 	}
@@ -174,7 +172,7 @@ func (e *Elastic) InsertAnnotation(a *annotate.Annotation) error {
 	return err
 }
 
-func (e *Elastic) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
+func (e *Elastic2) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
 	if !e.initialized {
 		return nil, false, unInitErr
 	}
@@ -196,7 +194,7 @@ func (e *Elastic) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
 	return &a, res.Found, nil
 }
 
-func (e *Elastic) DeleteAnnotation(id string) error {
+func (e *Elastic2) DeleteAnnotation(id string) error {
 	if !e.initialized {
 		return unInitErr
 	}

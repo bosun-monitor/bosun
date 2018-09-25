@@ -22,6 +22,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/ping"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
@@ -32,7 +33,10 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
+	elastic6 "github.com/olivere/elastic"
 	"gopkg.in/fsnotify.v1"
+	elastic2 "gopkg.in/olivere/elastic.v3"
+	elastic5 "gopkg.in/olivere/elastic.v5"
 )
 
 type bosunHttpTransport struct {
@@ -110,6 +114,13 @@ func main() {
 	if err != nil {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
+
+	// Check if ES version is set by getting configs on start-up.
+	// Because the current APIs don't return error so calling slog.Fatalf
+	// inside these functions (for multiple-es support).
+	systemConf.GetElasticContext()
+	systemConf.GetAnnotateElasticHosts()
+
 	sysProvider, err := systemConf.GetSystemConfProvider()
 	if err != nil {
 		slog.Fatal(err)
@@ -151,7 +162,14 @@ func main() {
 			index = "annotate"
 		}
 		config := sysProvider.GetAnnotateElasticHosts()
-		annotateBackend = backend.NewElastic([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs)
+		switch config.Version {
+		case expr.ESV2:
+			annotateBackend = backend.NewElastic2([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic2.ClientOptionFunc))
+		case expr.ESV5:
+			annotateBackend = backend.NewElastic5([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic5.ClientOptionFunc))
+		case expr.ESV6:
+			annotateBackend = backend.NewElastic6([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic6.ClientOptionFunc))
+		}
 		go func() {
 			for {
 				err := annotateBackend.InitBackend()
