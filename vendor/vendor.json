@@ -1214,6 +1214,16 @@
 			"revisionTime": "2017-09-26T22:05:24+02:00"
 		},
 		{
+			"path": "github.com/olivere/elastic",
+			"revision": "33ad30f61610dad54dc9a24b0e1fa875e89a2639",
+			"revisionTime": "2018-05-27T21:42:20+02:00"
+		},
+		{
+			"path": "github.com/mailru/easyjson",
+			"revision": "8b799c424f57fa123fc63a99d6383bc6e4c02578",
+			"revisionTime": "2018-05-27T21:42:20+02:00"
+		},
+		{
 			"path": "gopkg.in/yaml.v1",
 			"revision": "9f9df34309c04878acc86042b16630b0f696e1de",
 			"revisionTime": "2014-09-24T13:16:07-03:00"
