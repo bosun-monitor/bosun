@@ -19,7 +19,6 @@ var (
 	buildTsdb       = flag.Bool("tsdbrelay", false, "Only build tsdbrelay")
 	buildScollector = flag.Bool("scollector", false, "Only build scollector.")
 	output          = flag.String("output", "", "Output directory; defaults to $GOPATH/bin.")
-	esv5            = flag.Bool("esv5", false, "Build with esv5 support instead of v3")
 
 	allProgs = []string{"bosun", "scollector", "tsdbrelay"}
 )
@@ -56,9 +55,6 @@ func main() {
 			args = append(args, "build", "-o", filepath.Join(*output, app))
 		} else {
 			args = append(args, "install")
-		}
-		if *esv5 {
-			args = append(args, "-tags", "esv5")
 		}
 		args = append(args, "-ldflags", ldFlags, fmt.Sprintf("bosun.org/cmd/%s", app))
 		fmt.Println("go", strings.Join(args, " "))
