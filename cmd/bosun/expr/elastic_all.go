@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/jinzhu/now"
 
 	elastic6 "github.com/olivere/elastic"
@@ -40,7 +39,7 @@ func init() {
 	esClients.m = make(map[string]interface{})
 }
 
-func ESAll(e *State, T miniprofiler.Timer) (*Results, error) {
+func ESAll(e *State) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
