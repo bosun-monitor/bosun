@@ -177,7 +177,7 @@ func c_cisco_ios(host, community string, cpuIntegrator tsIntegrator) (opentsdb.M
 	for id, value := range memRaw {
 		sp := strings.SplitN(id, ".", 2)
 		if len(sp) != 2 {
-			slog.Errorln("unexpected length of snmp sub OID (%v) for ciscoMemoryPoolTable for host %v: %v", id, host)
+			slog.Errorf("expected length of 2 for snmp sub OID (%v) for ciscoMemoryPoolTable for host %v: got length %v", id, host, len(sp))
 		}
 		columnID := sp[0]
 		entryID := sp[1]
