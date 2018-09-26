@@ -164,7 +164,7 @@
 		</div>
 	</div>
 </div>
-<div class="row" ng-repeat="error in errors">
+<div class="row" ng-repeat="error in errors track by $index">
 	<div class="col-lg-12">
 		<pre class="alert alert-danger" ng-bind="error" style="white-space: pre-wrap;"></pre>
 	</div>
@@ -361,15 +361,31 @@
 					</ul>
 			</div>
 			<div ng-repeat="(n, ats) in actionNotifications">
-				<div class="panel panel-default" ng-if="n==notificationToShow" ng-repeat="(at, dat) in ats">
-					<div class="panel-heading">
-						<h3 class="panel-title">{{n}} {{at}}</h3>
+				<div ng-if="n==notificationToShow" ng-repeat="(at, dat) in ats">
+					<!-- Panel for showing actionNotification Errors -->
+					<div class="panel panel-danger" ng-show="at.startsWith('Errors')">
+						<div class="panel-heading">
+							<h3 class="panel-title">{{n}} {{at}}</h3>
+						</div>
+						<div class="panel-body">
+							<div class="panel-body">
+								<div class='row' ng-repeat="e in dat track by $index">
+									<div class="col-md-12">{{e}}</div>
+								</div>
+							</div>
+						</div>
 					</div>
-					<div class="panel-body">
-						<notification dat="dat"></notification>
-					</div>
-					<div ng-hide="notifications" class='col-md-12'>
-						<h4>No Notifications</h4>
+					<!-- Panel for Non-Error actionNotifications -->
+					<div class="panel panel-default" ng-hide="at.startsWith('Errors')">
+						<div class="panel-heading">
+							<h3 class="panel-title">{{n}} {{at}}</h3>
+						</div>
+						<div class="panel-body">
+							<notification dat="dat"></notification>
+						</div>
+						<div ng-hide="notifications" class='col-md-12'>
+							<h4>No Notifications</h4>
+						</div>
 					</div>
 				</div>
 			</div>

@@ -1318,12 +1318,17 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             });
             $scope.notifications = nots;
             var aNots = {};
+            var aNotErrorCount = 0;
             _(data.ActionNotifications).each(function (ts, n) {
                 $scope.notificationToShow = "" + n;
                 aNots[n] = {};
                 _(ts).each(function (val, at) {
                     if (val.Email) {
                         aNots[n]["Email (" + at + ")"] = val.Email;
+                    }
+                    if (val.Errors) {
+                        aNots[n]["Errors (" + at + ")"] = val.Errors;
+                        aNotErrorCount += val.Errors.length;
                     }
                     _(val.HTTP).each(function (hp) {
                         aNots[n][hp.Method + " (" + at + ")"] = hp;
@@ -1333,6 +1338,15 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $scope.actionNotifications = aNots;
             $scope.data = JSON.stringify(data.Data, null, '  ');
             $scope.errors = data.Errors;
+            if (aNotErrorCount > 0) {
+                var errMsg = aNotErrorCount + " errors in action notifications, see details within the \"Action Notifications\" tab";
+                if ($scope.errors) {
+                    $scope.errors.push(errMsg);
+                }
+                else {
+                    $scope.errors = [errMsg];
+                }
+            }
             $scope.warning = data.Warnings;
         }
         $scope.downloadConfig = function () {
