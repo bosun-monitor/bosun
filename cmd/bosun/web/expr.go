@@ -210,6 +210,10 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		}
 		var errs []error
 		primaryIncident.Id = int64(incidentID)
+		primaryIncident.Actions = []models.Action{
+			models.Action{User: "Kyle Brandt", Time: time.Now().UTC(), Type: models.ActionNote, Message: "I hope this helps with testing."},
+			models.Action{User: "Craig Peterson", Time: time.Now().UTC(), Type: models.ActionNote, Message: "Me Too!"},
+		}
 		primaryIncident.Start = time.Now().UTC()
 		primaryIncident.CurrentStatus = e.Status
 		primaryIncident.LastAbnormalStatus = e.Status
