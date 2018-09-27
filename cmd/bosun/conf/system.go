@@ -616,6 +616,7 @@ func (sc *SystemConf) GetAzureMonitorContext() expr.AzureMonitorClients {
 	allClients := make(expr.AzureMonitorClients)
 	for prefix, conf := range sc.AzureMonitorConf {
 		clients := expr.AzureMonitorClientCollection{}
+		clients.TenantId = conf.TenantId
 		if conf.Concurrency == 0 {
 			clients.Concurrency = 10
 		} else {

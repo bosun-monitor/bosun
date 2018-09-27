@@ -795,6 +795,38 @@ See the examples in the functions that follow to see examples of Error handling.
 
 #### Context-Bound Functions
 
+##### .AzureResourceLink(prefix, rType, rsg, name string) (string)
+{: .func}
+
+`.AzureResourceLink` returns a https link to Azure's Portal for the resource. `prefix` identifies the subscription, an empty string as a value is the same as "default". `rType` is the resource type, `rsg` is the name of the resource group, and `name` is the name of the resource.
+
+If there is an error an empty string is returned and .Errors is appended to.
+
+Example:
+
+```
+template AzureResourceLink.Example {
+    subject = ``
+    body = `
+    {{- $portalLink := .AzureResourceLink "default" .Alert.Vars.resType .Group.rsg .Group.name -}}
+    {{- if ne $portalLink "" -}}
+        <a href="{{ $portalLink }}">Azure Portal for Resource</a>
+    {{- else -}}
+        <p>Error Creating Azure Portal Link: {{ .LastError }}</p>
+    {{- end -}}
+`
+}
+
+alert AzureResourceLink.Example {
+    template = AzureResourceLink.Example
+    $resType = Microsoft.Compute/virtualMachines
+    $resources = azrt("$resType")
+    $q = azmulti("Percentage CPU", "", $resources, "avg", "1m", "5m", "")
+    $avgQ = avg($q)
+    warn = $avgQ > 50
+}
+```
+
 ##### .Ack() (string)
 {: .func}
 

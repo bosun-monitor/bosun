@@ -678,3 +678,40 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 
 	return nil
 }
+
+// AzureResourceLink create a link to Azure's Portal for the resource (https://portal.azure.com)
+// given the subscription identifer (bosun expression prefix), as well as the resource type, group,
+// and name. It uses the azrt expression function under the hood
+func (c *Context) AzureResourceLink(prefix, rType, rsg, name string) (link string) {
+	if prefix == "" {
+		prefix = "default"
+	}
+	// Get clients so we can get the TenantId
+	clients := c.schedule.SystemConf.GetAzureMonitorContext()
+	client, ok := clients[prefix]
+	if !ok {
+		c.addError(fmt.Errorf("client/subscription %s not found", prefix))
+		return
+	}
+	resList, _, err := c.eval(fmt.Sprintf(`["%s"]azrt("%s")`, prefix, rType), false, false, 0)
+	if err != nil {
+		c.addError(err)
+		return
+	}
+	if len(resList) == 0 {
+		c.addError(fmt.Errorf("no azure resources found for subscription %s and type %s", prefix, rType))
+		return
+	}
+	resources, ok := resList[0].Value.(expr.AzureResources)
+	if !ok {
+		c.addError(fmt.Errorf("failed type assertion on azure resource list"))
+		return
+	}
+	selectedResource, found := resources.Get(rType, rsg, name)
+	if !found {
+		c.addError(fmt.Errorf("resource with type %s, group %s, and name %s not found", rType, rsg, name))
+		return
+	}
+	link = fmt.Sprintf("https://portal.azure.com/#@%s/resource%s", client.TenantId, selectedResource.ID)
+	return
+}

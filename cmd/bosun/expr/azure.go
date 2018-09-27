@@ -453,6 +453,18 @@ type AzureResources struct {
 	Prefix    string
 }
 
+// Get Returns an AzureResource from AzureResources based on the resource type, group, and name
+// If no matching resource is found, an AzureResource object will be returned but found will be
+// false.
+func (resources AzureResources) Get(rType, rsg, name string) (az AzureResource, found bool) {
+	for _, res := range resources.Resources {
+		if res.Type == rType && res.ResourceGroup == rsg && res.Name == name {
+			return res, true
+		}
+	}
+	return
+}
+
 // Ask makes an AzureResource a github.com/kylebrandt/boolq Asker, which allows it to
 // to take boolean expressions to create conditions
 func (ar AzureResource) Ask(filter string) (bool, error) {
@@ -503,6 +515,7 @@ type AzureMonitorClientCollection struct {
 	MetricDefinitionsClient insights.MetricDefinitionsClient
 	ResourcesClient         resources.Client
 	Concurrency             int
+	TenantId                string
 }
 
 // AzureMonitorClients is map of all the AzureMonitorClientCollections that
