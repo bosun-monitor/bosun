@@ -693,25 +693,43 @@ func (c *Context) AzureResourceLink(prefix, rType, rsg, name string) (link strin
 		c.addError(fmt.Errorf("client/subscription %s not found", prefix))
 		return
 	}
-	resList, _, err := c.eval(fmt.Sprintf(`["%s"]azrt("%s")`, prefix, rType), false, false, 0)
+	selectedResource, err := c.azureSelectResource(prefix, rType, rsg, name)
 	if err != nil {
 		c.addError(err)
 		return
 	}
+	link = fmt.Sprintf("https://portal.azure.com/#@%s/resource%s", client.TenantId, selectedResource.ID)
+	return
+}
+
+// AzureResourceTags returns the Azure tags associated with the resource as a map
+func (c *Context) AzureResourceTags(prefix, rType, rsg, name string) map[string]string {
+	selectedResource, err := c.azureSelectResource(prefix, rType, rsg, name)
+	if err != nil {
+		c.addError(err)
+		return nil
+	}
+	return selectedResource.Tags
+}
+
+func (c *Context) azureSelectResource(prefix, rType, rsg, name string) (expr.AzureResource, error) {
+	if prefix == "" {
+		prefix = "default"
+	}
+	az := expr.AzureResource{}
+	resList, _, err := c.eval(fmt.Sprintf(`["%s"]azrt("%s")`, prefix, rType), false, false, 0)
+	if err != nil {
+		return az, err
+	}
 	if len(resList) == 0 {
-		c.addError(fmt.Errorf("no azure resources found for subscription %s and type %s", prefix, rType))
-		return
+		return az, fmt.Errorf("no azure resources found for subscription %s and type %s", prefix, rType)
 	}
 	resources, ok := resList[0].Value.(expr.AzureResources)
 	if !ok {
-		c.addError(fmt.Errorf("failed type assertion on azure resource list"))
-		return
+		return az, fmt.Errorf("failed type assertion on azure resource list")
 	}
-	selectedResource, found := resources.Get(rType, rsg, name)
-	if !found {
-		c.addError(fmt.Errorf("resource with type %s, group %s, and name %s not found", rType, rsg, name))
-		return
+	if selectedResource, found := resources.Get(rType, rsg, name); found {
+		return selectedResource, nil
 	}
-	link = fmt.Sprintf("https://portal.azure.com/#@%s/resource%s", client.TenantId, selectedResource.ID)
-	return
+	return az, fmt.Errorf("resource with type %s, group %s, and name %s not found", rType, rsg, name)
 }

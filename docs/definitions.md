@@ -827,6 +827,49 @@ alert AzureResourceLink.Example {
 }
 ```
 
+#### .AzureResourceTags(prefix, rType, rsg, name string) (map[string]string)
+{: .func}
+
+`.AzureResourceTags` returns the Azure tags associated with the resource as a map. `prefix` identifies the subscription, an empty string as a value is the same as "default". `rType` is the resource type, `rsg` is the name of the resource group, and `name` is the name of the resource.
+
+If there is an error then nil will be returned and .Errors is appended to. 
+
+```
+template AzureResourceTags.Example {
+    subject = ``
+    body = `
+    {{- $azTags := .AzureResourceTags "default" .Alert.Vars.resType .Group.rsg .Group.name -}}
+    {{- if notNil $azTags -}}
+        <table>
+            <tr>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+            {{ range $k, $v := $azTags }}
+                <tr>
+                    <td>{{ $k }}</td>
+                    <td>{{ $v }}</td>
+                </tr>
+            {{ end }}
+        </table>
+    {{- else -}}
+        <p>{{ .LastError }}</p>
+    {{- end }}
+`
+}
+
+alert AzureResourceTags.Example {
+    template = AzureResourceTags.Example
+    $resType = Microsoft.Compute/virtualMachines
+    $resources = azrt("$resType")
+    $q = azmulti("Percentage CPU", "", $resources, "avg", "1m", "5m", "")
+    $avgQ = avg($q)
+    warn = $avgQ > 50
+}
+```
+
+
+
 ##### .Ack() (string)
 {: .func}
 
