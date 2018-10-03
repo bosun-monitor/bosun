@@ -1347,6 +1347,58 @@ See the [main lookup example](/definitions#main-lookup-example) for example usag
 
 #### Global Functions
 
+##### append: append(a []interface{}, b interface{}) interface{}
+{: .func}
+
+`append` exposes go append function and lets you append an object to an existing slice (returning a new slice). This is useful since [Go version 1.11 allows you to modify template variables](https://golang.org/doc/go1.11#text/template).
+
+This can be combined with `makeSlice` to build slices to then seralize to JSON. For example:
+
+```
+notification test {
+    actionBody = myActionBody
+    post = http://localhost:2345
+    contentType = application/json
+}
+
+alert test {
+    template = test
+    $seriesA = series("host=server01", epoch(), 1)
+    $seriesB = series("host=server02", epoch(), 2)
+    warn = avg(merge($seriesA, $seriesB))
+    warnNotification = test
+}
+
+template test {
+    subject = ``
+    body = ``
+    myActionBody = `
+       {{- $s := makeSlice -}}
+       {{- range $x := .States -}}
+            {{- $s = append $s (index $x.Events 0).Time -}}
+       {{- end -}}
+       {{- $s | json }}
+    `
+}
+```
+
+```
+# Mixed Type matrix example (can be used with above example)
+template test {
+    subject = ``
+    body = ``
+    myActionBody = `
+       {{- $s := makeSlice -}}
+       {{- range $x := .States -}}
+            {{- range $a := $x.Actions }}
+                {{- $s = append $s (makeSlice $a.Time $a.User $a.Message $a.Type) -}}
+            {{- end -}}
+       {{- end -}}
+       {{- $s | json }}
+    `
+}
+```
+
 ##### bytes(string|int|float) (string)
 {: .func}
 
