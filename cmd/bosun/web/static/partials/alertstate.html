@@ -45,6 +45,15 @@
 					<a ng-href="/incident?id={{state.Id}}">Incident (#<span ng-bind="state.Id"/>)</a>
 				</div>
 			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Previous Incidents ({{ state.PreviousIds ? state.PreviousIds.length : 0 }}):</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<a ng-repeat="id in state.PreviousIds | limitTo:5" ng-href="/incident?id={{encode(id)}}">#{{id}} </a>
+					<p ng-hide="state.PreviousIds">None</p>
+				</div>
+			</div>
 		</div>
 		<div class="col-sm-6">
 			<div class="row">
