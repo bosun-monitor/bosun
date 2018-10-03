@@ -210,6 +210,12 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		}
 		var errs []error
 		primaryIncident.Id = int64(incidentID)
+		// See if the incidentID corresponds to a real Incident, and if so
+		// get some information from the real incident
+		if realIncident, err := schedule.DataAccess.State().GetIncidentState(primaryIncident.Id); err == nil {
+			primaryIncident.PreviousIds = realIncident.PreviousIds
+		}
+
 		primaryIncident.Start = time.Now().UTC()
 		primaryIncident.CurrentStatus = e.Status
 		primaryIncident.LastAbnormalStatus = e.Status

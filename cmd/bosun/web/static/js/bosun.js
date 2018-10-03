@@ -110,6 +110,14 @@ var IncidentState = (function () {
         this.WorstStatus = is.WorstStatus;
         this.LastAbnormalStatus = is.LastAbnormalStatus;
         this.LastAbnormalTime = is.LastAbnormalTime;
+        this.PreviousIds = new Array();
+        if (is.PreviousIds) {
+            for (var _d = 0, _e = is.PreviousIds; _d < _e.length; _d++) {
+                var id = _e[_d];
+                this.PreviousIds.push(id);
+            }
+        }
+        this.NextId = is.NextId;
     }
     IncidentState.prototype.IsPendingClose = function () {
         for (var _i = 0, _a = this.Actions; _i < _a.length; _i++) {

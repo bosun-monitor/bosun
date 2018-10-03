@@ -58,6 +58,23 @@
 					<a ng-href="/expr?expr={{btoa(incident.Expr)}}">Expression</a>
 				</div>
 			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Previous Incidents ({{ incident.PreviousIds ? incident.PreviousIds.length : 0 }}):</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<a ng-repeat="id in incident.PreviousIds | limitTo:5" ng-href="/incident?id={{encode(id)}}">#{{id}} </a>
+					<p ng-hide="incident.PreviousIds">None</p>
+				</div>
+			</div>
+			<div class="row" ng-hide="incident.NextId == 0">
+				<div class="col-sm-3">
+					<p><strong>Next Incident:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<a ng-href="/incident?id={{encode(incident.NextId)}}">#{{incident.NextId}}</a>
+				</div>
+			</div>
 		</div>
 		<div class="col-sm-6">
 			<div class="row">

@@ -92,6 +92,17 @@ func (c *Context) Last() interface{} {
 	}{c.IncidentState.Last(), c.Id}
 }
 
+// GetIncidentState returns an IncidentState so users can
+// include information about previous or other Incidents in alert notifications
+func (c *Context) GetIncidentState(id int64) *models.IncidentState {
+	is, err := c.schedule.DataAccess.State().GetIncidentState(id)
+	if err != nil {
+		c.addError(err)
+		return nil
+	}
+	return is
+}
+
 // Expr takes an expression in the form of a string, changes the tags to
 // match the context of the alert, and returns a link to the expression page.
 func (c *Context) Expr(v string) string {
