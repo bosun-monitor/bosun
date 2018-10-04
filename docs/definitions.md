@@ -1243,7 +1243,10 @@ template previous.incidents {
             {{- $pi := $.GetIncidentState $id -}}
             {{- if notNil $pi -}}
                 {{- $filteredActions := makeSlice -}}
-                {{- $incidentDuration := $pi.End.Sub $pi.Start -}}
+                {{- $incidentDuration := $pi.Start.Sub $pi.Start -}}
+                {{- if $pi.End -}}
+                    {{- $incidentDuration = $pi.End.Sub $pi.Start -}}
+                {{- end -}}
                 {{- range $action := $pi.Actions -}}
                     {{- $actionString := $action.Type.String -}}
                     {{- $closed := eq $actionString "Closed" -}}
