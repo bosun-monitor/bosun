@@ -13,6 +13,7 @@ const (
 	ILLEGAL Token = iota
 	EOF
 	WS
+	COMMENT
 
 	literalBeg
 	// IDENT and the following are InfluxQL literal tokens.
@@ -32,10 +33,14 @@ const (
 
 	operatorBeg
 	// ADD and the following are InfluxQL Operators
-	ADD // +
-	SUB // -
-	MUL // *
-	DIV // /
+	ADD         // +
+	SUB         // -
+	MUL         // *
+	DIV         // /
+	MOD         // %
+	BITWISE_AND // &
+	BITWISE_OR  // |
+	BITWISE_XOR // ^
 
 	AND // AND
 	OR  // OR
@@ -62,11 +67,13 @@ const (
 	// ALL and the following are InfluxQL Keywords
 	ALL
 	ALTER
+	ANALYZE
 	ANY
 	AS
 	ASC
 	BEGIN
 	BY
+	CARDINALITY
 	CREATE
 	CONTINUOUS
 	DATABASE
@@ -81,6 +88,7 @@ const (
 	DURATION
 	END
 	EVERY
+	EXACT
 	EXPLAIN
 	FIELD
 	FOR
@@ -151,10 +159,14 @@ var tokens = [...]string{
 	FALSE:       "FALSE",
 	REGEX:       "REGEX",
 
-	ADD: "+",
-	SUB: "-",
-	MUL: "*",
-	DIV: "/",
+	ADD:         "+",
+	SUB:         "-",
+	MUL:         "*",
+	DIV:         "/",
+	MOD:         "%",
+	BITWISE_AND: "&",
+	BITWISE_OR:  "|",
+	BITWISE_XOR: "^",
 
 	AND: "AND",
 	OR:  "OR",
@@ -178,11 +190,13 @@ var tokens = [...]string{
 
 	ALL:           "ALL",
 	ALTER:         "ALTER",
+	ANALYZE:       "ANALYZE",
 	ANY:           "ANY",
 	AS:            "AS",
 	ASC:           "ASC",
 	BEGIN:         "BEGIN",
 	BY:            "BY",
+	CARDINALITY:   "CARDINALITY",
 	CREATE:        "CREATE",
 	CONTINUOUS:    "CONTINUOUS",
 	DATABASE:      "DATABASE",
@@ -197,6 +211,7 @@ var tokens = [...]string{
 	DURATION:      "DURATION",
 	END:           "END",
 	EVERY:         "EVERY",
+	EXACT:         "EXACT",
 	EXPLAIN:       "EXPLAIN",
 	FIELD:         "FIELD",
 	FOR:           "FOR",
@@ -282,9 +297,9 @@ func (tok Token) Precedence() int {
 		return 2
 	case EQ, NEQ, EQREGEX, NEQREGEX, LT, LTE, GT, GTE:
 		return 3
-	case ADD, SUB:
+	case ADD, SUB, BITWISE_OR, BITWISE_XOR:
 		return 4
-	case MUL, DIV:
+	case MUL, DIV, MOD, BITWISE_AND:
 		return 5
 	}
 	return 0
