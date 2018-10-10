@@ -52,6 +52,14 @@ construct links.
 Example:
 `Hostname = "bosun.example.com"`
 
+### Scheme
+The URL that Bosun uses to construct its links. The common use case
+is in any [template functions](/definitions#template-functions) that
+construct links. the default is "http"
+
+Example:
+`Scheme = "https"`
+
 ### HTTPListen
 HTTP IP and Port to listen on. The default if not specified is to
 listen on `:8070`. However, if `HTTPSListen` is defined and `HTTPListen`
