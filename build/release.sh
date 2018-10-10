@@ -39,8 +39,8 @@ build linux arm 7
 if [ "$GITHUB_ACCESS_TOKEN" = "" ]; then
 	echo GITHUB_ACCESS_TOKEN not set: not running githubRelease.go
 else
-	GOOS=darwin
+	GOOS=linux
 	GOARCH=amd64
-	export BUILD_NUMBER=`${OUTPUTDIR}bosun-darwin-amd64 -version | awk '{print $3}'`
+	export BUILD_NUMBER=`${OUTPUTDIR}bosun-linux-amd64 -version | awk '{print $3}'`
 	go run build/release/githubRelease.go
 fi
