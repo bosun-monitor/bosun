@@ -397,11 +397,6 @@ log formatted data and stats from those logs.
 The functions that would allow you to use Elastic effectively as a
 time-series based backend do not currently exist.
 
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The Elastic config format may change before the final 0.6.0 release.</a>.</p>
-</div>
-
 #### ElasticConf.default
 Default cluster to query when [PrefixKey](/expressions#prefixkey) is not
 passed to the [elastic expression
