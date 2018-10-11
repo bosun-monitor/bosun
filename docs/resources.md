@@ -83,6 +83,9 @@ _See also the list of built-in collectors included with [scollector](http://bosu
 ### [discreet-scollector](https://forge.puppet.com/discreet/scollector) by Chris Pisano
 > Puppet module for installing and configuring the SCollector agent.
 
+### [VS Code Plugin](https://marketplace.visualstudio.com/items?itemName=tbutterwith.bosun) by Tom Butterwith
+> Syntax highlighting, openTSDB metric path completion and config validate extension for [VS Code](https://code.visualstudio.com/).
+
   &nbsp;
 
 ## [Screenshots and other Media](/media)
