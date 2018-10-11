@@ -2,15 +2,18 @@ package collectors
 
 import (
 	"encoding/json"
+	"fmt"
 	"os/exec"
+	"strings"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 func init() {
 	c_micron := &IntervalCollector{
-		F: c_dns_windows,
+		F: c_micron_ssds,
 		Enable: func() bool {
 			exe, err := exec.LookPath("msecli")
 			if err != nil || exe == "" {
@@ -25,21 +28,27 @@ func init() {
 func c_micron_ssds() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	cmd := exec.Command("msecli", "-L", "-J")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, err
+	output, _ := cmd.Output()
+	// ok, ok. msecli seems horribly ill suited for being read programatically.
+	// 1. Exit codes are all over the place, even in success. So we will just ignore error from exec.
+	// 2. It outputs some messages (non-json) before any json.
+	// so rather than check exec status, we'll just hope to find a non-empty json blob somewhere in the output
+	jidx := strings.Index(string(output), "{")
+	if jidx == -1 {
+		return nil, fmt.Errorf("No json found from msecli")
 	}
+	output = output[jidx:]
 	var data = &struct {
 		Drives []struct {
 			DeviceName      string `json:"deviceName"`
 			SerialNumber    string `json:"serialNumber"`
 			ModelNumber     string `json:"modelNumber"`
 			FirmwareVersion string `json:"firmwareVersion"`
-			IsMicron        bool   `json:"isMicron"`
+			IsMicron        string `json:"isMicron"`
 			DriverInfo      struct {
 				Version string `json:"driverVersion"`
 			} `json:"driverInfo"`
-			SmartData struct {
+			SmartData []struct {
 				CurrentTemperature  json.Number `json:"currentTemperature"`
 				AvailableSpareSpace json.Number `json:"availableSpareSpace"`
 				PercentLifeUsed     json.Number `json:"percentLifeUsed"`
@@ -53,15 +62,19 @@ func c_micron_ssds() (opentsdb.MultiDataPoint, error) {
 			} `json:"smartData"`
 		} `json:"drives"`
 	}{}
-	if err = json.Unmarshal(output, data); err != nil {
+	if err := json.Unmarshal(output, data); err != nil {
 		return nil, err
 	}
-	for _, d := range data.Drives {
-		if !d.IsMicron {
+	for i, d := range data.Drives {
+		if d.IsMicron != "true" {
 			continue
 		}
 		tags := opentsdb.TagSet{"serial": d.SerialNumber}
-		sd := d.SmartData
+		if len(d.SmartData) != 1 {
+			slog.Errorf("Drive %d has %d smart data entries. Expect exactly 1.", i, len(d.SmartData))
+			continue
+		}
+		sd := d.SmartData[0]
 		if v, err := sd.CurrentTemperature.Int64(); err == nil {
 			Add(&md, "micron.current_temp", v, tags, metadata.Gauge, metadata.C, "Current drive temperature")
 		}
