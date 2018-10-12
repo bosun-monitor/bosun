@@ -195,6 +195,7 @@ func timeInfluxRequest(e *State, db, query, startDuration, endDuration, groupByI
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Close()
 	q_key := fmt.Sprintf("%s: %s", db, q)
 	e.Timer.StepCustomTiming("influx", "query", q_key, func() {
 		getFn := func() (interface{}, error) {
