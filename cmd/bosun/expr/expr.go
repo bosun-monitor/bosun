@@ -591,6 +591,7 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 
 func operate(op string, a, b float64) (r float64) {
 	// Test short circuit before NaN.
+	// for >,<,>=,<=, if true, return the former value. but 0 > -1 is a exception, you should use -1 < 0 to return true
 	switch op {
 	case "||":
 		if a != 0 {
@@ -625,7 +626,7 @@ func operate(op string, a, b float64) (r float64) {
 		}
 	case ">":
 		if a > b {
-			r = 1
+			r = a
 		} else {
 			r = 0
 		}
@@ -637,19 +638,19 @@ func operate(op string, a, b float64) (r float64) {
 		}
 	case "<":
 		if a < b {
-			r = 1
+			r = a
 		} else {
 			r = 0
 		}
 	case ">=":
 		if a >= b {
-			r = 1
+			r = a
 		} else {
 			r = 0
 		}
 	case "<=":
 		if a <= b {
-			r = 1
+			r = a
 		} else {
 			r = 0
 		}
