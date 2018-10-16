@@ -15,6 +15,7 @@ import (
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 func (c *Conf) loadTemplate(s *parse.SectionNode) {
@@ -417,8 +418,11 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			}
 		case "afterAction":
 			if v == "ForceClose" || v == "Forget" || v == "Purge" {
+				if n.Next != nil {
+					slog.Warningf("afterAction=%s would change the chains of notifications, not use it with next=%s",v, n.NextName)
+				}
 				n.AfterAction = v
-			} else {
+			} else if v != "" {
 				c.errorf("invalid action value %s. only ForceClose/Forget/Purge allowed", v)
 			}
 		case "unknownMinGroupSize":

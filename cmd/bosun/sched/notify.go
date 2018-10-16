@@ -153,7 +153,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 			} else if silenced {
 				slog.Infof("silencing %s", ak)
 				continue
-			} else if !alert.Log && (!st.Open || !st.NeedAck) {
+			} else if !alert.Log && (!st.Open || !st.NeedAck) && n.AfterAction == "" {
 				slog.Errorf("Cannot notify acked or closed alert %s. Clearing.", ak)
 				if err := s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
 					slog.Error(err)
