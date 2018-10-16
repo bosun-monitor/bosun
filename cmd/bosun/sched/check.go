@@ -300,6 +300,29 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		for _, n := range nots {
 			s.Notify(incident, rt, n)
 			checkNotify = true
+			// check notification.afterAction, autoClose or autoForget or autoPurge
+			if n.AfterAction == "" {
+				continue
+			} else if n.AfterAction == "ForceClose" {
+				incident.Open = false
+				slog.Infof("Auto ForceClose enabled for %s", ak)
+				err = s.ActionByAlertKey("bosun", "Auto force close was enabled", models.ActionForceClose, nil, ak)
+			} else if n.AfterAction == "Forget" {
+				incident.Open = false
+				slog.Infof("Auto Purge enabled for %s", ak)
+				err = s.ActionByAlertKey("bosun", "Auto forget close was enabled", models.ActionForget, nil, ak)
+			} else if n.AfterAction == "Purge" {
+				incident.Open = false
+				slog.Infof("Auto Purge enabled for %s", ak)
+				err = s.ActionByAlertKey("bosun", "Auto purge close was enabled", models.ActionPurge, nil, ak)
+			} else {
+				// this code shall never be reached, see loaders.go:afterAction
+				err2 := fmt.Sprintf("Notification for %s option afterAction=%s is not supported. Ignored", ak, n.AfterAction)
+				slog.Errorf(err2)
+			}
+			if err != nil {
+				slog.Errorln(err)
+			}
 		}
 	}
 

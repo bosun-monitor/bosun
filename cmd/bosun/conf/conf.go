@@ -278,6 +278,7 @@ type Notification struct {
 	ContentType  string
 	RunOnActions string
 	GroupActions bool
+	AfterAction string // what to do with the alert after notfication sends
 
 	UnknownMinGroupSize *int // nil means use global defaults. 0 means no-grouping at all.
 	UnknownThreshold    *int // nil means use global defaults. 0 means no limit
