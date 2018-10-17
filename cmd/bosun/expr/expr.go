@@ -188,6 +188,11 @@ type NumberExpr Expr
 func (s NumberExpr) Type() models.FuncType { return models.TypeNumberExpr }
 func (s NumberExpr) Value() interface{}    { return s }
 
+type Info []interface{}
+
+func (i Info) Type() models.FuncType { return models.TypeInfo }
+func (i Info) Value() interface{}    { return i }
+
 //func (s String) MarshalJSON() ([]byte, error) { return json.Marshal(s) }
 
 // Series is the standard form within bosun to represent timeseries data.
@@ -242,6 +247,9 @@ func (t Table) Value() interface{}    { return t }
 
 func (a AzureResources) Type() models.FuncType { return models.TypeAzureResourceList }
 func (a AzureResources) Value() interface{}    { return a }
+
+func (a AzureApplicationInsightsApps) Type() models.FuncType { return models.TypeAzureAIApps }
+func (a AzureApplicationInsightsApps) Value() interface{}    { return a }
 
 type SortablePoint struct {
 	T time.Time
@@ -808,6 +816,9 @@ func extract(res *Results) interface{} {
 		return res.Results[0].Value.Value()
 	}
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeAzureResourceList {
+		return res.Results[0].Value.Value()
+	}
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeAzureAIApps {
 		return res.Results[0].Value.Value()
 	}
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESIndexer {

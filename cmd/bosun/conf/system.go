@@ -14,6 +14,9 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
+	ainsightsmgmt "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
+	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
+
 	"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	"github.com/Azure/go-autorest/autorest"
@@ -610,26 +613,30 @@ func (sc *SystemConf) GetElasticContext() expr.ElasticHosts {
 	return parseESConfig(sc)
 }
 
-// GetAzureMonitorContext returns a Azure Monitor API context which
-// contains the information needs to query the azure API
+// GetAzureMonitorContext returns a the collection of API clients needed
+// query the Azure Monitor and Application Insights APIs
 func (sc *SystemConf) GetAzureMonitorContext() expr.AzureMonitorClients {
 	allClients := make(expr.AzureMonitorClients)
 	for prefix, conf := range sc.AzureMonitorConf {
-		clients := expr.AzureMonitorClientCollection{}
-		clients.TenantId = conf.TenantId
+		cc := expr.AzureMonitorClientCollection{}
+		cc.TenantId = conf.TenantId
 		if conf.Concurrency == 0 {
-			clients.Concurrency = 10
+			cc.Concurrency = 10
 		} else {
-			clients.Concurrency = conf.Concurrency
+			cc.Concurrency = conf.Concurrency
 		}
-		clients.MetricsClient = insights.NewMetricsClient(conf.SubscriptionId)
-		clients.MetricDefinitionsClient = insights.NewMetricDefinitionsClient(conf.SubscriptionId)
-		clients.ResourcesClient = resources.NewClient(conf.SubscriptionId)
+		cc.MetricsClient = insights.NewMetricsClient(conf.SubscriptionId)
+		cc.MetricDefinitionsClient = insights.NewMetricDefinitionsClient(conf.SubscriptionId)
+		cc.ResourcesClient = resources.NewClient(conf.SubscriptionId)
+		cc.AIComponentsClient = ainsightsmgmt.NewComponentsClient(conf.SubscriptionId)
+		cc.AIMetricsClient = ainsights.NewMetricsClient()
 		if conf.DebugRequest {
-			clients.ResourcesClient.RequestInspector, clients.MetricsClient.RequestInspector, clients.MetricDefinitionsClient.RequestInspector = azureLogRequest(), azureLogRequest(), azureLogRequest()
+			cc.ResourcesClient.RequestInspector, cc.MetricsClient.RequestInspector, cc.MetricDefinitionsClient.RequestInspector = azureLogRequest(), azureLogRequest(), azureLogRequest()
+			cc.AIComponentsClient.RequestInspector, cc.AIMetricsClient.RequestInspector = azureLogRequest(), azureLogRequest()
 		}
 		if conf.DebugResponse {
-			clients.ResourcesClient.ResponseInspector, clients.MetricsClient.ResponseInspector, clients.MetricDefinitionsClient.ResponseInspector = azureLogResponse(), azureLogResponse(), azureLogResponse()
+			cc.ResourcesClient.ResponseInspector, cc.MetricsClient.ResponseInspector, cc.MetricDefinitionsClient.ResponseInspector = azureLogResponse(), azureLogResponse(), azureLogResponse()
+			cc.AIComponentsClient.ResponseInspector, cc.AIMetricsClient.ResponseInspector = azureLogResponse(), azureLogResponse()
 		}
 		ccc := auth.NewClientCredentialsConfig(conf.ClientId, conf.ClientSecret, conf.TenantId)
 		at, err := ccc.Authorizer()
@@ -638,8 +645,16 @@ func (sc *SystemConf) GetAzureMonitorContext() expr.AzureMonitorClients {
 			// This is checked before because this method is not called until the an expression is called
 			slog.Error("unexpected Azure Authorizer error: ", err)
 		}
-		clients.MetricsClient.Authorizer, clients.MetricDefinitionsClient.Authorizer, clients.ResourcesClient.Authorizer = at, at, at
-		allClients[prefix] = clients
+		// Application Insights needs a different authorizer to use the other Resource "api.application..."
+		rcc := auth.NewClientCredentialsConfig(conf.ClientId, conf.ClientSecret, conf.TenantId)
+		rcc.Resource = "https://api.applicationinsights.io"
+		rat, err := rcc.Authorizer()
+		if err != nil {
+			slog.Error("unexpected application insights azure authorizer error: ", err)
+		}
+		cc.MetricsClient.Authorizer, cc.MetricDefinitionsClient.Authorizer, cc.ResourcesClient.Authorizer = at, at, at
+		cc.AIComponentsClient.Authorizer, cc.AIMetricsClient.Authorizer = at, rat
+		allClients[prefix] = cc
 	}
 	return allClients
 }
