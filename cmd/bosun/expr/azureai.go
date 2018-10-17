@@ -149,9 +149,10 @@ func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, ap
 				next = &(*next.Segments)[0]
 				return nil
 			}
-
-			if err := decend("root-level"); err != nil {
-				return r, err
+			if segLen > 1 {
+				if err := decend("root-level"); err != nil {
+					return r, err
+				}
 			}
 			// When multiple dimensions are requests, there are nested MetricsSegmentInfo objects
 			// The higher levels just contain all the dimension key-value pairs except the last.
@@ -165,6 +166,9 @@ func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, ap
 						return r, err
 					}
 				}
+			}
+			if next == nil {
+				return r, fmt.Errorf("unexpected segement/dimension in insights response")
 			}
 			for _, innerSeg := range *next.Segments {
 				err := handleInnerSegment(innerSeg)
