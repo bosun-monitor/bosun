@@ -97,7 +97,7 @@ We don't need to understand everything in this alert, but it is worth highlighti
 
 These functions are considered *preview* as of August 2018. The names, signatures, and behavior of these functions might change as they are tested in real word usage.
 
-The Azure Monitor datasource queries Azure for metric and resource information. These functions are available when [AzureMonitorConf](#system-configuration#azuremonitorconf) is defined in the system configuration. 
+The Azure Monitor datasource queries Azure for metric and resource information. These functions are available when [AzureMonitorConf](#system-configuration#azuremonitorconf) is defined in the system configuration.
 
 These requests are subject to the [Azure Resource Manager Request Limits](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-manager-request-limits) so when using the `az` and `azmulti` functions you should be mindful of how many API calls your alerts are making given your configured check interval. Also using the historical testing feature to query multiple intervals of time could quickly eat through your request limit.
 
@@ -149,7 +149,7 @@ azrf (Azure Resource Filter) takes a resource list and filters it to less resour
 
 The filter argument supports filter supports joining terms in `()` as well as the `AND`, `OR`, and `!` operators. The following query terms are supported and are always in the format of something:something. The first part of each term (the key) is case insensitive.
 
- * `name:<regex>` where the resource name matches the regular expression. 
+ * `name:<regex>` where the resource name matches the regular expression.
  * `rsg:<regex>` where the resource group of the resource matches the resource.
  * `otherText:<regex>` will match resources based on Azure tags. `otherText` would be the tag key and the regex will match against the tag's value. If the tag key does not exist on the resource then there will be no match.
 
@@ -167,10 +167,11 @@ azmulti("Percentage CPU", "", $filteredRes, "max", "5m", "1h", "")
 Note that `azrf()` does not take a prefix key since it is filtering resources that have already been retrieved. The resulting azureResources will still be associated with the correct client/prefix.
 
 ### azmulti(metric string, tagKeysCSV string, resources AzureResources, agType string, interval string, startDuration string, endDuration string) seriesSet
+{: .exprFunc}
 
 azmulti (Azure Multiple Query) queries a metric for multiple resources and returns them as a single series set. The arguments metric, tagKeysCSV, agType, interval, startDuration, and endDuration all behave the same as in the `az` function. Also like the `az` functions the result will be tagged with `rsg`, `name`, and any dimensions from tagKeysCSV.
 
-The resources argument is a list of resources (an azureResourcesType) as returned by `azrt` and `azrf`. 
+The resources argument is a list of resources (an azureResourcesType) as returned by `azrt` and `azrf`.
 
 Each resource queried requires an Azure Monitor API call. So if there are 20 items in the set from return of the call, 20 calls are made that count toward the rate limit. This function exists because most metrics do not have dimensions on primary attributes like the machine name.
 
@@ -180,6 +181,73 @@ Example:
 $resources = azrt("Microsoft.Compute/virtualMachines")
 azmulti("Percentage CPU", "", $resources, "max", "PT5M", "1h", "")
 ```
+
+## Azure Application Insights Query Functions
+
+Queries for [Azure Application Insights](https://docs.microsoft.com/en-us/azure/application-insights/app-insights-overview) use the same system configuration as the [Azure Monitor Query Functions](/expressions#azure-monitor-query-functions). Therefore these functions are available when [AzureMonitorConf](#system-configuration#azuremonitorconf) is defined in the system configuration. However, a [different API](https://dev.applicationinsights.io/documentation/overview) is used to query these metrics. In order for these to work you will have to have [AAD Auth setup](https://dev.applicationinsights.io/documentation/Authorization/AAD-Application-Setup) for the client user.
+
+Currently only Application Insights [*metrics*](https://dev.applicationinsights.io/documentation/Using-the-API/Metrics) are supported and [events](https://dev.applicationinsights.io/documentation/Using-the-API/Events) are *not* supported.
+
+These queries share the same [Prefix Key as Azure Montitor queries](/expressions#prefixkey).
+
+### aiapp() azureAIApps
+{: .exprFunc}
+
+aiapp (Application Insights Apps) gets a list of Azure [application insights applications/resources](https://docs.microsoft.com/en-us/azure/application-insights/app-insights-create-new-resource) to query. This can be passed to the `ai()` function, or filtered to a subset of applications using the `aippf()` function, which can then also be passed to the `ai()` function. 
+
+The implementation for getting the list of applications uses the [Azure components/list REST API](https://docs.microsoft.com/en-us/rest/api/application-insights/components/components_list).
+
+### aippf(apps azureAIApps, filter string) azureAIApps
+{: .exprFunc}
+
+aiappf (Application Insights Apps Filter) filters a list of applications from `aiapp()` to a subset of applications based on the `filter` string. The result can then be passed to the `ai()` function. The filter behaves in a similar way to the way [`azrf()`](expressions#azrfresources-azureresources-filter-string-azureresources) filters resources.
+
+The filter argument supports filter supports joining terms in `()` as well as the `AND`, `OR`, and `!` operators. The following query terms are supported and are always in the format of something:something. The first part of each term (the key) is case insensitive.
+
+ * `name:<regex>` where the resource name of the insights application matches the regular expression.
+ * `otherText:<regex>` will match insights applications based on the Azure tags on the insights application resource. `otherText` would be the tag key and the regex will match against the tag's value. If the tag key does not exist on the resource then there will be no match.
+
+Regular expressions use Go's regular expressions which use the [RE2 syntax](https://github.com/google/re2/wiki/Syntax). If you want an exact match and not a substring be sure to anchor the term with something like `name:^myApp$`.
+
+### ai(metric, segmentsCSV, filter string, apps azureAIApps, agType, interval, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+ai (Application Insights) queries application insights metrics from multiple application insights applications, tagging the values with the `app=AppName` key-value pair where AppName is the name of the Application Insights resource. The response will also be tagged by segments if any are requested.
+
+ * `metric` is the name of the metric you wish to query. A list of ["Default Metrics" is listed in the API Documentation](https://dev.applicationinsights.io/documentation/Using-the-API/Metrics). You can also use the `aimd()` function to see what metrics are available.
+ * `segmentsCSV` is a comma-separated is comma-separated list of "segments" that you want the response to group by. For example with the default metric `requests/count` you might have `client/countryOrRegion,cloud/roleInstance`. You can also use the `aimd()` function to see what segments/dimensions are available.
+ * `filter` is an odata filter than can be used to refine results. See more information below.
+ * `apps` is a list of azure applications to query returned by `aiapp()` or `aiappf()`.
+ * `agType` is the aggregation type to use. Common values are `avg`, `min`, `max`, `sum`, or `count`. If the aggregation type is not available the error will indicate what types are. You can use the `aimd()` function to see what aggregations are available. 
+ * `interval` is the Azure timegrain to use without "PT" and in lower case (ISO 8601 duration format). Common supported timegrains are `1m`, `5m`, `15m`, `30m`, `1h`, `6h`, `12h`, and `1d`. If empty the value will be `1m`.
+ * `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details.
+
+Regarding the `filter` argument it seems [Azure's documentation](https://dev.applicationinsights.io/reference) is not clear on supported OData operations. That being said here are some observations:
+
+ * `startswith` and `contains` are valid string operations in the filter.
+ * You can *not do* negated matches. The API will accept them but they seem to have no impact. See this [Azure Feedback Issue](https://feedback.azure.com/forums/357324-application-insights/suggestions/7924191--not-filters-in-application-insights).
+ * You can filter on dimension/segements that are relevant to the metric, but were not requested as part of `segmentsCSV`.
+
+These requests are subject to a different [rate limit](https://dev.applicationinsights.io/documentation/Authorization/Rate-limits).
+
+> Using Azure Active Directory for authentication, throttling rules are applied per AAD client user. Each AAD user is able to make up to 200 requests per 30 seconds, with no cap on the total calls per day.
+
+A HTTP request is made per application. Unlike `azmulti()` these requests are *serial* and not parallelized since the ratelimit is of a relatively short duration (30 seconds). That means you can expect this query to be slow relative to the number of applications you are querying.
+
+Example:
+
+```
+$selectedApps = aiappf(aiapp(), "environment:prd")
+$filter = "startswith(operation/name, 'POST')"
+ai("requests/duration", "cloud/roleInstance", $filter, $selectedApps, "avg", "1h", "3d", "")
+```
+
+### aimd(apps azureAIApps) Info
+{: .exprFunc}
+
+aimd (Application Insights Metadata) return metrics and their related aggregations and dimensions/segments per application. The list of applications should be provided with `aiapp()` or `aiappf()`. For most use cases filtering to a single app is ideal since the metadata object for each application is generally fairly large.
+
+This is not meant to be used in normal expression workflow (e.g. *not* for alerting or templates), but rather exists so in the Bosun's expression editor UI, you can get a list of what can be queried with the `ai()` function.
 
 ## Graphite Query Functions
 
