@@ -3,6 +3,96 @@
 	"ignore": "test lua lmdb",
 	"package": [
 		{
+			"checksumSHA1": "xeK+ux8fKSSJJVW04/TE9yQFfGs=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights",
+			"revision": "6d20bdbae88c06c36d72eb512295417693bfdf4e",
+			"revisionTime": "2018-09-27T22:44:43Z"
+		},
+		{
+			"checksumSHA1": "RoA9l5c4+tunHi3vB0qeIh+Tp7Y=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights",
+			"revision": "6d20bdbae88c06c36d72eb512295417693bfdf4e",
+			"revisionTime": "2018-09-27T22:44:43Z"
+		},
+		{
+			"checksumSHA1": "/TCduAEWNLc+l4Z72IFgpzmd35k=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights",
+			"revision": "6d20bdbae88c06c36d72eb512295417693bfdf4e",
+			"revisionTime": "2018-09-27T22:44:43Z"
+		},
+		{
+			"checksumSHA1": "928vJH7PbmZ6/3pG5GIlaw+h7B4=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources",
+			"revision": "6d20bdbae88c06c36d72eb512295417693bfdf4e",
+			"revisionTime": "2018-09-27T22:44:43Z"
+		},
+		{
+			"checksumSHA1": "cAJGUx9EvLR1S1x0ohcW8MbVe1A=",
+			"path": "github.com/Azure/azure-sdk-for-go/version",
+			"revision": "6d20bdbae88c06c36d72eb512295417693bfdf4e",
+			"revisionTime": "2018-09-27T22:44:43Z"
+		},
+		{
+			"checksumSHA1": "L4fDMZadX7zBb8jPrtZteOVT+SY=",
+			"path": "github.com/Azure/go-autorest/autorest",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "ua1k5OMVO+I13Pl0sp04vA9+440=",
+			"path": "github.com/Azure/go-autorest/autorest/adal",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "vetwXbWpF1wf61SjGa8UfM01kws=",
+			"path": "github.com/Azure/go-autorest/autorest/azure",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "j5aBk8CqJ6uo1Uvm0gUp+vH6QDA=",
+			"path": "github.com/Azure/go-autorest/autorest/azure/auth",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "qvPx1wQDl9JT9vm45+bHHU92luw=",
+			"path": "github.com/Azure/go-autorest/autorest/azure/cli",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "9nXCi9qQsYjxCeajJKWttxgEt0I=",
+			"path": "github.com/Azure/go-autorest/autorest/date",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "SbBb2GcJNm5GjuPKGL2777QywR4=",
+			"path": "github.com/Azure/go-autorest/autorest/to",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "HjdLfAF3oA2In8F3FKh/Y+BPyXk=",
+			"path": "github.com/Azure/go-autorest/autorest/validation",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "b2lrPJRxf+MEfmMafN40wepi5WM=",
+			"path": "github.com/Azure/go-autorest/logger",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
+			"checksumSHA1": "MeS8ifHvJr4jORj7T3nkLulxhds=",
+			"path": "github.com/Azure/go-autorest/version",
+			"revision": "ea233b6412b0421a65dc6160e16c893364664a95",
+			"revisionTime": "2018-10-05T20:42:03Z"
+		},
+		{
 			"path": "github.com/BurntSushi/toml",
 			"revision": "5c4df71dfe9ac89ef6287afc05e4c1b16ae65a1e",
 			"revisionTime": "2016-01-02T09:47:48-05:00"
@@ -314,6 +404,18 @@
 			"revisionTime": "2013-06-07T11:20:45-04:00"
 		},
 		{
+			"checksumSHA1": "4772zXrOaPVeDeSgdiV7Vp4KEjk=",
+			"path": "github.com/dgrijalva/jwt-go",
+			"revision": "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e",
+			"revisionTime": "2018-03-08T23:13:08Z"
+		},
+		{
+			"checksumSHA1": "7EjxkAUND/QY/sN+2fNKJ52v1Rc=",
+			"path": "github.com/dimchansky/utfbom",
+			"revision": "5448fe645cb1964ba70ac8f9f2ffe975e61a536c",
+			"revisionTime": "2018-07-13T13:37:17Z"
+		},
+		{
 			"path": "github.com/edsrzf/mmap-go",
 			"revision": "903d080718bd2877583fe1bd0a19c9cd3e2906ff",
 			"revisionTime": "2015-11-29T07:25:04+13:00"
@@ -551,16 +653,32 @@
 			"revisionTime": "2015-11-05T14:43:36+01:00"
 		},
 		{
+			"path": "github.com/mailru/easyjson",
+			"revision": "8b799c424f57fa123fc63a99d6383bc6e4c02578",
+			"revisionTime": "2018-05-27T21:42:20+02:00"
+		},
+		{
 			"checksumSHA1": "ltMx61rRH1F1LsSto7voLWuRQpw=",
 			"path": "github.com/mhenderson-so/azure-ea-billing",
 			"revision": "4fd1a790460cd26f319b17f40c9559142db03bf0",
 			"revisionTime": "2016-08-29T17:56:29Z"
 		},
 		{
+			"checksumSHA1": "a58zUNtDH/gEd6F6KI3FqT2iEo0=",
+			"path": "github.com/mitchellh/go-homedir",
+			"revision": "ae18d6b8b3205b561c79e8e5f69bff09736185f4",
+			"revisionTime": "2018-08-24T00:42:36Z"
+		},
+		{
 			"checksumSHA1": "QLKPqiHoCTknOwOiNj5Miaze6HI=",
 			"path": "github.com/mjibson/esc/embed",
 			"revision": "58d9cde84f237ecdd89bd7f61c2de2853f4c5c6e",
 			"revisionTime": "2017-09-07T07:13:03Z"
+		},
+		{
+			"path": "github.com/olivere/elastic",
+			"revision": "33ad30f61610dad54dc9a24b0e1fa875e89a2639",
+			"revisionTime": "2018-05-27T21:42:20+02:00"
 		},
 		{
 			"path": "github.com/pkg/errors",
@@ -861,6 +979,18 @@
 			"path": "github.com/vmware/govmomi/vim25/xml",
 			"revision": "a2138329bbd18ad4a4eed5787771a280f7585938",
 			"revisionTime": "2018-02-28T03:27:28Z"
+		},
+		{
+			"checksumSHA1": "PJY7uCr3UnX4/Mf/RoWnbieSZ8o=",
+			"path": "golang.org/x/crypto/pkcs12",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+			"revisionTime": "2018-06-20T09:14:27Z"
+		},
+		{
+			"checksumSHA1": "p0GC51McIdA7JygoP223twJ1s0E=",
+			"path": "golang.org/x/crypto/pkcs12/internal/rc2",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+			"revisionTime": "2018-06-20T09:14:27Z"
 		},
 		{
 			"path": "golang.org/x/image/draw",

@@ -42,6 +42,9 @@ type IncidentState struct {
 
 	LastAbnormalTime Epoch
 
+	PreviousIds []int64 // A list to the previous IncidentIds for the same alert key (alertname+tagset)
+	NextId      int64   // The id of the next Incident Id for the same alert key, only added once a future incident has been created
+
 	// set of notifications we have already sent alerts to during the lifetime of the incident
 	Notifications []string
 }
@@ -209,6 +212,12 @@ func (f FuncType) String() string {
 		return "table"
 	case TypeVariantSet:
 		return "variantSet"
+	case TypeAzureResourceList:
+		return "azureResources"
+	case TypeAzureAIApps:
+		return "azureAIApps"
+	case TypeInfo:
+		return "info"
 	default:
 		return "unknown"
 	}
@@ -223,9 +232,12 @@ const (
 	TypeESQuery
 	TypeESIndexer
 	TypeNumberExpr
-	TypeSeriesExpr // No implmentation yet
+	TypeSeriesExpr // No implementation yet
 	TypeTable
 	TypeVariantSet
+	TypeAzureResourceList
+	TypeAzureAIApps
+	TypeInfo
 	TypeUnexpected
 )
 

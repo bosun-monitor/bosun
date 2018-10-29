@@ -4,12 +4,23 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
+	"strings"
 	"time"
+
+	"bosun.org/slog"
 
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
+	ainsightsmgmt "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
+	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
+
+	"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
+	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/BurntSushi/toml"
 	"github.com/influxdata/influxdb/client/v2"
 )
@@ -32,9 +43,10 @@ type SystemConf struct {
 	InternetProxy string
 	MinGroupSize  int
 
-	UnknownThreshold int
-	CheckFrequency   Duration // Time between alert checks: 5m
-	DefaultRunEvery  int      // Default number of check intervals to run each alert: 1
+	UnknownThreshold       int
+	CheckFrequency         Duration // Time between alert checks: 5m
+	DefaultRunEvery        int      // Default number of check intervals to run each alert: 1
+	AlertCheckDistribution string   // Method to distribute alet checks. No distribution if equals ""
 
 	DBConf DBConf
 
@@ -44,10 +56,11 @@ type SystemConf struct {
 
 	ExampleExpression string
 
-	OpenTSDBConf OpenTSDBConf
-	GraphiteConf GraphiteConf
-	InfluxConf   InfluxConf
-	ElasticConf  map[string]ElasticConf
+	OpenTSDBConf     OpenTSDBConf
+	GraphiteConf     GraphiteConf
+	InfluxConf       InfluxConf
+	ElasticConf      map[string]ElasticConf
+	AzureMonitorConf map[string]AzureMonitorConf
 
 	AnnotateConf AnnotateConf
 
@@ -67,12 +80,13 @@ type SystemConf struct {
 // and the parse errors can be thrown for query functions that are used when the backend
 // is not enabled
 type EnabledBackends struct {
-	OpenTSDB bool
-	Graphite bool
-	Influx   bool
-	Elastic  bool
-	Logstash bool
-	Annotate bool
+	OpenTSDB     bool
+	Graphite     bool
+	Influx       bool
+	Elastic      bool
+	Logstash     bool
+	Annotate     bool
+	AzureMonitor bool
 }
 
 // EnabledBackends returns and EnabledBackends struct which contains fields
@@ -84,6 +98,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.Influx = sc.InfluxConf.URL != ""
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
+	b.AzureMonitor = len(sc.AzureMonitorConf) != 0
 	return b
 }
 
@@ -105,7 +120,8 @@ type GraphiteConf struct {
 
 // AnnotateConf contains the elastic configuration to enable Annotations support
 type AnnotateConf struct {
-	Hosts         []string        // CSV of Elastic Hosts, currently the only backend in annotate
+	Hosts         []string // CSV of Elastic Hosts, currently the only backend in annotate
+	Version       string
 	SimpleClient  bool            // If true ES will connect over NewSimpleClient
 	ClientOptions ESClientOptions // ES client options
 	Index         string          // name of index / table
@@ -132,10 +148,50 @@ type ESClientOptions struct {
 }
 
 // ElasticConf contains configuration for an elastic host that Bosun can query
-type ElasticConf struct {
-	Hosts         []string
-	SimpleClient  bool
-	ClientOptions ESClientOptions
+type ElasticConf AnnotateConf
+
+// AzureConf contains configuration for an Azure metrics
+type AzureMonitorConf struct {
+	SubscriptionId string
+	TenantId       string
+	ClientId       string
+	ClientSecret   string
+	Concurrency    int
+	DebugRequest   bool
+	DebugResponse  bool
+}
+
+// Valid returns if the configuration for the AzureMonitor has
+// required fields with appropriate values
+func (ac AzureMonitorConf) Valid() error {
+	present := make(map[string]bool)
+	missing := []string{}
+	errors := []string{}
+	present["SubscriptionId"] = ac.SubscriptionId != ""
+	present["TenantId"] = ac.TenantId != ""
+	present["ClientId"] = ac.ClientId != ""
+	present["ClientSecret"] = ac.ClientSecret != ""
+	for k, v := range present {
+		if !v {
+			missing = append(missing, k)
+		}
+	}
+	if len(missing) != 0 {
+		errors = append(errors, fmt.Sprintf("missing required fields: %v", strings.Join(missing, ", ")))
+	} else {
+		ccc := auth.NewClientCredentialsConfig(ac.ClientId, ac.ClientSecret, ac.TenantId)
+		_, err := ccc.Authorizer() // We don't use the value here, only checking for error
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("problem creating valid authorization: %v", err.Error()))
+		}
+	}
+	if ac.Concurrency < 0 {
+		errors = append(errors, fmt.Sprintf("concurrency is %v and must be 0 or greater", ac.Concurrency))
+	}
+	if len(errors) != 0 {
+		return fmt.Errorf("%v", strings.Join(errors, " and "))
+	}
+	return nil
 }
 
 // InfluxConf contains configuration for an influx host that Bosun can query
@@ -225,10 +281,11 @@ const (
 // NewSystemConf retruns a system conf with default values set
 func newSystemConf() *SystemConf {
 	return &SystemConf{
-		Scheme:          "http",
-		CheckFrequency:  Duration{Duration: time.Minute * 5},
-		DefaultRunEvery: 1,
-		HTTPListen:      defaultHTTPListen,
+		Scheme:                 "http",
+		CheckFrequency:         Duration{Duration: time.Minute * 5},
+		DefaultRunEvery:        1,
+		HTTPListen:             defaultHTTPListen,
+		AlertCheckDistribution: "",
 		DBConf: DBConf{
 			LedisDir:      "ledis_data",
 			LedisBindAddr: "127.0.0.1:9565",
@@ -271,6 +328,10 @@ func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
 	}
 
+	if sc.GetAlertCheckDistribution() != "" && sc.GetAlertCheckDistribution() != "simple" {
+		return sc, fmt.Errorf("invalid value %v for AlertCheckDistribution", sc.GetAlertCheckDistribution())
+	}
+
 	// iterate over each hosts
 	for hostPrefix, value := range sc.ElasticConf {
 		if value.SimpleClient && value.ClientOptions.Enabled {
@@ -280,6 +341,13 @@ func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 
 	if sc.AnnotateConf.SimpleClient && sc.AnnotateConf.ClientOptions.Enabled {
 		return sc, fmt.Errorf("Can't use both ES SimpleClient and ES ClientOptions please remove or disable one in AnnotateConf: %#v", sc.AnnotateConf)
+	}
+
+	// Check Azure Monitor Configurations
+	for prefix, conf := range sc.AzureMonitorConf {
+		if err := conf.Valid(); err != nil {
+			return sc, fmt.Errorf(`error in configuration for Azure client "%v": %v`, prefix, err)
+		}
 	}
 
 	sc.md = decodeMeta
@@ -401,6 +469,11 @@ func (sc *SystemConf) GetCheckFrequency() time.Duration {
 // the CheckFrequency. Checks by default will run at CheckFrequency * RunEvery
 func (sc *SystemConf) GetDefaultRunEvery() int {
 	return sc.DefaultRunEvery
+}
+
+// GetAlertCheckDistribution returns if the alert rule checks are scattered over check period
+func (sc *SystemConf) GetAlertCheckDistribution() string {
+	return sc.AlertCheckDistribution
 }
 
 // GetUnknownThreshold returns the threshold in which multiple unknown alerts in a check iteration
@@ -538,6 +611,88 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 // needed to run Elastic queries.
 func (sc *SystemConf) GetElasticContext() expr.ElasticHosts {
 	return parseESConfig(sc)
+}
+
+// GetAzureMonitorContext returns a the collection of API clients needed
+// query the Azure Monitor and Application Insights APIs
+func (sc *SystemConf) GetAzureMonitorContext() expr.AzureMonitorClients {
+	allClients := make(expr.AzureMonitorClients)
+	for prefix, conf := range sc.AzureMonitorConf {
+		cc := expr.AzureMonitorClientCollection{}
+		cc.TenantId = conf.TenantId
+		if conf.Concurrency == 0 {
+			cc.Concurrency = 10
+		} else {
+			cc.Concurrency = conf.Concurrency
+		}
+		cc.MetricsClient = insights.NewMetricsClient(conf.SubscriptionId)
+		cc.MetricDefinitionsClient = insights.NewMetricDefinitionsClient(conf.SubscriptionId)
+		cc.ResourcesClient = resources.NewClient(conf.SubscriptionId)
+		cc.AIComponentsClient = ainsightsmgmt.NewComponentsClient(conf.SubscriptionId)
+		cc.AIMetricsClient = ainsights.NewMetricsClient()
+		if conf.DebugRequest {
+			cc.ResourcesClient.RequestInspector, cc.MetricsClient.RequestInspector, cc.MetricDefinitionsClient.RequestInspector = azureLogRequest(), azureLogRequest(), azureLogRequest()
+			cc.AIComponentsClient.RequestInspector, cc.AIMetricsClient.RequestInspector = azureLogRequest(), azureLogRequest()
+		}
+		if conf.DebugResponse {
+			cc.ResourcesClient.ResponseInspector, cc.MetricsClient.ResponseInspector, cc.MetricDefinitionsClient.ResponseInspector = azureLogResponse(), azureLogResponse(), azureLogResponse()
+			cc.AIComponentsClient.ResponseInspector, cc.AIMetricsClient.ResponseInspector = azureLogResponse(), azureLogResponse()
+		}
+		ccc := auth.NewClientCredentialsConfig(conf.ClientId, conf.ClientSecret, conf.TenantId)
+		at, err := ccc.Authorizer()
+		if err != nil {
+			// Should not hit this since we check for authorizer errors in Validation
+			// This is checked before because this method is not called until the an expression is called
+			slog.Error("unexpected Azure Authorizer error: ", err)
+		}
+		// Application Insights needs a different authorizer to use the other Resource "api.application..."
+		rcc := auth.NewClientCredentialsConfig(conf.ClientId, conf.ClientSecret, conf.TenantId)
+		rcc.Resource = "https://api.applicationinsights.io"
+		rat, err := rcc.Authorizer()
+		if err != nil {
+			slog.Error("unexpected application insights azure authorizer error: ", err)
+		}
+		cc.MetricsClient.Authorizer, cc.MetricDefinitionsClient.Authorizer, cc.ResourcesClient.Authorizer = at, at, at
+		cc.AIComponentsClient.Authorizer, cc.AIMetricsClient.Authorizer = at, rat
+		allClients[prefix] = cc
+	}
+	return allClients
+}
+
+// azureLogRequest outputs HTTP requests to Azure to the logs
+func azureLogRequest() autorest.PrepareDecorator {
+	return func(p autorest.Preparer) autorest.Preparer {
+		return autorest.PreparerFunc(func(r *http.Request) (*http.Request, error) {
+			r, err := p.Prepare(r)
+			if err != nil {
+				slog.Warningf("failure to dump azure request: %v", err)
+			}
+			dump, err := httputil.DumpRequestOut(r, true)
+			if err != nil {
+				slog.Warningf("failure to dump azure request: %v", err)
+			}
+			slog.Info(string(dump))
+			return r, err
+		})
+	}
+}
+
+// azureLogRequest outputs HTTP responses from requests to Azure to the logs
+func azureLogResponse() autorest.RespondDecorator {
+	return func(p autorest.Responder) autorest.Responder {
+		return autorest.ResponderFunc(func(r *http.Response) error {
+			err := p.Respond(r)
+			if err != nil {
+				slog.Warningf("failure to dump azure response: %v", err)
+			}
+			dump, err := httputil.DumpResponse(r, true)
+			if err != nil {
+				slog.Warningf("failure to dump azure response: %v", err)
+			}
+			slog.Info(string(dump))
+			return err
+		})
+	}
 }
 
 // AnnotateEnabled returns if annotations have been enabled or not

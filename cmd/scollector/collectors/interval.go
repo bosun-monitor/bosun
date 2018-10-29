@@ -117,6 +117,7 @@ func enableURL(url string, regexes ...string) func() bool {
 			resp.Body.Close()
 		}()
 		if resp.StatusCode != 200 {
+			slog.Infof("URL not enabled: %v; HTTP Response not 200, but %v", url, resp.StatusCode)
 			return false
 		}
 		if len(res) == 0 {

@@ -414,19 +414,23 @@ ConnectionString and Role, which are the same as using sqlplus.
 
 By default Elastic nodes are auto-detected on localhost:9200, but if you have a
 node running on another network interface, a non-standard port or even multiple
-nodes running on the same host you can use the Elastic configuration:
+nodes running on the same host you can use the Elastic configuration. Also lets
+you specify basic auth credentials and using TLS by setting the Scheme to https:
 
-  [[Elastic]]
-    Host = "192.168.1.1"
-    Port = 9201
-    ClusterInterval = "10s"
-    IndexInterval = "1m"
+	[[Elastic]]
+	  Host = "192.168.1.1"
+	  Port = 9201
+	  ClusterInterval = "10s"
+	  IndexInterval = "1m"
+	  User = "user"
+	  Password = "pass"
+	  Scheme = "https"
 
-  [[Elastic]]
-    Host = "192.168.1.1"
-    Port = 9202
-    ClusterInterval = "10s"
-    IndexInterval = "1m"
+	[[Elastic]]
+	  Host = "192.168.1.1"
+	  Port = 9202
+	  ClusterInterval = "10s"
+	  IndexInterval = "1m"
 
 Windows
 

@@ -29,7 +29,7 @@ import (
 // Matt and I decided not to expire the cache at given points (such as reloading rule page), but I forgot why. ?
 // the only risk is that if you query your store for data -5m to now and your store doesn't have the latest points up to date,
 // and then 5m from now you query -10min to -5m you'll get the same cached data, including the incomplete last points
-var cacheObj = cache.New(100)
+var cacheObj = cache.New("web", 100)
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v interface{}, err error) {
 	defer func() {
@@ -42,8 +42,15 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	if err != nil {
 		return nil, err
 	}
-
-	lines := strings.Split(strings.TrimSpace(string(text)), "\n")
+	rawLines := strings.Split(strings.TrimSpace(string(text)), "\n")
+	var lines []string
+	for _, line := range rawLines {
+		// remove comments and empty lines before processing so comments can be after the final line
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		lines = append(lines, line)
+	}
 	var expression string
 	vars := map[string]string{}
 	varRegex := regexp.MustCompile(`(\$\w+)\s*=(.*)`)
@@ -79,6 +86,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
 		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
 		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
+		AzureMonitor:    schedule.SystemConf.GetAzureMonitorContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,
@@ -87,7 +95,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		History:   nil,
 		Annotate:  AnnotateBackend,
 	}
-	res, queries, err := e.Execute(backends, providers, t, now, 0, false)
+	res, queries, err := e.Execute(backends, providers, t, now, 0, false, "Web: expression execution")
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +145,7 @@ type Res struct {
 func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string, incidentID int) (*ruleResult, error) {
 	s := &sched.Schedule{}
 	s.Search = schedule.Search
-	if err := s.Init(schedule.SystemConf, ruleConf, schedule.DataAccess, AnnotateBackend, false, false); err != nil {
+	if err := s.Init("web", schedule.SystemConf, ruleConf, schedule.DataAccess, AnnotateBackend, false, false); err != nil {
 		return nil, err
 	}
 	rh := s.NewRunHistory(now, cacheObj)
@@ -202,6 +210,12 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		}
 		var errs []error
 		primaryIncident.Id = int64(incidentID)
+		// See if the incidentID corresponds to a real Incident, and if so
+		// get some information from the real incident
+		if realIncident, err := schedule.DataAccess.State().GetIncidentState(primaryIncident.Id); err == nil {
+			primaryIncident.PreviousIds = realIncident.PreviousIds
+		}
+
 		primaryIncident.Start = time.Now().UTC()
 		primaryIncident.CurrentStatus = e.Status
 		primaryIncident.LastAbnormalStatus = e.Status

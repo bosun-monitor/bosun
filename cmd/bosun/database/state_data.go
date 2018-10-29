@@ -61,9 +61,13 @@ type StateDataAccess interface {
 	GetIncidentState(incidentId int64) (*models.IncidentState, error)
 
 	GetAllIncidentsByAlertKey(ak models.AlertKey) ([]*models.IncidentState, error)
+	GetAllIncidentIdsByAlertKey(ak models.AlertKey) ([]int64, error)
 
 	UpdateIncidentState(s *models.IncidentState) (int64, error)
 	ImportIncidentState(s *models.IncidentState) error
+
+	// SetIncidentNext gets the incident for previousIncidentId, and sets its NextId field to be nextIncidentId and then saves the incident
+	SetIncidentNext(incidentId, nextIncidentId int64) error
 
 	SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error
 	GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error)
@@ -259,6 +263,17 @@ func (d *dataAccess) GetAllIncidentsByAlertKey(ak models.AlertKey) ([]*models.In
 	return d.incidentMultiGet(conn, ids)
 }
 
+func (d *dataAccess) GetAllIncidentIdsByAlertKey(ak models.AlertKey) ([]int64, error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	ids, err := int64s(conn.Do("LRANGE", incidentsForAlertKeyKey(ak), 0, -1))
+	if err != nil {
+		return nil, slog.Wrap(err)
+	}
+	return ids, nil
+}
+
 // In general one should not use the redis KEYS command. So this is only used
 // in migration. If we want to use a proper index of all incidents
 // then issues with allIncidents must be fixed. Currently it is planned
@@ -318,10 +333,39 @@ func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn) (*models.Inc
 	return state, nil
 }
 
+// setIncident directly sets the incident as is to the datastore
+func (d *dataAccess) setIncident(incident *models.IncidentState, conn redis.Conn) error {
+	data, err := json.Marshal(incident)
+	if err != nil {
+		return slog.Wrap(err)
+	}
+	if _, err = conn.Do("SET", incidentStateKey(incident.Id), data); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *dataAccess) GetIncidentState(incidentId int64) (*models.IncidentState, error) {
 	conn := d.Get()
 	defer conn.Close()
 	return d.getIncident(incidentId, conn)
+}
+
+// SetIncidentNext gets the incident for previousIncidentId, and sets its NextId field
+// to be nextIncidentId and then saves the incident
+func (d *dataAccess) SetIncidentNext(previousIncidentId, nextIncidentId int64) error {
+	conn := d.Get()
+	defer conn.Close()
+	previousIncident, err := d.getIncident(previousIncidentId, conn)
+	if err != nil {
+		return err
+	}
+	previousIncident.NextId = nextIncidentId
+	err = d.setIncident(previousIncident, conn)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *dataAccess) UpdateIncidentState(s *models.IncidentState) (int64, error) {

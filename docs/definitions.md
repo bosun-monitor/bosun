@@ -196,6 +196,8 @@ Variables and function available to the unknown template:
 * Group: list of names of alerts
 * Name: group name
 * Time: [time](http://golang.org/pkg/time/#Time) this group triggered unknown
+* States: unknown incident states (only use when grouping unknown disabled using [unknownMinGroupSize](http://bosun.org/definitions#unknownmingroupsize))
+* IncidentUnknownLink: creates a link to Bosun’s incident view same as `.Incident` (require incident id)
 
 Example:
 
@@ -212,6 +214,21 @@ template ut {
 }
 
 unknownTemplate = ut
+```
+
+```
+template testunknownBody {
+    subject = {{.Name}}{{ if .States.Tags }}.{{ replace .States.Tags "," "." -1 }}{{else}}{{end}}
+    body = `
+    <p>Time: {{.Time}}
+    <p>Name: {{.Name}}
+    <p>AlertKey: {{.States.AlertKey}}
+    <p>Incident Id: {{.States.Id}}
+    <p>Link: {{.IncidentUnknownLink .States.Id}}
+    `
+}
+
+unknownBody = testunknownBody
 ```
 
 In general it is better to stick with the system default by not defining an unknown template. The system default is:
@@ -660,12 +677,21 @@ The value of is `IsEmail` is true if the template is being rendered for an email
 
 #### .LastAbnormalTime
 {: .var}
-`.LastAbnormalTime` is an int64 representing the time of `.LastAbnormalStatus`. This is not a time.Time object, but rather a unix epoch. This will be 0 when using Bosun's testing UI.
-
+`.LastAbnormalTime` is a time.Time object that will json marshall itself as Unix time. It represents the time of `.LastAbnormalStatus`.
 
 #### .NeedAck
 {: .var}
 `.NeedAck` is a boolean value that is true if the alert has not been acknowledged yet.
+
+#### .Open
+{: .var}
+`.Open` is a boolean value that is true if the alert has not been closed yet.
+
+#### .PreviousIds
+
+`.PerviousIds` is a slice of Incident IDs (int64) that exist for the alertkey (Alert Name + TagSet) of the incident ordered with the most recent previous incident first. This can be useful to generate links to previous incidents or to get information about previous incidents using the context-bound [`.GetIncidentState` template function](/definitions#getincidentstateid-int64-incidentstate).
+
+In Bosun's testing UI this will be populated by the previous Incidents of a real incident if you set the incident number in the interface to match a real incident id.
 
 #### .Result
 {: .var}
@@ -778,6 +804,81 @@ See the examples in the functions that follow to see examples of Error handling.
 
 #### Context-Bound Functions
 
+##### .AzureResourceLink(prefix, rType, rsg, name string) (string)
+{: .func}
+
+`.AzureResourceLink` returns a https link to Azure's Portal for the resource. `prefix` identifies the subscription, an empty string as a value is the same as "default". `rType` is the resource type, `rsg` is the name of the resource group, and `name` is the name of the resource.
+
+If there is an error an empty string is returned and .Errors is appended to.
+
+Example:
+
+```
+template AzureResourceLink.Example {
+    subject = ``
+    body = `
+    {{- $portalLink := .AzureResourceLink "default" .Alert.Vars.resType .Group.rsg .Group.name -}}
+    {{- if ne $portalLink "" -}}
+        <a href="{{ $portalLink }}">Azure Portal for Resource</a>
+    {{- else -}}
+        <p>Error Creating Azure Portal Link: {{ .LastError }}</p>
+    {{- end -}}
+`
+}
+
+alert AzureResourceLink.Example {
+    template = AzureResourceLink.Example
+    $resType = Microsoft.Compute/virtualMachines
+    $resources = azrt("$resType")
+    $q = azmulti("Percentage CPU", "", $resources, "avg", "1m", "5m", "")
+    $avgQ = avg($q)
+    warn = $avgQ > 50
+}
+```
+
+##### .AzureResourceTags(prefix, rType, rsg, name string) (map[string]string)
+{: .func}
+
+`.AzureResourceTags` returns the Azure tags associated with the resource as a map. `prefix` identifies the subscription, an empty string as a value is the same as "default". `rType` is the resource type, `rsg` is the name of the resource group, and `name` is the name of the resource.
+
+If there is an error then nil will be returned and .Errors is appended to. 
+
+```
+template AzureResourceTags.Example {
+    subject = ``
+    body = `
+    {{- $azTags := .AzureResourceTags "default" .Alert.Vars.resType .Group.rsg .Group.name -}}
+    {{- if notNil $azTags -}}
+        <table>
+            <tr>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+            {{ range $k, $v := $azTags }}
+                <tr>
+                    <td>{{ $k }}</td>
+                    <td>{{ $v }}</td>
+                </tr>
+            {{ end }}
+        </table>
+    {{- else -}}
+        <p>{{ .LastError }}</p>
+    {{- end }}
+`
+}
+
+alert AzureResourceTags.Example {
+    template = AzureResourceTags.Example
+    $resType = Microsoft.Compute/virtualMachines
+    $resources = azrt("$resType")
+    $q = azmulti("Percentage CPU", "", $resources, "avg", "1m", "5m", "")
+    $avgQ = avg($q)
+    warn = $avgQ > 50
+}
+```
+
+
+
 ##### .Ack() (string)
 {: .func}
 
@@ -808,7 +909,7 @@ template test {
 ##### .ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) ([]interface{})
 {: .func}
 
-`.ESQuery` returns a slice of elastic documents. The function behaves like the escount and esstat [elastic expression functions](/expressions#elastic-query-functions) but returns documents instead of statistics about those documents. The number of documents is limited to the provided size argument. Each item in the slice is the a document that has been marshaled to a golang interface{}. This means the contents are dynamic like elastic documents. If there is an error, than nil is returned and `.Errors` is appended to. 
+`.ESQuery` returns a slice of elastic documents. The function behaves like the escount and esstat [elastic expression functions](/expressions#elastic-query-functions) but returns documents instead of statistics about those documents. The number of documents is limited to the provided size argument. Each item in the slice is the a document that has been marshaled to a golang interface{}. This means the contents are dynamic like elastic documents. If there is an error, then nil is returned and `.Errors` is appended to.
 
 The group (aka tags) of the alert is used to further filter the results. This is implemented by taking each key/value pair in the alert, and adding them as an [elastic term query](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-term-query.html).
 
@@ -1104,6 +1205,89 @@ template graph {
 
 A map of tags keys to their corresponding values for the alert.
 
+##### .GetIncidentState(id int64) (IncidentState)
+{: .func}
+
+`.GetIncidentState` returns an [IncidentState Object](/definitions#incidentstate) for the given incident id. If there is no incident for the Id or there is an error then nil is returned and `.Errors` is appended to.
+
+Example:
+
+```
+template previous.incidents {
+    <style>
+            td, th {
+                padding-right: 10px;
+                padding-left: 2px;
+                border: 1px solid black;
+            }
+        </style>
+        <h3>Previous Incidents with Ack/Close/Note Actions</h3>
+
+        <table>
+        <thead>
+            <tr>
+                <th colspan="3">Incident</th>
+                <th colspan="4">Actions</th>
+            </tr>
+            <tr>
+                <th>Id</th>
+                <th>Duration</th>
+                <th>Event Count</th>
+                <th>Who</th>
+                <th>Action</th>
+                <th>When</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        {{- range $id := .PreviousIds -}}
+            {{- $pi := $.GetIncidentState $id -}}
+            {{- if notNil $pi -}}
+                {{- $filteredActions := makeSlice -}}
+                {{- $incidentDuration := $pi.Start.Sub $pi.Start -}}
+                {{- if $pi.End -}}
+                    {{- $incidentDuration = $pi.End.Sub $pi.Start -}}
+                {{- end -}}
+                {{- range $action := $pi.Actions -}}
+                    {{- $actionString := $action.Type.String -}}
+                    {{- $closed := eq $actionString "Closed" -}}
+                    {{- $ackd := eq $actionString "Acknowledged" -}}
+                    {{- $note := eq $actionString "Note" -}}
+                    {{- if or $closed $ackd $note }}
+                        {{- $filteredActions = append $filteredActions $action -}}
+                    {{- end -}}
+                {{- end -}}
+
+                <tr>
+                    {{ $actionLen := len $filteredActions }}
+                    <td {{ if gt $actionLen 1 -}} rowspan="{{- len $filteredActions }}" {{- end -}}>
+                        <a target="_blank" href="https://bosun.ds.stackexchange.com/incident?id={{$pi.Id}}">#{{$pi.Id }}</a>    
+                    </td>
+                    <td {{ if gt $actionLen 1 -}} rowspan="{{- len $filteredActions }}" {{- end -}}>
+                        {{ $incidentDuration.Truncate 1e9 }}
+                    </td>
+                    <td {{ if gt $actionLen 1 -}} rowspan="{{- len $filteredActions }}" {{- end -}}>
+                        {{ len $pi.Events }}
+                    </td>
+                    {{- range $ia, $action := $filteredActions -}}
+                        {{- if gt $ia 0 -}}</tr><tr></td>{{ end }}
+                        <td>{{ $action.User }}</td>
+                        <td>{{ $action.Type | printf "%s" }}</td>
+                        <td>{{ $action.Time.Format "2006-01-02 15:04" }}</td>
+                        <td>{{ $action.Message }}</td>
+                        {{ if gt $ia 0 }}</tr>{{ end }}
+                    {{- end -}}
+                </tr>
+
+            {{- else -}}
+                <tr><td rowspan=7>{{ .LastError }}</td></tr>
+            {{- end -}}
+        {{- end -}}
+        </table>
+   `
+}
+
+```
+
 ##### .HTTPGet(url string) string
 {: .func}
 
@@ -1254,6 +1438,58 @@ See the [main lookup example](/definitions#main-lookup-example) for example usag
 See the [main lookup example](/definitions#main-lookup-example) for example usage in a template.
 
 #### Global Functions
+
+##### append: append(a []interface{}, b interface{}) interface{}
+{: .func}
+
+`append` exposes go append function and lets you append an object to an existing slice (returning a new slice). This is useful since [Go version 1.11 allows you to modify template variables](https://golang.org/doc/go1.11#text/template).
+
+This can be combined with `makeSlice` to build slices to then seralize to JSON. For example:
+
+```
+notification test {
+    actionBody = myActionBody
+    post = http://localhost:2345
+    contentType = application/json
+}
+
+alert test {
+    template = test
+    $seriesA = series("host=server01", epoch(), 1)
+    $seriesB = series("host=server02", epoch(), 2)
+    warn = avg(merge($seriesA, $seriesB))
+    warnNotification = test
+}
+
+template test {
+    subject = ``
+    body = ``
+    myActionBody = `
+       {{- $s := makeSlice -}}
+       {{- range $x := .States -}}
+            {{- $s = append $s (index $x.Events 0).Time -}}
+       {{- end -}}
+       {{- $s | json }}
+    `
+}
+```
+
+```
+# Mixed Type matrix example (can be used with above example)
+template test {
+    subject = ``
+    body = ``
+    myActionBody = `
+       {{- $s := makeSlice -}}
+       {{- range $x := .States -}}
+            {{- range $a := $x.Actions }}
+                {{- $s = append $s (makeSlice $a.Time $a.User $a.Message $a.Type) -}}
+            {{- end -}}
+       {{- end -}}
+       {{- $s | json }}
+    `
+}
+```
 
 ##### bytes(string|int|float) (string)
 {: .func}
@@ -1528,6 +1764,29 @@ There is a third property **Computations**. But it is not recommended that you a
 {: .type}
 
 A `.Expr` is a bosun expression. Although various properties and methods are attached to it, it should only be used for printing (to see the underlying text) and for passing it to function that evaluate expressions such as [`.Eval`](/definitions#evalstringexpression-resultvalue) within templates.
+
+#### IncidentState
+{: type}
+
+An `IncidentState` is the main object that contains information about an incident. The IncidentState is always embedded into a template's context making these fields available context-bound template variables (Read: All IncidentState fields are available as template variables, but not all template variables are available as IncidentState fields (IncidentState is a strict/proper subset of Template Variables: `IncidentState ⊊ TemplateVars`)). 
+
+This type is also returned by [`.GetIncidentState` template function](/definitions#getincidentstateid-int64-incidentstate). The following fields are available:
+
+* `Id`: The Id of the incident as int64
+* `Start`: a [time.Time](https://golang.org/pkg/time/#Time) object, see [Template Variables `.Start`](/definitons#start)
+* `End`:  a pointer to a time.Time object, will be a nil pointer if the incident has not ended yet
+* `AlertKey`: see [Template Variables .AlertKey](/definitions#alertkey)
+* `Alert`: string representation of AlertKey
+* `Result`: A pointer to an embedded [`Result` type](/definitions#result-1)
+* `Events`: a slice of [Event objects](/definitions#event), see [Template Variables `.Events`](/definitons#events)
+* `Actions`: a slice of [Action objects](/definitions#action), see [Template Variables `.Events`](/definitons#actions)
+* `Subject`: string representation of the subject of the alert, see [Template Variables `.Events`](/definitions#subject-1)
+* `NeedAck`, `Open`, `Unevaluated`: are all bool fields. See [Template Variable `.NeedAck`](/definitions#needack), [Template Variable Open](/definitions#open), and [Template Variable `.Unevaluated`](/definitions#unevaulated)
+* `CurrentStatus`, `WorstStatus`, `LastAbnormalStatus` are all [`Status` objects](/definitions#status). See See [Template Variable `.CurrentStatus`](/definitions#currentstatus), [Template Variable `.WorstStatus`](/definitions#worststatus), and [Template Variable `.LastAbnormalStatus`](/definitions#lastabnormalstatus)
+* `LastAbnormalTime` is time.Time object that will marshall itself as Unix time. See [Template Variable `.LastAbnormalTime`](/definitions#lastabnormaltime)
+* `PreviousIds` is a slice of Incident IDs (int64) of previous Incidents. See [Template Variable `.LastAbnormalTime`](/definitions#previousids)
+* `NextId` is the ID of a future incident for the same AlertKey. If there is no future incident, then the value is 0.
+* `Notifications` is a string slice of all notifications names that were sent for the incident at the present time.
 
 #### Result
 {: .type}

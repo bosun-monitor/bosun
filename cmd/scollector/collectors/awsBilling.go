@@ -403,7 +403,7 @@ func (billingObject *bucketContents) downloadGzippedItem(downloader *s3manager.D
 	tempFile.Close()
 	err = os.Remove(tempFile.Name())
 	if err != nil {
-		slog.Warningf("Could not remove temporary file", tempFile.Name())
+		slog.Warningf("Could not remove temporary file: %v", tempFile.Name())
 	}
 	return &unzippedFile, err
 }

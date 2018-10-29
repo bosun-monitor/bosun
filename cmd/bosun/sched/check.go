@@ -3,6 +3,7 @@ package sched
 import (
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"bosun.org/cmd/bosun/cache"
@@ -73,6 +74,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 			GraphiteContext: s.SystemConf.GetGraphiteContext(),
 			InfluxConfig:    s.SystemConf.GetInfluxContext(),
 			ElasticHosts:    s.SystemConf.GetElasticContext(),
+			AzureMonitor:    s.SystemConf.GetAzureMonitorContext(),
 		},
 	}
 	return r
@@ -243,9 +245,33 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		if a.Log || silencedOrIgnored(a, event, si) {
 			//a log or silenced/ignored alert will not need to be saved
 		} else {
-			incident.Id, err = s.DataAccess.State().UpdateIncidentState(incident)
+			daState := s.DataAccess.State()
+			incident.Id, err = daState.UpdateIncidentState(incident)
 			if err != nil {
 				return
+			}
+			previousIds := []int64{}
+			previousIds, err = daState.GetAllIncidentIdsByAlertKey(ak)
+			if err != nil {
+				return
+			}
+			for _, id := range previousIds {
+				if incident.Id > id {
+					incident.PreviousIds = append(incident.PreviousIds, id)
+				}
+			}
+			sort.Slice(incident.PreviousIds, func(i, j int) bool {
+				return incident.PreviousIds[i] > incident.PreviousIds[j]
+			})
+			_, err = daState.UpdateIncidentState(incident)
+			if err != nil {
+				return
+			}
+			if len(incident.PreviousIds) > 0 {
+				err = daState.SetIncidentNext(incident.PreviousIds[0], incident.Id)
+				if err != nil {
+					return
+				}
 			}
 		}
 	}
@@ -642,7 +668,8 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 		History:   s,
 		Annotate:  s.annotate,
 	}
-	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
+	origin := fmt.Sprintf("Schedule: Alert Name: %s", a.Name)
+	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK, origin)
 	return results, err
 }
 

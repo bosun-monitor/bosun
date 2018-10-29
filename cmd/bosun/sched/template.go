@@ -92,6 +92,17 @@ func (c *Context) Last() interface{} {
 	}{c.IncidentState.Last(), c.Id}
 }
 
+// GetIncidentState returns an IncidentState so users can
+// include information about previous or other Incidents in alert notifications
+func (c *Context) GetIncidentState(id int64) *models.IncidentState {
+	is, err := c.schedule.DataAccess.State().GetIncidentState(id)
+	if err != nil {
+		c.addError(err)
+		return nil
+	}
+	return is
+}
+
 // Expr takes an expression in the form of a string, changes the tags to
 // match the context of the alert, and returns a link to the expression page.
 func (c *Context) Expr(v string) string {
@@ -303,7 +314,8 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 		Squelched: c.schedule.RuleConf.AlertSquelched(c.Alert),
 		History:   c.schedule,
 	}
-	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK)
+	origin := fmt.Sprintf("Template: Alert Key: %v", c.AlertKey)
+	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, origin)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}
@@ -643,48 +655,92 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 }
 
 func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
-	newFilter := expr.ScopeES(c.Group(), filter.Query)
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size, c.ElasticHost)
-	if err != nil {
-		c.addError(err)
+	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
+	if !ok {
 		return nil
 	}
-	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
-	if err != nil {
-		c.addError(err)
-		return nil
+
+	switch cfg.Version {
+	case expr.ESV2:
+		return c.esQuery2(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV5:
+		return c.esQuery5(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV6:
+		return c.esQuery6(indexRoot, filter, sduration, eduration, size)
 	}
-	r := make([]interface{}, len(results.Hits.Hits))
-	for i, h := range results.Hits.Hits {
-		var err error
-		err = json.Unmarshal(*h.Source, &r[i])
-		if err != nil {
-			c.addError(err)
-			return nil
-		}
-	}
-	return r
+
+	return nil
 }
 
 func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, filter.Query, sduration, eduration, size, c.ElasticHost)
+	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
+	if !ok {
+		return nil
+	}
+
+	switch cfg.Version {
+	case expr.ESV2:
+		return c.esQueryAll2(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV5:
+		return c.esQueryAll5(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV6:
+		return c.esQueryAll6(indexRoot, filter, sduration, eduration, size)
+	}
+
+	return nil
+}
+
+// AzureResourceLink create a link to Azure's Portal for the resource (https://portal.azure.com)
+// given the subscription identifer (bosun expression prefix), as well as the resource type, group,
+// and name. It uses the azrt expression function under the hood
+func (c *Context) AzureResourceLink(prefix, rType, rsg, name string) (link string) {
+	if prefix == "" {
+		prefix = "default"
+	}
+	// Get clients so we can get the TenantId
+	clients := c.schedule.SystemConf.GetAzureMonitorContext()
+	client, ok := clients[prefix]
+	if !ok {
+		c.addError(fmt.Errorf("client/subscription %s not found", prefix))
+		return
+	}
+	selectedResource, err := c.azureSelectResource(prefix, rType, rsg, name)
+	if err != nil {
+		c.addError(err)
+		return
+	}
+	link = fmt.Sprintf("https://portal.azure.com/#@%s/resource%s", client.TenantId, selectedResource.ID)
+	return
+}
+
+// AzureResourceTags returns the Azure tags associated with the resource as a map
+func (c *Context) AzureResourceTags(prefix, rType, rsg, name string) map[string]string {
+	selectedResource, err := c.azureSelectResource(prefix, rType, rsg, name)
 	if err != nil {
 		c.addError(err)
 		return nil
 	}
-	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
+	return selectedResource.Tags
+}
+
+func (c *Context) azureSelectResource(prefix, rType, rsg, name string) (expr.AzureResource, error) {
+	if prefix == "" {
+		prefix = "default"
+	}
+	az := expr.AzureResource{}
+	resList, _, err := c.eval(fmt.Sprintf(`["%s"]azrt("%s")`, prefix, rType), false, false, 0)
 	if err != nil {
-		c.addError(err)
-		return nil
+		return az, err
 	}
-	r := make([]interface{}, len(results.Hits.Hits))
-	for i, h := range results.Hits.Hits {
-		var err error
-		err = json.Unmarshal(*h.Source, &r[i])
-		if err != nil {
-			c.addError(err)
-			return nil
-		}
+	if len(resList) == 0 {
+		return az, fmt.Errorf("no azure resources found for subscription %s and type %s", prefix, rType)
 	}
-	return r
+	resources, ok := resList[0].Value.(expr.AzureResources)
+	if !ok {
+		return az, fmt.Errorf("failed type assertion on azure resource list")
+	}
+	if selectedResource, found := resources.Get(rType, rsg, name); found {
+		return selectedResource, nil
+	}
+	return az, fmt.Errorf("resource with type %s, group %s, and name %s not found", rType, rsg, name)
 }

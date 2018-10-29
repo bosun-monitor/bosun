@@ -22,7 +22,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -38,7 +38,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -54,7 +54,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -70,7 +70,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -89,7 +89,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +108,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -124,7 +124,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		true, // expect parse error here, series result not valid as TypeNumberExpr
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -140,7 +140,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		true, // v() is not valid outside a map expression
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -159,7 +159,7 @@ func TestMap(t *testing.T) {
 			},
 		},
 		false,
-	})
+	}, t)
 	if err != nil {
 		t.Error(err)
 	}

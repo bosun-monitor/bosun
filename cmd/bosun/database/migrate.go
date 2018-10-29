@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/json"
+	"sort"
 
 	"bosun.org/models"
 	"bosun.org/slog"
@@ -24,6 +25,11 @@ var tasks = []Migration{
 		UID:     "Migrate Rendered Templates",
 		Task:    migrateRenderedTemplates,
 		Version: 1,
+	},
+	{
+		UID:     "Populate Previous IncidentIds",
+		Task:    populatePreviousIncidents,
+		Version: 2,
 	},
 }
 
@@ -69,6 +75,58 @@ func migrateRenderedTemplates(d *dataAccess) error {
 		}
 		if _, err := conn.Do("SET", renderedTemplatesKey(oldState.Id), renderedTemplatesJSON); err != nil {
 			return slog.Wrap(err)
+		}
+
+	}
+	return nil
+}
+
+func populatePreviousIncidents(d *dataAccess) error {
+	slog.Infoln("Adding fields for previous incidents and next incident on all incidents in order to link incidents together. This is a one time operation that can take several minutes.")
+
+	ids, err := d.getAllIncidentIdsByKeys()
+	slog.Infof("migrating %v incidents", len(ids))
+	if err != nil {
+		return err
+	}
+
+	conn := d.Get()
+	defer conn.Close()
+
+	prevIdCache := make(map[models.AlertKey]*[]int64)
+
+	for _, id := range ids {
+		incident, err := d.State().GetIncidentState(id)
+		if err != nil {
+			return err
+		}
+		if _, ok := prevIdCache[incident.AlertKey]; !ok {
+			prevList, err := d.State().GetAllIncidentIdsByAlertKey(incident.AlertKey)
+			if err != nil {
+				return err
+			}
+			sort.Slice(prevList, func(i, j int) bool {
+				return prevList[i] < prevList[j]
+			})
+			prevIdCache[incident.AlertKey] = &prevList
+		}
+		for _, pid := range *prevIdCache[incident.AlertKey] {
+			if incident.Id > pid {
+				incident.PreviousIds = append([]int64{pid}, incident.PreviousIds...)
+				continue
+			}
+			break
+		}
+
+		err = d.setIncident(incident, conn)
+		if err != nil {
+			return err
+		}
+		if len(incident.PreviousIds) > 0 {
+			err := d.State().SetIncidentNext(incident.PreviousIds[0], incident.Id)
+			if err != nil {
+				return err
+			}
 		}
 
 	}

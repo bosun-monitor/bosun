@@ -20,7 +20,6 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 )
 
 type Conf struct {
@@ -425,6 +424,9 @@ var defaultFuncs = template.FuncMap{
 		}
 		return &d
 	},
+	"append": func(a []interface{}, b interface{}) interface{} {
+		return append(a, b)
+	},
 	"makeSlice": func(vals ...interface{}) interface{} {
 		return vals
 	},
@@ -504,7 +506,7 @@ func (c *Conf) NewExpr(s string) *expr.Expr {
 }
 
 func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
-	lookup := func(e *expr.State, T miniprofiler.Timer, lookup, key string) (results *expr.Results, err error) {
+	lookup := func(e *expr.State, lookup, key string) (results *expr.Results, err error) {
 		results = new(expr.Results)
 		results.IgnoreUnjoined = true
 		l := c.Lookups[lookup]
@@ -552,7 +554,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		}
 		return results, nil
 	}
-	lookupSeries := func(e *expr.State, T miniprofiler.Timer, series *expr.Results, lookup, key string) (results *expr.Results, err error) {
+	lookupSeries := func(e *expr.State, series *expr.Results, lookup, key string) (results *expr.Results, err error) {
 		results = new(expr.Results)
 		results.IgnoreUnjoined = true
 		l := c.Lookups[lookup]
@@ -659,6 +661,9 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	if backends.Annotate {
 		merge(expr.Annotate)
 	}
+	if backends.AzureMonitor {
+		merge(expr.AzureMonitor)
+	}
 	return funcs
 }
 
@@ -682,12 +687,12 @@ func (c *Conf) getAlertExpr(name, key string) (*conf.Alert, *expr.Expr, error) {
 	return a, e, nil
 }
 
-func (c *Conf) alert(s *expr.State, T miniprofiler.Timer, name, key string) (results *expr.Results, err error) {
+func (c *Conf) alert(s *expr.State, name, key string) (results *expr.Results, err error) {
 	_, e, err := c.getAlertExpr(name, key)
 	if err != nil {
 		return nil, err
 	}
-	results, _, err = e.ExecuteState(s, T)
+	results, _, err = e.ExecuteState(s)
 	if err != nil {
 		return nil, err
 	}

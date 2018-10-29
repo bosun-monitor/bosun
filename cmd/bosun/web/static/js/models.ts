@@ -141,6 +141,9 @@ class IncidentState {
     LastAbnormalStatus: string;
     LastAbnormalTime: number; // Epoch
 
+    PreviousIds: number[];
+    NextId: number;
+
     constructor(is) {
         this.Id = is.Id;
         this.Start = is.Start;
@@ -171,6 +174,13 @@ class IncidentState {
         this.WorstStatus = is.WorstStatus;
         this.LastAbnormalStatus = is.LastAbnormalStatus;
         this.LastAbnormalTime = is.LastAbnormalTime;
+        this.PreviousIds = new Array<number>();
+        if (is.PreviousIds) {
+            for (let id of is.PreviousIds) {
+                this.PreviousIds.push(id);
+            }
+        }
+        this.NextId = is.NextId;
     }
 
 
