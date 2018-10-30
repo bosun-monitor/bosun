@@ -20,6 +20,7 @@ type Migration struct {
 	Version int64
 }
 
+// Be sure to increment the value of `var SchemaVersion` in database.go when adding a new migration
 var tasks = []Migration{
 	{
 		UID:     "Migrate Rendered Templates",

@@ -19,7 +19,7 @@ import (
 	"github.com/captncraig/easyauth/providers/token/redisStore"
 )
 
-var SchemaVersion = int64(1)
+var SchemaVersion = int64(2)
 
 // Core data access interface for everything sched needs
 type DataAccess interface {
