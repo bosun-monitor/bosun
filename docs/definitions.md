@@ -1442,6 +1442,13 @@ See the [main lookup example](/definitions#main-lookup-example) for example usag
 
 `.Rule` creates a link to Bosun's rule editor page. This is useful to provide a quick link to the view someone would use to edit the alert. This is generated using the [system configuration's Hostname](/system_configuration#hostname) value as the root of the link. The link will set the the alert, which template should be rendered, and time on the rule editor page. The time that represents "now" will be the time of the alert. The rule editor's alert will be set to point to the alert definition that corresponds to this alert. However, it will always be loading the current definitions, so it is possible that the alert or template definitions will have changed since the template was rendered.
 
+##### .Shorten(url string) (string)
+{: .func}
+
+`.Shorten` uses Bosun's url shortner service to return a shortlink for the `url` argument. For example: `<a href="{{.Ack | .Shorten}}">Ack Short</a>`.
+
+If there is an error generating the shortlink an empty string is returned and `.Errors` is appended to.
+
 #### Global Functions
 
 ##### append: append(a []interface{}, b interface{}) interface{}
