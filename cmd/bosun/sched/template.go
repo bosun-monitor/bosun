@@ -124,6 +124,17 @@ func (c *Context) GraphLink(v string) string {
 	return c.schedule.SystemConf.MakeLink("/expr", &p)
 }
 
+// Shorten uses Bosun's url shortner service to create a shortlink for
+// the given url
+func (c *Context) Shorten(link string) string {
+	id, err := c.schedule.DataAccess.Configs().ShortenLink(link)
+	if err != nil {
+		c.addError(err)
+		return ""
+	}
+	return c.schedule.SystemConf.MakeLink(fmt.Sprintf("/s/%d", id), nil)
+}
+
 func (c *Context) Rule() string {
 	p := url.Values{}
 	time := c.runHistory.Start
