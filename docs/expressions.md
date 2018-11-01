@@ -663,12 +663,25 @@ Returns the number of seconds since the most recent data point in each series.
 ## streak(seriesSet) numberSet
 {: .exprFunc}
 
-Returns the length of the longest streak of values that evaluate to true (i.e. max amount of contiguous non-zero values found).
+Returns the length of the longest streak of values that evaluate to true for each series in the set (i.e. max amount of contiguous non-zero values found). A single true value in the series returns 1.
+
+This is useful to create an expression that is true if a certain number of consecutive observations exceeded a threshold - as in the following example:
+
+```
+$seriesA = series("host=server01", 0,0, 60,35, 120,35, 180,35, 240,5)
+$seriesB = series("host=server02", 0,0, 60,35, 120, 5, 180, 5, 240,5)
+$sSet = merge($seriesA, $seriesB)
+$isAbove = $sSet > 30
+$consecutiveCount = streak($isAbove)
+# $consecutiveCount: a numberSet where server01 has a value of 3, server02 has a value of 1
+# Are there 3 or more adjacent/consecutive/contiguous observations greater than 30?
+$consecutiveCount >= 3
+```
 
 ## sum(seriesSet) numberSet
 {: .exprFunc}
 
-Sum.
+Sum returns the sum (a.k.a. "total") for each series in the set.
 
 # Aggregation Functions
 
