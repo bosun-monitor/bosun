@@ -10,8 +10,8 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/influxdb/influxql"
 	influxModels "github.com/influxdata/influxdb/models"
+	"github.com/influxdata/influxql"
 )
 
 // Influx is a map of functions to query InfluxDB.

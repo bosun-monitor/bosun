@@ -35,6 +35,10 @@ func TestInfluxQueryDuration(t *testing.T) {
 			fmt.Sprintf("SELECT * FROM a WHERE value > 0 AND time >= '%s' AND time <= '%s' GROUP BY time(15m) fill(none)", start, end),
 		},
 		{
+			"select NON_NEGATIVE_DERIVATIVE(SUM(value)) from a WHERE value > 0", "15m",
+			fmt.Sprintf("SELECT non_negative_derivative(sum(value)) FROM a WHERE value > 0 AND time >= '%s' AND time <= '%s' GROUP BY time(15m) fill(none)", start, end),
+		},
+		{
 			"select * from a WHERE time > 0 fill(none)", "",
 			"",
 		},
