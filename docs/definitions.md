@@ -1198,7 +1198,7 @@ template graph {
 ##### .GraphLink(string) (string)
 {: .func}
 
-`.GraphLink` creates a link to Bosun's rule editor page. This is useful to provide a quick link to the view someone would use to edit the alert. This is generated using the [system configuration's Hostname](/system_configuration#hostname) value as the root of the link. The link will set the the alert, which template should be rendered, and time on the rule editor page. The time that represents "now" will be the time of the alert. The rule editor's alert will be set to point to the alert definition that corresponds to this alert. However, it will always be loading the current definitions, so it is possible that the alert or template definitions will have changed since the template was rendered.
+`.GraphLink` creates a link to Bosun's Expression Editor page. It populates the expression, date, and time fields and executes the expression. It also sets the view to the 'Graph' tab. The argument to the function is the expression that will fill in the text editor in the expression page. The date and time fields will also be set to the time the template was rendered. This is generated using the [system configuration's Hostname](/system_configuration#hostname) value as the root of the link.
 
 ##### .Group() (TagSet)
 {: .func}
@@ -1436,6 +1436,18 @@ See the [main lookup example](/definitions#main-lookup-example) for example usag
 `.LookupAll` behaves like `Lookup` except that you specify the tags. The tags can me a string such as `"host=a,dc=us"` or can be a tagset (i.e. the return of the [.Group](/definitions#group-tagset) template function).
 
 See the [main lookup example](/definitions#main-lookup-example) for example usage in a template.
+
+##### .Rule() (string)
+{: .func}
+
+`.Rule` creates a link to Bosun's rule editor page. This is useful to provide a quick link to the view someone would use to edit the alert. This is generated using the [system configuration's Hostname](/system_configuration#hostname) value as the root of the link. The link will set the the alert, which template should be rendered, and time on the rule editor page. The time that represents "now" will be the time of the alert. The rule editor's alert will be set to point to the alert definition that corresponds to this alert. However, it will always be loading the current definitions, so it is possible that the alert or template definitions will have changed since the template was rendered.
+
+##### .Shorten(url string) (string)
+{: .func}
+
+`.Shorten` uses Bosun's url shortner service to return a shortlink for the `url` argument. For example: `<a href="{{.Ack | .Shorten}}">Ack Short</a>`.
+
+If there is an error generating the shortlink an empty string is returned and `.Errors` is appended to.
 
 #### Global Functions
 
