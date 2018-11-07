@@ -18,6 +18,20 @@
 		</div>
 	</div>
 	<div class="form-group">
+		<label class="col-sm-2 control-label">start time period</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="periodTimeStart" ng-change="change()">
+			<p class="help-block">Optional. Format: HH:MM[:SS] [MST/-0700]. UTC if no timezone. Leave it blank if you don't want to silence notifications periodically(by day).</p>
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">end time period</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="periodTimeEnd" ng-change="change()">
+			<p class="help-block">None or both of periodTimeStart and periodTimeEnd shall be set. Only works before the end date or duration</p>
+		</div>
+	</div>
+	<div class="form-group">
 		<label class="col-sm-2 control-label">duration</label>
 		<div class="col-sm-6">
 			<input type="text" class="form-control" ng-model="duration" ng-change="change()">
@@ -98,6 +112,7 @@
 				<tr>
 					<th>start</th>
 					<th>end</th>
+					<th>periodTime(Start-End)</th>
 					<th>alert</th>
 					<th>tags</th>
 					<th>user</th>
@@ -109,6 +124,7 @@
 				<tr ng-repeat="(id, s) in silence.silences">
 					<td ts-time="s.Start"></td>
 					<td ts-time="s.End"></td>
+					<td><span ng-bind="s.PeriodTimeIntStart"></span> - <span ng-bind="s.PeriodTimeIntEnd"></span></td>
 					<td ng-bind="s.Alert"></td>
 					<td ng-bind="s.TagString"></td>
 					<td ng-bind="s.User"></td>

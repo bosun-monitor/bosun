@@ -18,6 +18,8 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	ainsightsmgmt "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
+	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
 	"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	"github.com/kylebrandt/boolq"
@@ -56,6 +58,32 @@ var AzureMonitor = map[string]parse.Func{
 		Args:   []models.FuncType{models.TypeAzureResourceList, models.TypeString},
 		Return: models.TypeAzureResourceList,
 		F:      AzureFilterResources,
+	},
+	// Azure function for application insights, See azureai.go
+	"aiapp": {
+		Args:          []models.FuncType{},
+		Return:        models.TypeAzureAIApps,
+		F:             AzureAIListApps,
+		PrefixEnabled: true,
+	},
+	"aiappf": {
+		Args:          []models.FuncType{models.TypeAzureAIApps, models.TypeString},
+		Return:        models.TypeAzureAIApps,
+		F:             AzureAIFilterApps,
+		PrefixEnabled: true,
+	},
+	"aimd": {
+		Args:          []models.FuncType{models.TypeAzureAIApps},
+		Return:        models.TypeInfo,
+		F:             AzureAIMetricMD,
+		PrefixEnabled: true,
+	},
+	"ai": {
+		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeAzureAIApps, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
+		Return:        models.TypeSeriesSet,
+		Tags:          azAITags,
+		F:             AzureAIQuery,
+		PrefixEnabled: true,
 	},
 }
 
@@ -125,17 +153,7 @@ func AzureMetricDefinitions(prefix string, e *State, namespace, metric, rsg, res
 	return
 }
 
-// azureQuery queries Azure metrics for time series data based on the resourceUri
-func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resourceUri, agtype, interval, sdur, edur string) (r *Results, err error) {
-	r = new(Results)
-	// Verify prefix is a defined resource and fetch the collection of clients
-	cc, clientFound := e.Backends.AzureMonitor[prefix]
-	if !clientFound {
-		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
-	}
-	c := cc.MetricsClient
-	r = new(Results)
-	// Parse Relative Time to absolute time
+func azureTimeSpan(e *State, sdur, edur string) (span string, err error) {
 	sd, err := opentsdb.ParseDuration(sdur)
 	if err != nil {
 		return
@@ -149,6 +167,24 @@ func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resou
 	}
 	st := e.now.Add(time.Duration(-sd)).Format(azTimeFmt)
 	en := e.now.Add(time.Duration(-ed)).Format(azTimeFmt)
+	return fmt.Sprintf("%s/%s", st, en), nil
+}
+
+// azureQuery queries Azure metrics for time series data based on the resourceUri
+func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resourceUri, agtype, interval, sdur, edur string) (r *Results, err error) {
+	r = new(Results)
+	// Verify prefix is a defined resource and fetch the collection of clients
+	cc, clientFound := e.Backends.AzureMonitor[prefix]
+	if !clientFound {
+		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
+	}
+	c := cc.MetricsClient
+	r = new(Results)
+	// Parse Relative Time to absolute time
+	timespan, err := azureTimeSpan(e, sdur, edur)
+	if err != nil {
+		return nil, err
+	}
 
 	// Set Dimensions (tag) keys for metrics that support them by building an Azure filter
 	// expression in form of "tagKey eq '*' and tagKey eq ..."
@@ -174,10 +210,10 @@ func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resou
 	if err != nil {
 		return
 	}
-	cacheKey := strings.Join([]string{metric, filter, resourceUri, aggLong, interval, st, en}, ":")
+	cacheKey := strings.Join([]string{metric, filter, resourceUri, aggLong, interval, timespan}, ":")
 	getFn := func() (interface{}, error) {
 		req, err := c.ListPreparer(context.Background(), resourceUri,
-			fmt.Sprintf("%s/%s", st, en),
+			timespan,
 			tg,
 			metric,
 			aggLong,
@@ -465,8 +501,8 @@ func (resources AzureResources) Get(rType, rsg, name string) (az AzureResource, 
 	return
 }
 
-// Ask makes an AzureResource a github.com/kylebrandt/boolq Asker, which allows it to
-// to take boolean expressions to create conditions
+// Ask makes an AzureResource a github.com/kylebrandt/boolq Asker, which allows it
+// to take boolean expressions to create true/false conditions for filtering
 func (ar AzureResource) Ask(filter string) (bool, error) {
 	sp := strings.SplitN(filter, ":", 2)
 	if len(sp) != 2 {
@@ -514,6 +550,8 @@ type AzureMonitorClientCollection struct {
 	MetricsClient           insights.MetricsClient
 	MetricDefinitionsClient insights.MetricDefinitionsClient
 	ResourcesClient         resources.Client
+	AIComponentsClient      ainsightsmgmt.ComponentsClient
+	AIMetricsClient         ainsights.MetricsClient
 	Concurrency             int
 	TenantId                string
 }

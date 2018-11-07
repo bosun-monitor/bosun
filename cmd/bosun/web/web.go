@@ -819,9 +819,18 @@ var silenceLayouts = []string{
 	"2006-01-02 15:04:05",
 	"2006-01-02 15:04",
 }
+var silencePeriodLayouts = []string{
+	"15:04",
+	"15:04 MST",
+	"15:04 -0700",
+	"15:04:05",
+	"15:04:05 MST",
+	"15:04:05 -0700",
+}
 
 func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var start, end time.Time
+	var periodTimeIntStart, periodTimeIntEnd int
 	var err error
 	var data map[string]string
 	j := json.NewDecoder(r.Body)
@@ -850,6 +859,42 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 			return nil, fmt.Errorf("unrecognized end time format: %s", s)
 		}
 	}
+	// handle periodTimeStart,periodTimeEnd, convert 15:04:00 to int(150410)
+	if s1, s2 := data["periodTimeStart"], data["periodTimeEnd"]; s1 == "" || s2 == "" {
+		if s1 != s2 {
+			return nil, fmt.Errorf("periodTimeStart and periodTimeEnd must be both set or both none")
+		}
+		// else ignore period silence, periodTimeIntStart = periodTimeIntEnd = 0
+	} else {
+		if s1 == s2 {
+			return nil, fmt.Errorf("periodTimeStart and periodTimeEnd can not be set the same. if you want to silence across 24h, leave these two empty")
+		}
+		var periodTimeStart, periodTimeEnd time.Time
+		for _, layout := range silencePeriodLayouts {
+			periodTimeStart, err = time.Parse(layout, s1)
+			if err == nil {
+				break
+			}
+		}
+		if periodTimeStart.IsZero() {
+			return nil, fmt.Errorf("unrecognized periodTimeStart time format: %s", s1)
+		} else {
+			periodTimeIntStart = periodTimeStart.UTC().Hour() * 10000 + periodTimeStart.UTC.Minute() * 100 + periodTimeStart.Second()
+		}
+
+		for _, layout := range silencePeriodLayouts {
+			periodTimeEnd, err = time.Parse(layout, s2)
+			if err == nil {
+				break
+			}
+		}
+		if periodTimeEnd.IsZero() {
+			return nil, fmt.Errorf("unrecognized periodTimeEnd time format: %s", s2)
+		} else {
+			periodTimeIntEnd = periodTimeEnd.UTC().Hour() * 10000 + periodTimeEnd.UTC().Minute() * 100 + periodTimeEnd.Second()
+		}
+	}
+
 	if start.IsZero() {
 		start = time.Now().UTC()
 	}
@@ -867,7 +912,8 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	} else if ok {
 		username = data["user"]
 	}
-	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], username, data["message"])
+	// if at least one of periodTimeIntStart,periodTimeIntEnd is greater than 0, period silence works!
+	return schedule.AddSilence(start, end, periodTimeIntStart, periodTimeIntEnd, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], username, data["message"])
 }
 
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
