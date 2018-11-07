@@ -128,7 +128,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.AddSilence(utcNow().Add(-time.Hour), utcNow().Add(time.Hour), "a", "", false, true, "", "user", "message")
+	_, err = s.AddSilence(utcNow().Add(-time.Hour), utcNow().Add(time.Hour), 0, 0, "a", "", false, true, "", "user", "message")
 	if err != nil {
 		t.Fatal(err)
 	}

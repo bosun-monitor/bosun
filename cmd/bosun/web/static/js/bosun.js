@@ -3408,6 +3408,8 @@ var LinkService = (function () {
         var forget = silence.Forget ? '&forget' : '';
         return "/silence?start=" + this.time(silence.Start) +
             "&end=" + this.time(silence.End) +
+            "&periodTimeStart=" + this.timeInt2Time(silence.PeriodTimeIntStart) +
+            "&periodTimeEnd=" + this.timeInt2Time(silence.PeriodTimeIntEnd) +
             "&alert=" + silence.Alert +
             "&tags=" + encodeURIComponent(silence.TagString) +
             forget +
@@ -3416,6 +3418,19 @@ var LinkService = (function () {
     LinkService.prototype.time = function (v) {
         var m = moment(v).utc();
         return m.format();
+    };
+    // convert 150405 to 15:04:05
+    LinkService.prototype.timeInt2Time = function (timeInt) {
+        var v_h = (timeInt / 10000).toFixed(0).toString();
+        var v_m = this.padZero((timeInt % 10000 / 100).toFixed(0), 2);
+        var v_s = this.padZero((timeInt % 100).toFixed(0), 2);
+        return v_h + ":" + v_m + ":" + v_s;
+    };
+    LinkService.prototype.padZero = function (num, size) {
+        var s = num + "";
+        while (s.length < size)
+            s = "0" + s;
+        return s;
     };
     return LinkService;
 }());
@@ -3511,6 +3526,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         var search = $location.search();
         $scope.start = search.start;
         $scope.end = search.end;
+        $scope.periodTimeStart = search.periodTimeStart;
+        $scope.periodTimeEnd = search.periodTimeEnd;
         $scope.duration = search.duration;
         $scope.alert = search.alert;
         $scope.hosts = search.hosts;
@@ -3578,6 +3595,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             var data = {
                 start: $scope.start,
                 end: $scope.end,
+                periodTimeStart: $scope.periodTimeStart,
+                periodTimeEnd: $scope.periodTimeEnd,
                 duration: $scope.duration,
                 alert: $scope.alert,
                 tags: tags.join(','),
@@ -3587,7 +3606,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             };
             return data;
         }
-        var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags || search.forget;
+        var any = search.start || search.end || search.periodTimeStart || search.periodTimeEnd || search.duration || search.alert || search.hosts || search.tags || search.forget;
         var state = getData();
         $scope.change = function () {
             $scope.disableConfirm = true;
@@ -3608,6 +3627,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $scope.test = function () {
             $location.search('start', $scope.start || null);
             $location.search('end', $scope.end || null);
+            $location.search('periodTimeStart', $scope.periodTimeStart || null);
+            $location.search('periodTimeEnd', $scope.periodTimeEnd || null);
             $location.search('duration', $scope.duration || null);
             $location.search('alert', $scope.alert || null);
             $location.search('hosts', $scope.hosts || null);

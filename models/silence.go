@@ -11,6 +11,7 @@ import (
 
 type Silence struct {
 	Start, End time.Time
+	PeriodTimeIntStart, PeriodTimeIntEnd  int
 	Alert      string
 	Tags       opentsdb.TagSet
 	TagString  string
@@ -27,6 +28,24 @@ func (s *Silence) Silenced(now time.Time, alert string, tags opentsdb.TagSet) bo
 }
 
 func (s *Silence) ActiveAt(now time.Time) bool {
+	// period silence judge
+	if s.PeriodTimeIntStart + s.PeriodTimeIntEnd > 0 {  // at leat one of them is greater than 0
+		nowHMInt := now.Hour() * 10000 + now.Minute() * 100 + now.Second()
+		if s.PeriodTimeIntStart < s.PeriodTimeIntEnd {
+			if nowHMInt > s.PeriodTimeIntStart && nowHMInt < s.PeriodTimeIntEnd {
+				return true
+			} else {
+				return false
+			}
+		} else {
+			if nowHMInt > s.PeriodTimeIntStart || nowHMInt < s.PeriodTimeIntEnd {
+				return true
+			} else {
+				return false
+			}
+		}
+	}
+
 	if now.Before(s.Start) || now.After(s.End) {
 		return false
 	}

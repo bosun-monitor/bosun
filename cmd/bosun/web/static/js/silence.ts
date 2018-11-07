@@ -5,6 +5,8 @@ interface ISilenceScope extends ng.IScope {
 	error: string;
 	start: string;
 	end: string;
+	periodTimeStart: string;
+	periodTimeEnd: string;
 	duration: string;
 	alert: string;
 	hosts: string;
@@ -27,6 +29,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	var search = $location.search();
 	$scope.start = search.start;
 	$scope.end = search.end;
+	$scope.periodTimeStart = search.periodTimeStart;
+	$scope.periodTimeEnd = search.periodTimeEnd;
 	$scope.duration = search.duration;
 	$scope.alert = search.alert;
 	$scope.hosts = search.hosts;
@@ -94,6 +98,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 		var data: any = {
 			start: $scope.start,
 			end: $scope.end,
+			periodTimeStart: $scope.periodTimeStart,
+			periodTimeEnd: $scope.periodTimeEnd,
 			duration: $scope.duration,
 			alert: $scope.alert,
 			tags: tags.join(','),
@@ -103,7 +109,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 		};
 		return data;
 	}
-	var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags || search.forget;
+	var any = search.start || search.end || search.periodTimeStart || search.periodTimeEnd || search.duration || search.alert || search.hosts || search.tags || search.forget;
 	var state = getData();
 	$scope.change = () => {
 		$scope.disableConfirm = true;
@@ -124,6 +130,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.test = () => {
 		$location.search('start', $scope.start || null);
 		$location.search('end', $scope.end || null);
+		$location.search('periodTimeStart', $scope.periodTimeStart || null);
+		$location.search('periodTimeEnd', $scope.periodTimeEnd || null);
 		$location.search('duration', $scope.duration || null);
 		$location.search('alert', $scope.alert || null);
 		$location.search('hosts', $scope.hosts || null);
