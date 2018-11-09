@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -764,6 +765,9 @@ func Sort(e *State, series *Results, order string) (*Results, error) {
 }
 
 func Limit(e *State, set *Results, v float64) (*Results, error) {
+	if v < 0 {
+		return nil, errors.New(fmt.Sprintf("Limit can't be negative value. We have received value %f as limit", v))
+	}
 	i := int(v)
 	if len(set.Results) > i {
 		set.Results = set.Results[:i]
@@ -1031,13 +1035,25 @@ func match(f func(res *Results, series *Result, floats []float64) error, series 
 
 func reduce(e *State, series *Results, F func(Series, ...float64) float64, args ...*Results) (*Results, error) {
 	f := func(res *Results, s *Result, floats []float64) error {
-		t := s.Value.(Series)
-		if len(t) == 0 {
+		switch tp := s.Value.(type) {
+		case Series:
+			t := s.Value.(Series)
+			if len(t) == 0 {
+				return nil
+			}
+			s.Value = Number(F(t, floats...))
+			res.Results = append(res.Results, s)
 			return nil
+		default:
+			return errors.New(
+				fmt.Sprintf(
+					"Unsupported type passed to reduce for alarm [%s]. Want: Series, got: %s. "+
+						"It can happen when we can't unjoin values. Please set IgnoreUnjoined and/or "+
+						"IgnoreOtherUnjoined for distiguish this error.", e.Origin, reflect.TypeOf(tp).String(),
+				),
+			)
 		}
-		s.Value = Number(F(t, floats...))
-		res.Results = append(res.Results, s)
-		return nil
+
 	}
 	return match(f, series, args...)
 }
