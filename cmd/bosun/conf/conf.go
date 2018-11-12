@@ -438,6 +438,7 @@ type Alert struct {
 	MaxLogFrequency  time.Duration
 	IgnoreUnknown    bool
 	UnknownsNormal   bool
+	DelayCloseNormal time.Duration
 	UnjoinedOK       bool `json:",omitempty"`
 	Log              bool
 	RunEvery         int

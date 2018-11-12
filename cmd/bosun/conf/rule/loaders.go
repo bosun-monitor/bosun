@@ -224,6 +224,16 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.IgnoreUnknown = true
 		case "unknownIsNormal":
 			a.UnknownsNormal = true
+		case "delayCloseNormal":
+			od, err := opentsdb.ParseDuration(v)
+			if err != nil {
+				c.error(err)
+			}
+			d := time.Duration(od)
+			if d < time.Second {
+				c.errorf("auto delay close normal incidents duartion must be at 1s ( >=conf.CheckFrequency )")
+			}
+			a.DelayCloseNormal = d
 		case "log":
 			a.Log = true
 		case "runEvery":

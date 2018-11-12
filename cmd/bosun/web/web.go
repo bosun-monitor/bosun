@@ -879,7 +879,7 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		if periodTimeStart.IsZero() {
 			return nil, fmt.Errorf("unrecognized periodTimeStart time format: %s", s1)
 		} else {
-			periodTimeIntStart = periodTimeStart.UTC().Hour() * 10000 + periodTimeStart.UTC.Minute() * 100 + periodTimeStart.Second()
+			periodTimeIntStart = periodTimeStart.UTC().Hour() * 10000 + periodTimeStart.UTC().Minute() * 100 + periodTimeStart.Second()
 		}
 
 		for _, layout := range silencePeriodLayouts {

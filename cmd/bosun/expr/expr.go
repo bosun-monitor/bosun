@@ -611,6 +611,7 @@ func operate(op string, a, b float64) (r float64) {
 		}
 	}
 	if math.IsNaN(a) || math.IsNaN(b) {
+		slog.Warningf("operate compare fail(return NaN): a=%f, b=%f", a , b)
 		return math.NaN()
 	}
 	switch op {

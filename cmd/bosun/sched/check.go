@@ -141,6 +141,23 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		if err != nil {
 			return
 		}
+		if a.DelayCloseNormal >= time.Second && event.Status == models.StNormal {
+			incident.Open = false
+			slog.Infof("Auto delay close when back to normal enabled for %s", ak)
+
+			if event.Status != incident.CurrentStatus {
+				incident.Events = append(incident.Events, *event)
+			}
+			incident.CurrentStatus = event.Status
+			// the defer will update this incident status to normal
+
+			delayCloseDeadline := time.Now().UTC().Add(a.DelayCloseNormal)
+			err = s.ActionByAlertKey("bosun", "Auto delay close when back to normal was enabled", models.ActionClose, &delayCloseDeadline, ak)
+			if err != nil {
+				slog.Errorln(err)
+			}
+			return
+		}
 		for i, action := range incident.Actions {
 			if action.Type == models.ActionDelayedClose && !(action.Fullfilled || action.Cancelled) {
 				if event.Status > incident.WorstStatus {
