@@ -137,6 +137,10 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/config_test", JSON(ConfigTest), canViewConfig).Name("config_test").Methods(POST)
 	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
 
+	if schedule.RaftInstance != nil {
+		handle("/api/cluster/status", JSON(ClusterStatus), canViewConfig).Name("cluster_status").Methods(GET)
+	}
+
 	if schedule.SystemConf.ReloadEnabled() {
 		handle("/api/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
 	}

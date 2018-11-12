@@ -50,6 +50,8 @@ type SystemConf struct {
 
 	DBConf DBConf
 
+	ClusterConf ClusterConf
+
 	SMTPConf SMTPConf
 
 	RuleVars map[string]string
@@ -213,6 +215,13 @@ type DBConf struct {
 
 	LedisDir      string
 	LedisBindAddr string
+}
+
+// ClusterConf stores information about nodes in cluster
+type ClusterConf struct {
+	MetadataStorePath string
+	RPCListen         string
+	Members           []string
 }
 
 // SMTPConf contains information for the mail server for which bosun will
@@ -438,6 +447,25 @@ func (sc *SystemConf) GetRedisPassword() string {
 
 func (sc *SystemConf) GetAuthConf() *AuthConf {
 	return sc.AuthConf
+}
+
+// ClusterEnabled returns information about clustering
+func (sc *SystemConf) ClusterEnabled() bool {
+	return len(sc.ClusterConf.RPCListen) > 0
+}
+
+// GetClusterBindAddress returns the address thet SERF should listen on.
+// RAFT will listen port SERF + 1
+func (sc *SystemConf) GetClusterBindAddress() string {
+	return sc.ClusterConf.RPCListen
+}
+
+func (sc *SystemConf) GetClusterMetadataStorePath() string {
+	return sc.ClusterConf.MetadataStorePath
+}
+
+func (sc *SystemConf) GetClusterMembers() []string {
+	return sc.ClusterConf.Members
 }
 
 // GetRuleVars user defined variables that will be available to the rule configuration

@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"bosun.org/_version"
 
 	"bosun.org/annotate/backend"
+	"bosun.org/cmd/bosun/cluster"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
@@ -33,6 +35,8 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
+	"github.com/hashicorp/raft"
+	"github.com/hashicorp/serf/serf"
 	elastic6 "github.com/olivere/elastic"
 	"gopkg.in/fsnotify.v1"
 	elastic2 "gopkg.in/olivere/elastic.v3"
@@ -115,6 +119,71 @@ func main() {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
 
+	reloadCluster := make(chan bool)
+	var raftInstance *raft.Raft
+	// If cluster eneble - init cluster
+	if systemConf.ClusterEnabled() {
+		*flagQuiet = true
+		*flagNoChecks = true
+		raftListen := systemConf.GetClusterBindAddress()
+		serfEvents := make(chan serf.Event, 16)
+		var err error
+		raftInstance, err = cluster.StartCluster(
+			raftListen,
+			systemConf.GetClusterMetadataStorePath(),
+			systemConf.GetClusterMembers(),
+			serfEvents)
+		if err != nil {
+			slog.Fatalf("couldn't init bosun cluster: %v", err)
+		}
+		raftCh := raftInstance.LeaderCh()
+
+		go func() {
+			for {
+				select {
+				case isLeader := <-raftCh:
+					if isLeader {
+						slog.Infoln("Node was selected as an leader")
+						*flagQuiet = false
+						*flagNoChecks = false
+						reloadCluster <- true
+						slog.Infoln("Reloading service for disable read only mode")
+					} else {
+						slog.Infoln("Node was selected as an follower")
+						*flagQuiet = true
+						*flagNoChecks = true
+						reloadCluster <- true
+						slog.Infoln("Reloading service for enable read only mode")
+					}
+				case ev := <-serfEvents:
+					slog.Infoln(ev)
+					leader := raftInstance.VerifyLeader()
+					if memberEvent, ok := ev.(serf.MemberEvent); ok {
+						for _, member := range memberEvent.Members {
+							changedPeer := member.Addr.String() + ":" + strconv.Itoa(int(member.Port+1))
+							if memberEvent.EventType() == serf.EventMemberJoin {
+								if leader.Error() == nil {
+									f := raftInstance.AddVoter(raft.ServerID(changedPeer), raft.ServerAddress(changedPeer), 0, 0)
+									if f.Error() != nil {
+										slog.Fatalf("error adding voter: %s", err)
+									}
+								}
+							} else if memberEvent.EventType() == serf.EventMemberLeave || memberEvent.EventType() == serf.EventMemberFailed || memberEvent.EventType() == serf.EventMemberReap {
+								if leader.Error() == nil {
+									f := raftInstance.RemoveServer(raft.ServerID(changedPeer), 0, 0)
+									if f.Error() != nil {
+										slog.Fatalf("error removing server: %s", err)
+									}
+								}
+							}
+						}
+					}
+				}
+
+			}
+		}()
+	}
+
 	// Check if ES version is set by getting configs on start-up.
 	// Because the current APIs don't return error so calling slog.Fatalf
 	// inside these functions (for multiple-es support).
@@ -182,7 +251,7 @@ func main() {
 		}()
 		web.AnnotateBackend = annotateBackend
 	}
-	if err := sched.Load(sysProvider, ruleProvider, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
+	if err := sched.Load(sysProvider, ruleProvider, da, annotateBackend, raftInstance, *flagSkipLast, *flagQuiet); err != nil {
 		slog.Fatal(err)
 	}
 	if err := metadata.InitF(false, func(k metadata.Metakey, v interface{}) error { return sched.DefaultSched.PutMetadata(k, v) }); err != nil {
@@ -231,6 +300,7 @@ func main() {
 	}
 	var reload func() error
 	reloading := make(chan bool, 1) // a lock that we can give up acquiring
+
 	reload = func() error {
 		select {
 		case reloading <- true:
@@ -256,7 +326,7 @@ func main() {
 		slog.Infoln("schedule shutdown, loading new schedule")
 
 		// Load does not set the DataAccess or Search if it is already set
-		if err := sched.Load(sysProvider, newConf, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
+		if err := sched.Load(sysProvider, newConf, da, annotateBackend, raftInstance, *flagSkipLast, *flagQuiet); err != nil {
 			slog.Fatal(err)
 		}
 		web.ResetSchedule() // Signal web to point to the new DefaultSchedule
@@ -269,7 +339,12 @@ func main() {
 		slog.Infoln("config reload complete")
 		return nil
 	}
-
+	go func() {
+		for {
+			<-reloadCluster
+			reload()
+		}
+	}()
 	ruleProvider.SetReload(reload)
 
 	go func() {
