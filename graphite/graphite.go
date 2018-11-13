@@ -127,11 +127,6 @@ type Context interface {
 	Query(*Request) (Response, error)
 }
 
-// Query performs a request to a Graphite server.
-//func (h GraphiteHosts) Query(r *Request) (Response, error) {
-//return r.Query(string(h.Hosts[r.Prefix].Host), nil)
-//}
-
 type GraphiteConfig struct {
 	Host   string
 	Header http.Header
