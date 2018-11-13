@@ -16,16 +16,18 @@ import (
 // Graphite defines functions for use with a Graphite backend.
 var Graphite = map[string]parse.Func{
 	"graphiteBand": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
-		Return: models.TypeSeriesSet,
-		Tags:   graphiteTagQuery,
-		F:      GraphiteBand,
+		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
+		Return:        models.TypeSeriesSet,
+		Tags:          graphiteTagQuery,
+		F:             GraphiteBand,
+		PrefixEnabled: true,
 	},
 	"graphite": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   graphiteTagQuery,
-		F:      GraphiteQuery,
+		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
+		Return:        models.TypeSeriesSet,
+		Tags:          graphiteTagQuery,
+		F:             GraphiteQuery,
+		PrefixEnabled: true,
 	},
 }
 
@@ -93,7 +95,7 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 	return results, nil
 }
 
-func GraphiteBand(e *State, query, duration, period, format string, num float64) (r *Results, err error) {
+func GraphiteBand(prefix string, e *State, query, duration, period, format string, num float64) (r *Results, err error) {
 	r = new(Results)
 	r.IgnoreOtherUnjoined = true
 	r.IgnoreUnjoined = true
@@ -112,6 +114,7 @@ func GraphiteBand(e *State, query, duration, period, format string, num float64)
 		}
 		req := &graphite.Request{
 			Targets: []string{query},
+			Prefix:  prefix,
 		}
 		now := e.now
 		req.End = &now
@@ -164,7 +167,7 @@ func GraphiteBand(e *State, query, duration, period, format string, num float64)
 	return
 }
 
-func GraphiteQuery(e *State, query string, sduration, eduration, format string) (r *Results, err error) {
+func GraphiteQuery(prefix string, e *State, query string, sduration, eduration, format string) (r *Results, err error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
@@ -182,6 +185,7 @@ func GraphiteQuery(e *State, query string, sduration, eduration, format string) 
 		Targets: []string{query},
 		Start:   &st,
 		End:     &et,
+		Prefix:  prefix,
 	}
 	s, err := timeGraphiteRequest(e, req)
 	if err != nil {

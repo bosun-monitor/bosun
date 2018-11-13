@@ -59,10 +59,10 @@ ExampleExpression = 'avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'
 
 # Configuration for to enable to Graphite Backend
 [GraphiteConf]
-	Host = "localhost:80"
-	[GraphiteConf.Headers]
-		X-Meow = "Mix"
-
+  [GraphiteConf.default]
+      Host = "localhost:80"
+	[GraphiteConf.default.Headers]
+		  X-Meow = "Mix"
 
 # Configuration of hosts to enable the Elastic backend
 [ElasticConf]

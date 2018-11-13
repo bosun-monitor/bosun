@@ -251,6 +251,15 @@ This is not meant to be used in normal expression workflow (e.g. *not* for alert
 
 ## Graphite Query Functions
 
+### PrefixKey
+
+PrefixKey is a quoted string used to query multiple Graphite cluster from a single instance of Bosun. It can be passed as a prefix to Graphite query functions as in the example below. If there is no prefix used then the query will be made on default cluster. Refer [system configuration docs](/system_configuration#graphiteconf) for more details.
+
+Querying [foo](/system_configuration#graphiteconf) cluster:
+```
+["foo"]graphite("sys.bosun*.cpu.total.user", "12m", "2m", "")
+```
+
 ### graphite(query string, startDuration string, endDuration string, format string) seriesSet
 {: .exprFunc}
 

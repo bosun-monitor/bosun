@@ -59,7 +59,7 @@ type SystemConf struct {
 	ExampleExpression string
 
 	OpenTSDBConf     OpenTSDBConf
-	GraphiteConf     GraphiteConf
+	GraphiteConf     map[string]GraphiteConf
 	InfluxConf       InfluxConf
 	ElasticConf      map[string]ElasticConf
 	AzureMonitorConf map[string]AzureMonitorConf
@@ -97,7 +97,7 @@ type EnabledBackends struct {
 func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b := EnabledBackends{}
 	b.OpenTSDB = sc.OpenTSDBConf.Host != ""
-	b.Graphite = sc.GraphiteConf.Host != ""
+	b.Graphite = len(sc.GraphiteConf) != 0
 	b.Influx = sc.InfluxConf.URL != ""
 	b.Prom = sc.PromConf["default"].URL != ""
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
@@ -347,7 +347,7 @@ func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 		decodeMeta, err = toml.Decode(conf, &sc)
 	}
 	if err != nil {
-		return sc, err
+		return sc, fmt.Errorf("%s Refer system configuration docs for more deatils http://bosun.org/system_configuration", err)
 	}
 	if len(decodeMeta.Undecoded()) > 0 {
 		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
@@ -603,20 +603,29 @@ func (sc *SystemConf) GetTSDBContext() opentsdb.Context {
 // GetGraphiteContext returns a Graphite context which contains all the information needed
 // to query Graphite. A nil context is returned if GraphiteHost is not set.
 func (sc *SystemConf) GetGraphiteContext() graphite.Context {
-	if sc.GraphiteConf.Host == "" {
+	if sc.GraphiteConf["default"].Host == "" {
 		return nil
 	}
-	if len(sc.GraphiteConf.Headers) > 0 {
-		headers := http.Header(make(map[string][]string))
-		for k, v := range sc.GraphiteConf.Headers {
-			headers.Add(k, v)
-		}
-		return graphite.HostHeader{
-			Host:   sc.GraphiteConf.Host,
-			Header: headers,
+
+	configStore := make(map[string]graphite.GraphiteConfig)
+
+	for hostPerfix, value := range sc.GraphiteConf {
+		if len(value.Headers) > 0 {
+			headers := http.Header(make(map[string][]string))
+			for k, v := range value.Headers {
+				headers.Add(k, v)
+			}
+			configStore[hostPerfix] = graphite.GraphiteConfig{
+				Host:   value.Host,
+				Header: headers,
+			}
+		} else {
+			configStore[hostPerfix] = graphite.GraphiteConfig{
+				Host: value.Host,
+			}
 		}
 	}
-	return graphite.Host(sc.GraphiteConf.Host)
+	return graphite.GraphiteHosts{Conf: configStore}
 }
 
 // GetInfluxContext returns a Influx context which contains all the information needed

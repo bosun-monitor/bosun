@@ -35,9 +35,11 @@ func TestSystemToml(t *testing.T) {
 		ResponseLimit: 25000000,
 		Version:       opentsdb.Version2_2,
 	})
-	assert.Equal(t, sc.GraphiteConf, GraphiteConf{
-		Host:    "localhost:80",
-		Headers: map[string]string{"X-Meow": "Mix"},
+	assert.Equal(t, sc.GraphiteConf, map[string]GraphiteConf{
+		"default": {
+			Host:    "localhost:80",
+			Headers: map[string]string{"X-Meow": "Mix"},
+		},
 	})
 	assert.Equal(t, sc.ElasticConf, map[string]ElasticConf{
 		"default": {

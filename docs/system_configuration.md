@@ -453,6 +453,10 @@ e.g. basic authentication, http schema etc.
 Enables querying Graphite server and exposes its query functions to the
 expression language.
 
+### GraphiteConf.default
+Default cluster to query when [PrefixKey](/expressions#graphite-query-functions) is not passed to the
+[graphite query functions](/expressions#graphite-query-functions).
+
 #### Host
 Graphite connection host and port, e.g. `Host = "localhost:80"`.
 
@@ -464,9 +468,12 @@ Graphite request.
 
 ```
 [GraphiteConf]
-	Host = "localhost:80"
-	[GraphiteConf.Headers]
-		X-Meow = "Mix"
+  [GraphiteConf.default]
+      Host = "localhost:80"
+  [GraphiteConf.default.Headers]
+	  X-Meow = "Mix"
+  [GraphiteConf.foo]
+      Host = "localhost:80"
 ```
 
 ### PromConf

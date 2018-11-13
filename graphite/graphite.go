@@ -18,6 +18,7 @@ type Request struct {
 	Start   *time.Time
 	End     *time.Time
 	Targets []string
+	Prefix  string
 	URL     *url.URL
 }
 
@@ -126,19 +127,20 @@ type Context interface {
 	Query(*Request) (Response, error)
 }
 
-// Host is a simple Graphite Context with no additional features.
-type Host string
-
 // Query performs a request to a Graphite server.
-func (h Host) Query(r *Request) (Response, error) {
-	return r.Query(string(h), nil)
-}
+//func (h GraphiteHosts) Query(r *Request) (Response, error) {
+//return r.Query(string(h.Hosts[r.Prefix].Host), nil)
+//}
 
-type HostHeader struct {
+type GraphiteConfig struct {
 	Host   string
 	Header http.Header
 }
 
-func (h HostHeader) Query(r *Request) (Response, error) {
-	return r.Query(h.Host, h.Header)
+type GraphiteHosts struct {
+	Conf map[string]GraphiteConfig
+}
+
+func (h GraphiteHosts) Query(r *Request) (Response, error) {
+	return r.Query(h.Conf[r.Prefix].Host, h.Conf[r.Prefix].Header)
 }
