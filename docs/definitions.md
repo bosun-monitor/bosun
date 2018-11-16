@@ -1666,6 +1666,48 @@ alert pct {
 }
 ```
 
+##### last(series expr.seriesSet) (float64)
+{: .func}
+
+`last` return last value of seriesSet identical to reduction functions [last()](/expressions#lastseriesset-numberset)
+
+Example:
+
+```
+template last {
+    body = `
+        <table border="1">
+          <th>Host</th>
+          <th>State</th>
+          {{range $s := .EvalAll .Alert.Vars.state }}
+            <tr>
+             <td>{{ $s.Group.host }}</td>
+             {{ $state := last $s.Value }}
+             {{ if eq $state 0.0 }}
+                <td bgcolor="LIGHTGREEN">UP</td>
+             {{ end }}
+             {{ if eq $state 1.0 }}
+                <td bgcolor="YELLOW">UNKNOWN</td>
+             {{ end }}
+             {{ if gt $state 1.0 }}
+                <td bgcolor="RED">DEAD</td>
+             {{ end }}
+            </tr>
+          {{end}}
+       </table>
+    `
+}
+
+alert last {
+    template = last
+    $query = "aliasByNode(sys.host.*.status,2)"
+    $state = graphite($query, "5m", "", "host")
+    crit = last($state) > 1
+    warn = last($state) > 0
+}
+```
+
+
 ##### replace(s, old, new string, n int) (string)
 {: .func}
 

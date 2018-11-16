@@ -397,6 +397,16 @@ var defaultFuncs = template.FuncMap{
 	"pct": func(i interface{}) string {
 		return fmt.Sprintf("%.2f%%", i)
 	},
+	"last": func(series expr.Series) (a float64) {
+		var last time.Time
+		for k, v := range series {
+			if k.After(last) {
+				a = v
+				last = k
+			}
+		}
+		return
+	},
 	"replace": strings.Replace,
 	"short": func(v string) string {
 		return strings.SplitN(v, ".", 2)[0]
