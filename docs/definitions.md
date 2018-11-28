@@ -1854,6 +1854,8 @@ Specify a template name to use for the notification body. Default is `body`, or 
 
 If your body for a POST notification requires a different Content-Type header than the default of `application/x-www-form-urlencoded`, you may set the `contentType` variable.
 
+Same as `headers.Content-Type = <value>`.
+
 #### email
 {: .keyword}
 
@@ -1876,6 +1878,11 @@ Specify a template name to use for the email subject. Defualts to `emailSubject`
 #### groupActions
 {: .keyword}
 chooses whether or not multiple actions performed at once (like a user acking multiple alerts), should be sent as one notification, or as many. Default is `true`. Set to `false` to get one notification per alert key.
+
+#### headers.<Header>
+{: .keyword}
+
+Adds an HTTP header to a `post` notifications. Replace `<Header>` with the header name to set. For example: `headers.Authentication = secretkey`.
 
 #### next
 {: .keyword}
