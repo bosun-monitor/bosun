@@ -59,6 +59,7 @@ type StateDataAccess interface {
 	GetLatestIncident(ak models.AlertKey) (*models.IncidentState, error)
 	GetAllOpenIncidents() ([]*models.IncidentState, error)
 	GetIncidentState(incidentId int64) (*models.IncidentState, error)
+	GetAllIncidentIdsByAlert(alert string) ([]*models.IncidentState, error)
 
 	GetAllIncidentsByAlertKey(ak models.AlertKey) ([]*models.IncidentState, error)
 	GetAllIncidentIdsByAlertKey(ak models.AlertKey) ([]int64, error)
@@ -272,6 +273,46 @@ func (d *dataAccess) GetAllIncidentIdsByAlertKey(ak models.AlertKey) ([]int64, e
 		return nil, slog.Wrap(err)
 	}
 	return ids, nil
+}
+
+// Get all incidents by alert name
+func (d *dataAccess) GetAllIncidentIdsByAlert(alert string) ([]*models.IncidentState, error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	key := fmt.Sprintf("incidents:%s*", alert)
+
+	incidents, err := redis.Strings(conn.Do("KEYS", key))
+
+	if err != nil {
+		return nil, slog.Wrap(err)
+	}
+
+	state := []*models.IncidentState{}
+
+	for _, inc := range incidents {
+		key := models.AlertKey(strings.Split(inc, ":")[1])
+
+		if strings.HasPrefix(string(key), alert) {
+			// only get last incident id
+			ids, err := int64s(conn.Do("LRANGE", incidentsForAlertKeyKey(key), 0, 0))
+
+			if err != nil {
+				return nil, slog.Wrap(err)
+			}
+
+			if len(ids) > 0 {
+				st, _ := d.getIncident(ids[0], conn)
+				state = append(state, st)
+			}
+		}
+
+		// limit the result set to 10
+		if len(state) >= 9 {
+			break
+		}
+	}
+	return state, nil
 }
 
 // In general one should not use the redis KEYS command. So this is only used

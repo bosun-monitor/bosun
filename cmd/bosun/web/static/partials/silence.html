@@ -69,7 +69,7 @@
 	</div>
 	<div class="form-group">
 		<div class="col-sm-offset-2 col-sm-6">
-			<button class="btn btn-default" ng-click="test()">test</button>
+			<button class="btn btn-default" ng-click="test()" ng-disabled="showLoader">test <i ng-show="showLoader" class="fa fa-refresh fa-spin"></i></button>
 		</div>
 	</div>
 </form>
@@ -79,9 +79,17 @@
 	</div>
 	<div class="col-sm-12">
 		<ul class="list-unstyled">
-			<li ng-repeat="(silence, active) in testSilences">
-				<span ng-bind="silence"></span>
-				<span class="label label-primary" ng-show="active">active</span>
+			<li ng-repeat="(silence, st) in testSilences">
+                <span ng-if="st.Active" title="This exclamation icon represents that the alert of this incident is in an active (non-normal) state." class="fa fa-exclamation-circle"></span>
+				<span ng-if="st.Active" ng-bind="silence"></span>
+                <span ng-if="!st.Active" ng-bind="silence" style="padding-left: 15px;"></span>
+                <span ng-switch="st.State" ng-if="st.Active">
+				    <span ng-switch-when="critical" title="critical" class="label label-primary" ng-show="active" style="background-color: #a94442;">active</span>
+                    <span ng-switch-when="warning" title="warning" class="label label-primary" ng-show="active" style="background-color: #8a6d3b;">active</span>
+                    <span ng-switch-when="unknown" title="unknown" class="label label-primary" ng-show="active">active</span>
+                    <span ng-switch-when="normal" title="normal" class="label label-primary" ng-show="active" style="background-color: #3c763d;">active</span>
+                </span>
+                <span ng-if="!st.Active" class="label label-primary" style="background-color: brown">inactive</span>
 			</li>
 		<ul>
 	</div>

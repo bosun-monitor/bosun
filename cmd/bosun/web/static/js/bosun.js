@@ -3594,11 +3594,13 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         };
         if (any) {
             $scope.error = null;
+            $scope.showLoader = true;
             $http.post('/api/silence/set', state)
                 .success(function (data) {
                 if (!data) {
                     data = { '(none)': false };
                 }
+                $scope.showLoader = false;
                 $scope.testSilences = data;
             })
                 .error(function (error) {

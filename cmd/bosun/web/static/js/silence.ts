@@ -16,6 +16,7 @@ interface ISilenceScope extends ng.IScope {
 	clear: (id: string) => void;
 	change: () => void;
 	disableConfirm: boolean;
+    showLoader: boolean;
 	time: (v: any) => string;
 	forget: string;
 	user: string;
@@ -110,11 +111,13 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	};
 	if (any) {
 		$scope.error = null;
+        $scope.showLoader = true;
 		$http.post('/api/silence/set', state)
 			.success((data) => {
 				if (!data) {
 					data = {'(none)': false};
-				}
+                }
+                $scope.showLoader = false;
 				$scope.testSilences = data;
 			})
 			.error((error) => {

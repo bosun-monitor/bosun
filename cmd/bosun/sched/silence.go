@@ -36,7 +36,12 @@ func (s *Schedule) Silenced() SilenceTester {
 	}
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]bool, error) {
+type SilenceData struct {
+	Active bool
+	State  models.Status
+}
+
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]SilenceData, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -80,14 +85,36 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 		}
 		return nil, nil
 	}
-	aks := make(map[models.AlertKey]bool)
+
+	aks := make(map[models.AlertKey]SilenceData)
 	open, err := s.DataAccess.State().GetAllOpenIncidents()
 	if err != nil {
 		return nil, err
 	}
+
 	for _, inc := range open {
 		if si.Matches(inc.Alert, inc.AlertKey.Group()) {
-			aks[inc.AlertKey] = true
+			aks[inc.AlertKey] = SilenceData{
+				Active: true,
+				State:  inc.CurrentStatus,
+			}
+		}
+	}
+
+	// If no open incident get past incident
+	if len(aks) == 0 {
+		all, err := s.DataAccess.State().GetAllIncidentIdsByAlert(alert)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, st := range all {
+			if _, exist := aks[st.AlertKey]; !exist && si.Matches(st.Alert, st.AlertKey.Group()) {
+				aks[st.AlertKey] = SilenceData{
+					Active: false,
+					State:  st.CurrentStatus,
+				}
+			}
 		}
 	}
 	return aks, nil
