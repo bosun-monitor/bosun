@@ -65,6 +65,7 @@ func TestSystemToml(t *testing.T) {
 	})
 	assert.Equal(t, sc.CloudWatchConf, CloudWatchConf{
 		Enabled: true,
+		Concurrency:1,
 	}, "CloudwatchConf does not match")
 
 }
