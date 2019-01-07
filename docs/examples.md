@@ -237,9 +237,9 @@ alert elb_error_rate {
     template = elb_error_rate
     $region="eu-west-1"
     $namespace="AWS/ELB"
-    $period="60"
+    $period=60
     $statistics="Sum"
-    $dimensions="LoadBalancerName:prod-webservers"
+    $dimensions= cwdim('''[{"LoadBalancerName":"prod-webservers"}]''')
 
 
     $requests = cw($region, $namespace, "RequestCount", $period, $statistics, $dimensions, "15m", "")
@@ -247,7 +247,7 @@ alert elb_error_rate {
     $percentage = ( $500s/$requests * 100 )
 
     #Calculate the historic error rate to put in the notification graph
-    $hPeriod = "360"
+    $hPeriod = 360
     $hRequests = cw($region, $namespace, "RequestCount", $hPeriod, $statistics, $dimensions, "24h", "")
     $h500s=cw($region, $namespace, "HTTPCode_Backend_5XX", $hPeriod, $statistics, $dimensions, "24h", "")
     $hPercentage = ( $h500s/$hRequests * 100 )

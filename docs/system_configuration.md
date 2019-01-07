@@ -597,12 +597,15 @@ For complete details see the `Specifying Credentials` section of the [aws docume
 #### Enabled
 Should the cloudwatch functionality be loaded.
 
+#### Concurrency
+The number of simultaneous queries to make to the cloudwatch api. Increasing this number can improve perfomance of queries 
+which contain a large number of metrics but may result in rate limiting if you call the cloudwatch api too frequently.
 #### Example:
 
 ```
 [CloudWatchConf]
   Enabled = true
-
+  Concurency = 1
 ```
 
 ### AuthConf
