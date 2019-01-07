@@ -152,9 +152,7 @@ func main() {
 	if err != nil {
 		slog.Fatal(err)
 	}
-	if sysProvider.GetMaxRenderedTemplateAge() != 0 {
-		go da.State().CleanupOldRenderedTemplates(time.Hour * 24 * time.Duration(sysProvider.GetMaxRenderedTemplateAge()))
-	}
+	go da.State().StartTTLEnforcerLoop(time.Hour*24*time.Duration(sysProvider.GetMaxRenderedTemplateAge()), time.Hour*24*time.Duration(sysProvider.GetMaxClosedIncidentAge()))
 	var annotateBackend backend.Backend
 	if sysProvider.AnnotateEnabled() {
 		index := sysProvider.GetAnnotateIndex()

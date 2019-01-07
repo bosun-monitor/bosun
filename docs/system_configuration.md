@@ -133,6 +133,12 @@ It will remove all rendered templates for alerts that have been closed for longe
 
 Example: `MaxRenderedTemplateAge = 30 # retain old templates for only 30 days`
 
+### MaxClosedIncidentAge
+If set, Bosun will automatically delete closed incidents from its data store.
+It will remove incidents and references to those incidents, which ended beyond this time (in days).
+
+Example: `MaxClosedIncidentAge = 180 # retain closed incidents for 180 days`
+
 ### TimeAndDate
 Used to configure time zones that will be linked to in Bosun's
 dashboard. It is an array of timeanddate.com zones (the page that gets

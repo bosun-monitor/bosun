@@ -67,6 +67,7 @@ type SystemConf struct {
 	AuthConf *AuthConf
 
 	MaxRenderedTemplateAge int // in days
+	MaxClosedIncidentAge   int // in days
 
 	EnableSave      bool
 	EnableReload    bool
@@ -500,10 +501,16 @@ func (sc *SystemConf) GetInternetProxy() string {
 	return sc.InternetProxy
 }
 
-// MaxRenderedTemplateAge returns the maximum time in days to keep rendered templates
+// GetMaxRenderedTemplateAge returns the maximum time in days to keep rendered templates
 // after the incident end date.
 func (sc *SystemConf) GetMaxRenderedTemplateAge() int {
 	return sc.MaxRenderedTemplateAge
+}
+
+// GetMaxClosedIncidentAge returns the maximum time in days to keep closed incidents
+// after the incident end date.
+func (sc *SystemConf) GetMaxClosedIncidentAge() int {
+	return sc.MaxClosedIncidentAge
 }
 
 // SaveEnabled returns if saving via the UI and config editing API endpoints should be enabled

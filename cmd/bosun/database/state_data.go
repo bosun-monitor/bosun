@@ -2,8 +2,10 @@ package database
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"strings"
@@ -72,8 +74,8 @@ type StateDataAccess interface {
 	SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error
 	GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error)
 	GetRenderedTemplateKeys() ([]string, error)
-	CleanupOldRenderedTemplates(olderThan time.Duration)
-	DeleteRenderedTemplates(incidentIds []int64) error
+	StartTTLEnforcerLoop(renderedTemplatesMaxAge time.Duration, closedIncidentsMaxAge time.Duration)
+	CleanupOldIncidents(config RetentionConfig)
 
 	Forget(ak models.AlertKey) error
 	SetUnevaluated(ak models.AlertKey, uneval bool) error
@@ -122,11 +124,11 @@ func (d *dataAccess) scanMatchCmd(pattern string) (string, []interface{}, int) {
 	return "XSCAN", []interface{}{"KV", "0", "MATCH", pattern}, 1
 }
 
-func (d *dataAccess) GetRenderedTemplateKeys() ([]string, error) {
+func (d *dataAccess) getScanResults(pattern string) ([]string, error) {
 	conn := d.Get()
 	defer conn.Close()
 
-	cmd, args, cursorIdx := d.scanMatchCmd("renderedTemplatesById:*")
+	cmd, args, cursorIdx := d.scanMatchCmd(pattern)
 	found := []string{}
 	for {
 		vals, err := redis.Values(conn.Do(cmd, args...))
@@ -150,28 +152,50 @@ func (d *dataAccess) GetRenderedTemplateKeys() ([]string, error) {
 	return found, nil
 }
 
-func (d *dataAccess) DeleteRenderedTemplates(incidentIds []int64) error {
+func (d *dataAccess) GetRenderedTemplateKeys() ([]string, error) {
+	return d.getScanResults("renderedTemplatesById:*")
+}
+
+func (d *dataAccess) GetIncidentKeys() ([]string, error) {
+	return d.getScanResults("incidentById:*")
+}
+
+// Delete references to incident id
+func (d *dataAccess) deleteIncidentReferences(conn redis.Conn, incident *models.IncidentState) error {
+	if incident.Open {
+		return errors.New("state_data: cannot delete open incidents")
+	}
+	command, args := d.LMCLEAR(incidentsForAlertKeyKey(incident.AlertKey), strconv.FormatInt(incident.Id, 10))
+	_, err := conn.Do(command, args...)
+	if err != nil {
+		return slog.Wrap(err)
+	}
+	return nil
+}
+
+func (d *dataAccess) deleteBatch(conn redis.Conn, keys []interface{}) {
+	_, err := conn.Do("DEL", keys...)
+	if err != nil {
+		slog.Error(err)
+	}
+}
+
+func (d *dataAccess) deleteKeys(keys <-chan string) {
 	conn := d.Get()
 	defer conn.Close()
 	const batchSize = 1000
 	args := make([]interface{}, 0, batchSize)
-	for len(incidentIds) > 0 {
-		size := len(incidentIds)
-		if size > batchSize {
-			size = batchSize
-		}
-		thisBatch := incidentIds[:size]
-		incidentIds = incidentIds[size:]
-		args = args[:0]
-		for _, id := range thisBatch {
-			args = append(args, renderedTemplatesKey(id))
-		}
-		_, err := conn.Do("DEL", args...)
-		if err != nil {
-			return slog.Wrap(err)
+	for key := range keys {
+		args = append(args, key)
+		if len(args) == batchSize {
+			// Flush after we receive enough keys
+			d.deleteBatch(conn, args)
 		}
 	}
-	return nil
+	// Flush remaining events in buffer when channel closes
+	if len(args) > 0 {
+		d.deleteBatch(conn, args)
+	}
 }
 
 func (d *dataAccess) State() StateDataAccess {
@@ -561,58 +585,153 @@ func (d *dataAccess) transact(conn redis.Conn, f func() error) error {
 	return nil
 }
 
-// CleanupCleanupOldRenderedTemplates will in a loop purge any old rendered templates
-func (d *dataAccess) CleanupOldRenderedTemplates(olderThan time.Duration) {
-	// run after 5 minutes (to let bosun stabilize)
-	// and then every hour
-	time.Sleep(time.Minute * 5)
-	for {
-		conn := d.Get()
-		slog.Infof("Cleaning out old rendered templates")
-		earliestOk := time.Now().UTC().Add(-1 * olderThan)
-		func() {
-			toPurge := []int64{}
-			keys, err := d.GetRenderedTemplateKeys()
+// getAllIds runs each getKeys function to retrieve an array of strings which describe a DB key (e.g. "incidentId:42" or
+// "renderedTemplateId:42").  The incident IDs (e.g. 42 in the case above) are returned as map keys.
+func (d *dataAccess) getAllIds(getKeys ...func() ([]string, error)) map[int64]bool {
+	allIds := make(map[int64]bool)
+	for _, keyGetter := range getKeys {
+		keys, err := keyGetter()
+		if err != nil {
+			slog.Error(err)
+			continue
+		}
+		for _, key := range keys {
+			parts := strings.Split(key, ":")
+			if len(parts) != 2 {
+				slog.Errorf("invalid redis key found: %s", key)
+				continue
+			}
+			id, err := strconv.ParseInt(parts[1], 10, 64)
 			if err != nil {
 				slog.Error(err)
-				return
+				continue
 			}
-			for _, key := range keys {
-				parts := strings.Split(key, ":")
-				if len(parts) != 2 {
-					slog.Errorf("Invalid rendered template redis key found: %s", key)
-					continue
-				}
-				id, err := strconv.ParseInt(parts[1], 10, 64)
-				if err != nil {
-					slog.Error(err)
-					continue
-				}
-				state, err := d.getIncident(id, conn)
-				if err != nil {
-					if IsRedisNil(err) {
-						toPurge = append(toPurge, id)
-						continue
-					}
-					slog.Error(err)
-					continue
-				}
-				if state.End != nil && (*state.End).Before(earliestOk) {
-					toPurge = append(toPurge, id)
-				}
-			}
-			if len(toPurge) == 0 {
-				return
-			}
-			slog.Infof("Deleting %d old rendered templates", len(toPurge))
-			if err = d.DeleteRenderedTemplates(toPurge); err != nil {
-				slog.Error(err)
-				return
-			}
-		}()
-		conn.Close()
-		slog.Info("Done cleaning rendered templates")
+			allIds[id] = true
+		}
+	}
+	return allIds
+}
+
+// StartTTLEnforcerLoop will in a loop purge any old rendered templates and incidents
+func (d *dataAccess) StartTTLEnforcerLoop(renderedTemplateMaxAge time.Duration, closedIncidentMaxAge time.Duration) {
+	if renderedTemplateMaxAge <= 0 && closedIncidentMaxAge <= 0 {
+		// No cleanup to do
+		return
+	}
+
+	// wait for 5 minutes initially (to let bosun stabilize) and then run every hour
+	time.Sleep(time.Minute * 5)
+	for {
+		slog.Info("running state TTL cleanup")
+		retentionConfig := NewRetentionConfig(renderedTemplateMaxAge, closedIncidentMaxAge)
+		d.CleanupOldIncidents(retentionConfig)
+		slog.Info("cleanup complete")
 		time.Sleep(time.Hour)
+	}
+}
+
+type RetentionConfig struct {
+	renderedTemplateMaxAge     time.Duration
+	closedIncidentMaxAge       time.Duration
+	earliestOkRenderedTemplate time.Time
+	earliestOkClosedIncident   time.Time
+}
+
+func NewRetentionConfig(renderedTemplateMaxAge time.Duration, closedIncidentMaxAge time.Duration) RetentionConfig {
+	now := time.Now().UTC()
+	return RetentionConfig{
+		renderedTemplateMaxAge:     renderedTemplateMaxAge,
+		closedIncidentMaxAge:       closedIncidentMaxAge,
+		earliestOkRenderedTemplate: now.Add(-1 * renderedTemplateMaxAge),
+		earliestOkClosedIncident:   now.Add(-1 * closedIncidentMaxAge),
+	}
+}
+
+func (config RetentionConfig) ShouldDeleteIncident(state *models.IncidentState, err error) bool {
+	if config.closedIncidentMaxAge <= 0 {
+		return false
+	}
+	if err != nil {
+		slog.Error(err)
+		return false
+	}
+	if state.End != nil && (*state.End).Before(config.earliestOkClosedIncident) {
+		return true
+	}
+	return false
+}
+
+func (config RetentionConfig) ShouldDeleteRenderedTemplate(state *models.IncidentState, err error) bool {
+	if config.renderedTemplateMaxAge <= 0 {
+		return false
+	}
+	if err != nil {
+		if IsRedisNil(err) {
+			return true
+		}
+		slog.Error(err)
+		return false
+	}
+	if state.End != nil && (*state.End).Before(config.earliestOkRenderedTemplate) {
+		return true
+	}
+	return false
+}
+
+func (d *dataAccess) CleanupOldIncidents(config RetentionConfig) {
+	idGetters := make([]func() ([]string, error), 0)
+
+	if config.renderedTemplateMaxAge > 0 {
+		slog.Infof("running rendered template cleanup with TTL %s", config.renderedTemplateMaxAge.String())
+		idGetters = append(idGetters, d.GetRenderedTemplateKeys)
+	}
+	if config.closedIncidentMaxAge > 0 {
+		slog.Infof("running closed incident cleanup with TTL %s", config.closedIncidentMaxAge.String())
+		idGetters = append(idGetters, d.GetIncidentKeys)
+	}
+
+	incidentsIds := d.getAllIds(idGetters...)
+	if incidentsIds == nil || len(incidentsIds) == 0 {
+		return
+	}
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+	keysToPurge := make(chan string, 1000)
+	defer close(keysToPurge)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		d.deleteKeys(keysToPurge)
+	}()
+
+	incidentsDeleted := 0
+	renderedTemplatesDeleted := 0
+
+	conn := d.Get()
+	defer conn.Close()
+	for id := range incidentsIds {
+		state, err := d.getIncident(id, conn)
+		if config.ShouldDeleteIncident(state, err) {
+			err := d.deleteIncidentReferences(conn, state)
+			if err != nil {
+				slog.Error(err)
+				continue
+			}
+			keysToPurge <- renderedTemplatesKey(id)
+			keysToPurge <- incidentStateKey(id)
+			incidentsDeleted++
+		} else if config.ShouldDeleteRenderedTemplate(state, err) {
+			keysToPurge <- renderedTemplatesKey(id)
+			renderedTemplatesDeleted++
+		}
+	}
+	if renderedTemplatesDeleted > 0 {
+		slog.Infof("deleting %d old rendered templates", renderedTemplatesDeleted)
+	}
+	if incidentsDeleted > 0 {
+		slog.Infof("deleting %d old closed incidents", incidentsDeleted)
 	}
 }
 

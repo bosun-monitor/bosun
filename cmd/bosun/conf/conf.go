@@ -71,6 +71,7 @@ type SystemConfProvider interface {
 	GetAuthConf() *AuthConf
 
 	GetMaxRenderedTemplateAge() int
+	GetMaxClosedIncidentAge() int
 
 	GetExampleExpression() string
 
