@@ -218,6 +218,8 @@ func (f FuncType) String() string {
 		return "azureAIApps"
 	case TypeInfo:
 		return "info"
+	case TypeCWDimensionList:
+		return "cwdimensionlist"
 	default:
 		return "unknown"
 	}
@@ -239,6 +241,7 @@ const (
 	TypeAzureAIApps
 	TypeInfo
 	TypeUnexpected
+	TypeCWDimensionList
 )
 
 type Status int

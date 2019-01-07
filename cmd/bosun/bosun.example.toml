@@ -126,6 +126,7 @@ ExampleExpression = 'avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'
 # Configuration to enable the CloudWatch backend
 [CloudWatchConf]
 	Enabled = true
+    Concurrency = 1
 
 [PromConf]
 	[PromConf.default]

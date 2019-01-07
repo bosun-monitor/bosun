@@ -106,7 +106,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	b.AzureMonitor = len(sc.AzureMonitorConf) != 0
-	b.CloudWatch = true
+	b.CloudWatch = sc.CloudWatchConf.Enabled == true
 	return b
 }
 
@@ -294,7 +294,8 @@ type LDAPGroup struct {
 }
 
 type CloudWatchConf struct {
-	Enabled bool
+	Enabled     bool
+	Concurrency int
 }
 
 // GetSystemConfProvider returns the SystemConfProvider interface
@@ -667,7 +668,7 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 }
 
 func (sc *SystemConf) GetCloudWatchContext() cloudwatch.Context {
-	c := cloudwatch.NewConfig()
+	c := cloudwatch.NewConfig(sc.CloudWatchConf.Concurrency)
 	return c
 }
 
