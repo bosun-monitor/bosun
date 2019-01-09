@@ -9,7 +9,6 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/prometheus/client_golang/api"
 	"github.com/prometheus/client_golang/api/prometheus/v1"
 	promModels "github.com/prometheus/common/model"
@@ -50,7 +49,7 @@ func PromTag(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
-func PromQuery(e *State, T miniprofiler.Timer, query, startDuration, endDuration, stepDuration string) (*Results, error) {
+func PromQuery(e *State, query, startDuration, endDuration, stepDuration string) (*Results, error) {
 	r := new(Results)
 	sd, err := opentsdb.ParseDuration(startDuration)
 	if err != nil {
@@ -69,7 +68,7 @@ func PromQuery(e *State, T miniprofiler.Timer, query, startDuration, endDuration
 		return nil, err
 	}
 	step := time.Duration(st)
-	qres, err := timePromRequest(e, T, query, start, end, step)
+	qres, err := timePromRequest(e, query, start, end, step)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +92,7 @@ func PromQuery(e *State, T miniprofiler.Timer, query, startDuration, endDuration
 	return r, nil
 }
 
-func timePromRequest(e *State, T miniprofiler.Timer, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
+func timePromRequest(e *State, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
 	//spew.Dump(os.Stderr, e)
 	client, err := api.NewClient(api.Config{Address: e.PromConfig.URL})
 	if err != nil {
@@ -112,7 +111,7 @@ func timePromRequest(e *State, T miniprofiler.Timer, query string, start, end ti
 		r,
 	}
 	b, _ := json.MarshalIndent(key, "", "  ")
-	T.StepCustomTiming("prom", "query", query, func() {
+	e.Timer.StepCustomTiming("prom", "query", query, func() {
 		getFn := func() (interface{}, error) {
 			res, err := conn.QueryRange(context.Background(), query,
 				r)
