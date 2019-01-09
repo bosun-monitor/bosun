@@ -80,7 +80,7 @@ type SystemConfProvider interface {
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts
 	GetAzureMonitorContext() expr.AzureMonitorClients
-	GetPromContext() expr.PromConfig
+	GetPromContext() expr.PromClients
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string

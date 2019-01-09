@@ -12,29 +12,15 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	"github.com/prometheus/client_golang/api"
-	"github.com/prometheus/client_golang/api/prometheus/v1"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	promModels "github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/promql"
 )
 
-type PromConfig struct {
-	URL string
-}
+// PromClients is a collection of Prometheus API v1 client APIs (connections)
+type PromClients map[string]v1.API
 
 // Prom is a map of functions to query Prometheus.
 var Prom = map[string]parse.Func{
-	"promPrev": {
-		Args: []models.FuncType{
-			models.TypeString, // query
-			models.TypeString, // start
-			models.TypeString, // end
-			models.TypeString, // step
-		},
-		Return: models.TypeSeriesSet,
-		Tags:   PromTag,
-		F:      PromQuery2,
-	},
 	"prom": {
 		Args: []models.FuncType{
 			models.TypeString, // metric
@@ -45,25 +31,11 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // StartDuration
 			models.TypeString, // EndDuration
 		},
-		Return: models.TypeSeriesSet,
-		Tags:   promGroupTags,
-		F:      PromQuery,
+		Return:        models.TypeSeriesSet,
+		Tags:          promGroupTags,
+		F:             PromQuery,
+		PrefixEnabled: true,
 	},
-}
-
-func PromTag(args []parse.Node) (parse.Tags, error) {
-	st, err := promql.ParseMetricSelector(args[0].(*parse.StringNode).Text)
-	if err != nil {
-		return nil, err
-	}
-	t := make(parse.Tags)
-	for _, s := range st {
-		if string(s.Name) == "__name__" {
-			continue
-		}
-		t[string(s.Name)] = struct{}{}
-	}
-	return t, nil
 }
 
 func promGroupTags(args []parse.Node) (parse.Tags, error) {
@@ -75,7 +47,7 @@ func promGroupTags(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
-func PromQuery(e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
+func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	sd, err := opentsdb.ParseDuration(sdur)
 	if err != nil {
@@ -107,7 +79,7 @@ func PromQuery(e *State, metric, groupBy, filter, agType, stepDuration, sdur, ed
 		return
 	}
 	query := buf.String()
-	qres, err := timePromRequest(e, query, start, end, step)
+	qres, err := timePromRequest(e, prefix, query, start, end, step)
 	if err != nil {
 		return nil, err
 	}
@@ -143,55 +115,11 @@ type promQuery struct {
 	Filter string
 }
 
-func PromQuery2(e *State, query, startDuration, endDuration, stepDuration string) (*Results, error) {
-	r := new(Results)
-	sd, err := opentsdb.ParseDuration(startDuration)
-	if err != nil {
-		return nil, err
+func timePromRequest(e *State, prefix, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
+	client, found := e.PromConfig[prefix]
+	if !found {
+		return s, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
 	}
-	ed, err := opentsdb.ParseDuration(endDuration)
-	if endDuration == "" {
-		ed = 0
-	} else if err != nil {
-		return nil, err
-	}
-	start := time.Now().Add(-time.Duration(sd))
-	end := time.Now().Add(-time.Duration(ed))
-	st, err := opentsdb.ParseDuration(stepDuration)
-	if err != nil {
-		return nil, err
-	}
-	step := time.Duration(st)
-	qres, err := timePromRequest(e, query, start, end, step)
-	if err != nil {
-		return nil, err
-	}
-	for _, row := range qres.(promModels.Matrix) {
-		tags := make(opentsdb.TagSet)
-		for tagk, tagv := range row.Metric {
-			tags[string(tagk)] = string(tagv)
-		}
-		if e.Squelched(tags) {
-			continue
-		}
-		values := make(Series, len(row.Values))
-		for _, v := range row.Values {
-			values[v.Timestamp.Time()] = float64(v.Value)
-		}
-		r.Results = append(r.Results, &Result{
-			Value: values,
-			Group: tags,
-		})
-	}
-	return r, nil
-}
-
-func timePromRequest(e *State, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
-	client, err := api.NewClient(api.Config{Address: e.PromConfig.URL})
-	if err != nil {
-		return nil, err
-	}
-	conn := v1.NewAPI(client)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +134,7 @@ func timePromRequest(e *State, query string, start, end time.Time, step time.Dur
 	b, _ := json.MarshalIndent(key, "", "  ")
 	e.Timer.StepCustomTiming("prom", "query", query, func() {
 		getFn := func() (interface{}, error) {
-			res, err := conn.QueryRange(context.Background(), query,
+			res, err := client.QueryRange(context.Background(), query,
 				r)
 			if err != nil {
 				return nil, err
@@ -219,7 +147,7 @@ func timePromRequest(e *State, query string, start, end time.Time, step time.Dur
 		}
 		var val interface{}
 		var ok bool
-		val, err, _ = e.Cache.Get(string(b), getFn)
+		val, err, _ = e.Cache.Get(fmt.Sprintf("%v:%v", prefix, string(b)), getFn)
 		if s, ok = val.(promModels.Matrix); !ok {
 			err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
 		}
