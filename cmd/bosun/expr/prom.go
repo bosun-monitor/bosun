@@ -1,11 +1,14 @@
 package expr
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
+	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
@@ -21,7 +24,7 @@ type PromConfig struct {
 
 // Prom is a map of functions to query Prometheus.
 var Prom = map[string]parse.Func{
-	"prom": {
+	"promPrev": {
 		Args: []models.FuncType{
 			models.TypeString, // query
 			models.TypeString, // start
@@ -30,6 +33,20 @@ var Prom = map[string]parse.Func{
 		},
 		Return: models.TypeSeriesSet,
 		Tags:   PromTag,
+		F:      PromQuery2,
+	},
+	"prom": {
+		Args: []models.FuncType{
+			models.TypeString, // metric
+			models.TypeString, // groupby tags
+			models.TypeString, // filter string
+			models.TypeString, // aggregation type
+			models.TypeString, // step interval duration
+			models.TypeString, // StartDuration
+			models.TypeString, // EndDuration
+		},
+		Return: models.TypeSeriesSet,
+		Tags:   promGroupTags,
 		F:      PromQuery,
 	},
 }
@@ -49,7 +66,84 @@ func PromTag(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
-func PromQuery(e *State, query, startDuration, endDuration, stepDuration string) (*Results, error) {
+func promGroupTags(args []parse.Node) (parse.Tags, error) {
+	tags := make(parse.Tags)
+	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
+	for _, k := range csvTags {
+		tags[k] = struct{}{}
+	}
+	return tags, nil
+}
+
+func PromQuery(e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
+	r = new(Results)
+	sd, err := opentsdb.ParseDuration(sdur)
+	if err != nil {
+		return
+	}
+	var ed opentsdb.Duration
+	if edur != "" {
+		ed, err = opentsdb.ParseDuration(edur)
+		if err != nil {
+			return
+		}
+	}
+	start := e.now.Add(-time.Duration(sd))
+	end := e.now.Add(-time.Duration(ed))
+	st, err := opentsdb.ParseDuration(stepDuration)
+	if err != nil {
+		return nil, err
+	}
+	step := time.Duration(st)
+	qs := promQuery{
+		Metric: metric,
+		AgFunc: agType,
+		Tags:   groupBy,
+		Filter: filter,
+	}
+	buf := new(bytes.Buffer)
+	err = promQueryTemplate.Execute(buf, qs)
+	if err != nil {
+		return
+	}
+	query := buf.String()
+	qres, err := timePromRequest(e, query, start, end, step)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range qres.(promModels.Matrix) {
+		tags := make(opentsdb.TagSet)
+		for tagk, tagv := range row.Metric {
+			tags[string(tagk)] = string(tagv)
+		}
+		if e.Squelched(tags) {
+			continue
+		}
+		values := make(Series, len(row.Values))
+		for _, v := range row.Values {
+			values[v.Timestamp.Time()] = float64(v.Value)
+		}
+		r.Results = append(r.Results, &Result{
+			Value: values,
+			Group: tags,
+		})
+	}
+	return r, nil
+}
+
+var promQueryTemplate = template.Must(template.New("promQueryTemplate").Parse(`
+{{ .AgFunc }}( {{ .Metric -}} 
+{{- if ne .Filter "" }} {{ .Filter | printf "{%v} " }} {{ end -}}
+) by ( {{ .Tags }} )`))
+
+type promQuery struct {
+	Metric string
+	AgFunc string
+	Tags   string
+	Filter string
+}
+
+func PromQuery2(e *State, query, startDuration, endDuration, stepDuration string) (*Results, error) {
 	r := new(Results)
 	sd, err := opentsdb.ParseDuration(startDuration)
 	if err != nil {
@@ -93,7 +187,6 @@ func PromQuery(e *State, query, startDuration, endDuration, stepDuration string)
 }
 
 func timePromRequest(e *State, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
-	//spew.Dump(os.Stderr, e)
 	client, err := api.NewClient(api.Config{Address: e.PromConfig.URL})
 	if err != nil {
 		return nil, err
