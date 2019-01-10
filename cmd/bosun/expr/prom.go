@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"bosun.org/cmd/bosun/conf/template"
@@ -36,6 +37,21 @@ var Prom = map[string]parse.Func{
 		F:             PromQuery,
 		PrefixEnabled: true,
 	},
+	"promm": {
+		Args: []models.FuncType{
+			models.TypeString, // metric
+			models.TypeString, // groupby tags
+			models.TypeString, // filter string
+			models.TypeString, // aggregation type
+			models.TypeString, // step interval duration
+			models.TypeString, // StartDuration
+			models.TypeString, // EndDuration
+		},
+		Return:        models.TypeSeriesSet,
+		Tags:          promMGroupTags,
+		F:             PromMQuery,
+		PrefixEnabled: true,
+	},
 	"promrate": {
 		Args: []models.FuncType{
 			models.TypeString, // metric
@@ -52,6 +68,22 @@ var Prom = map[string]parse.Func{
 		F:             PromRate,
 		PrefixEnabled: true,
 	},
+	"promratem": {
+		Args: []models.FuncType{
+			models.TypeString, // metric
+			models.TypeString, // groupby tags
+			models.TypeString, // filter string
+			models.TypeString, // aggregation type
+			models.TypeString, // rate step interval duration
+			models.TypeString, // step interval duration
+			models.TypeString, // start duration
+			models.TypeString, // end duration
+		},
+		Return:        models.TypeSeriesSet,
+		Tags:          promMGroupTags,
+		F:             PromMRate,
+		PrefixEnabled: true,
+	},
 }
 
 func promGroupTags(args []parse.Node) (parse.Tags, error) {
@@ -63,15 +95,80 @@ func promGroupTags(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+func promMGroupTags(args []parse.Node) (parse.Tags, error) {
+	tags := make(parse.Tags)
+	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
+	for _, k := range csvTags {
+		tags[k] = struct{}{}
+	}
+	tags["bosun_prefix"] = struct{}{}
+	return tags, nil
+}
+
 func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
-	return promQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur)
+	return promQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur, false)
 }
 
 func PromRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
-	return promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur)
+	return promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, false)
 }
 
-func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
+func PromMQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
+	return promMQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur, false)
+}
+
+func PromMRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
+	return promMQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, false)
+}
+
+func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, multi bool) (r *Results, err error) {
+	r = new(Results)
+	prefixes := strings.Split(prefix, ",")
+	if len(prefixes) == 1 && prefixes[0] == "," {
+		return promQuery("default", e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, true)
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(prefixes))
+	resCh := make(chan *Results, len(prefixes))
+	errCh := make(chan error, len(prefixes))
+
+	for _, prefix := range prefixes {
+		go func(prefix string) {
+			defer wg.Done()
+			res, err := promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, true)
+			resCh <- res
+			errCh <- err
+		}(prefix)
+	}
+
+	wg.Wait()
+	close(resCh)
+	close(errCh)
+	// Gather errors from the request and return an error if any of the requests failled
+	errors := []string{}
+	for err := range errCh {
+		if err == nil {
+			continue
+		}
+		errors = append(errors, err.Error())
+	}
+	if len(errors) > 0 {
+		return r, fmt.Errorf(strings.Join(errors, " :: "))
+	}
+	resultCollection := []*Results{}
+	for res := range resCh {
+		resultCollection = append(resultCollection, res)
+	}
+	if len(resultCollection) == 1 { // no need to merge if there is only one item
+		return resultCollection[0], nil
+	}
+	// Merge the query results into a single seriesSet
+	r, err = Merge(e, resultCollection...)
+	return
+}
+
+func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, multi bool) (r *Results, err error) {
 	r = new(Results)
 	start, end, err := parseDurationPair(e, sdur, edur)
 	if err != nil {
@@ -103,6 +200,9 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 		tags := make(opentsdb.TagSet)
 		for tagk, tagv := range row.Metric {
 			tags[string(tagk)] = string(tagv)
+		}
+		if multi {
+			tags["bosun_prefix"] = prefix
 		}
 		if e.Squelched(tags) {
 			continue
