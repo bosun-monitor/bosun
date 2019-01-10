@@ -36,6 +36,22 @@ var Prom = map[string]parse.Func{
 		F:             PromQuery,
 		PrefixEnabled: true,
 	},
+	"promrate": {
+		Args: []models.FuncType{
+			models.TypeString, // metric
+			models.TypeString, // groupby tags
+			models.TypeString, // filter string
+			models.TypeString, // aggregation type
+			models.TypeString, // rate step interval duration
+			models.TypeString, // step interval duration
+			models.TypeString, // start duration
+			models.TypeString, // end duration
+		},
+		Return:        models.TypeSeriesSet,
+		Tags:          promGroupTags,
+		F:             PromRate,
+		PrefixEnabled: true,
+	},
 }
 
 func promGroupTags(args []parse.Node) (parse.Tags, error) {
@@ -48,30 +64,30 @@ func promGroupTags(args []parse.Node) (parse.Tags, error) {
 }
 
 func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
+	return promQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur)
+}
+
+func PromRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
+	return promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur)
+}
+
+func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
-	sd, err := opentsdb.ParseDuration(sdur)
+	start, end, err := parseDurationPair(e, sdur, edur)
 	if err != nil {
 		return
 	}
-	var ed opentsdb.Duration
-	if edur != "" {
-		ed, err = opentsdb.ParseDuration(edur)
-		if err != nil {
-			return
-		}
-	}
-	start := e.now.Add(-time.Duration(sd))
-	end := e.now.Add(-time.Duration(ed))
 	st, err := opentsdb.ParseDuration(stepDuration)
 	if err != nil {
-		return nil, err
+		return
 	}
 	step := time.Duration(st)
-	qs := promQuery{
-		Metric: metric,
-		AgFunc: agType,
-		Tags:   groupBy,
-		Filter: filter,
+	qs := promQueryTemplateData{
+		Metric:       metric,
+		AgFunc:       agType,
+		Tags:         groupBy,
+		Filter:       filter,
+		RateDuration: rateDuration,
 	}
 	buf := new(bytes.Buffer)
 	err = promQueryTemplate.Execute(buf, qs)
@@ -81,7 +97,7 @@ func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDur
 	query := buf.String()
 	qres, err := timePromRequest(e, prefix, query, start, end, step)
 	if err != nil {
-		return nil, err
+		return
 	}
 	for _, row := range qres.(promModels.Matrix) {
 		tags := make(opentsdb.TagSet)
@@ -104,15 +120,18 @@ func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDur
 }
 
 var promQueryTemplate = template.Must(template.New("promQueryTemplate").Parse(`
-{{ .AgFunc }}( {{ .Metric -}} 
-{{- if ne .Filter "" }} {{ .Filter | printf "{%v} " }} {{ end -}}
+{{ .AgFunc }}(
+{{- if ne .RateDuration "" }}rate({{ end }} {{ .Metric -}}
+{{- if ne .Filter "" }} {{ .Filter | printf "{%v} " -}} {{- end -}}
+{{- if ne .RateDuration "" -}} {{ .RateDuration | printf " [%v] )"  }} {{- end -}}
 ) by ( {{ .Tags }} )`))
 
-type promQuery struct {
-	Metric string
-	AgFunc string
-	Tags   string
-	Filter string
+type promQueryTemplateData struct {
+	Metric       string
+	AgFunc       string
+	Tags         string
+	Filter       string
+	RateDuration string
 }
 
 func timePromRequest(e *State, prefix, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
