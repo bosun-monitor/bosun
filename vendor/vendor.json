@@ -680,6 +680,24 @@
 			"revisionTime": "2016-01-10T11:55:54+01:00"
 		},
 		{
+			"checksumSHA1": "qeRNcE15+58PvlfKwBA2n96Qa5I=",
+			"path": "github.com/prometheus/client_golang/api",
+			"revision": "d2ead25884778582e740573999f7b07f47e171b4",
+			"revisionTime": "2019-01-06T16:50:22Z"
+		},
+		{
+			"checksumSHA1": "btuIL6bpXw4HB9PTQJ8yMBxi+28=",
+			"path": "github.com/prometheus/client_golang/api/prometheus/v1",
+			"revision": "d2ead25884778582e740573999f7b07f47e171b4",
+			"revisionTime": "2019-01-06T16:50:22Z"
+		},
+		{
+			"checksumSHA1": "oKlDMiV9MHiguN2YtUnZP9s+2aw=",
+			"path": "github.com/prometheus/common/model",
+			"revision": "2998b132700a7d019ff618c06a234b47c1f3f681",
+			"revisionTime": "2019-01-07T10:31:13Z"
+		},
+		{
 			"path": "github.com/ryanuber/go-glob",
 			"revision": "572520ed46dbddaed19ea3d9541bdd0494163693",
 			"revisionTime": "2016-02-26T00:37:05-08:00"
