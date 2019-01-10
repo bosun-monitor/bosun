@@ -84,6 +84,12 @@ var Prom = map[string]parse.Func{
 		F:             PromMRate,
 		PrefixEnabled: true,
 	},
+	"prommetrics": {
+		Args:          []models.FuncType{models.TypeString},
+		Return:        models.TypeInfo,
+		F:             PromMetricList,
+		PrefixEnabled: true,
+	},
 }
 
 func promGroupTags(args []parse.Node) (parse.Tags, error) {
@@ -103,6 +109,33 @@ func promMGroupTags(args []parse.Node) (parse.Tags, error) {
 	}
 	tags["bosun_prefix"] = struct{}{}
 	return tags, nil
+}
+
+// PromMetricList returns a list of available metrics for the prometheus backend
+func PromMetricList(prefix string, e *State) (r *Results, err error) {
+	r = new(Results)
+	client, found := e.PromConfig[prefix]
+	if !found {
+		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
+	}
+	getFn := func() (interface{}, error) {
+		var metrics promModels.LabelValues
+		e.Timer.StepCustomTiming("prom", "metriclist", "", func() {
+			metrics, err = client.LabelValues(context.Background(), "__name__")
+		})
+		if err != nil {
+			return nil, err
+		}
+		return metrics, nil
+	}
+	val, err, hit := e.Cache.Get(fmt.Sprintf("%v:metriclist", prefix), getFn)
+	collectCacheHit(e.Cache, "prom_metrics", hit)
+	if err != nil {
+		return nil, err
+	}
+	metrics := val.(promModels.LabelValues)
+	r.Results = append(r.Results, &Result{Value: Info{metrics}})
+	return
 }
 
 // PromQuery is a wrapper from promQuery so there is a function signature that doesn't require the rate argument in the expr language.
@@ -255,9 +288,6 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 	if !found {
 		return s, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
 	}
-	if err != nil {
-		return nil, err
-	}
 	r := v1.Range{Start: start, End: end, Step: step}
 	key := struct {
 		Query string
@@ -269,8 +299,7 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 	b, _ := json.MarshalIndent(key, "", "  ")
 	e.Timer.StepCustomTiming("prom", "query", query, func() {
 		getFn := func() (interface{}, error) {
-			res, err := client.QueryRange(context.Background(), query,
-				r)
+			res, err := client.QueryRange(context.Background(), query, r)
 			if err != nil {
 				return nil, err
 			}
@@ -280,9 +309,9 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 			}
 			return m, nil
 		}
-		var val interface{}
+		val, err, hit := e.Cache.Get(fmt.Sprintf("%v:%v", prefix, string(b)), getFn)
+		collectCacheHit(e.Cache, "prom_ts", hit)
 		var ok bool
-		val, err, _ = e.Cache.Get(fmt.Sprintf("%v:%v", prefix, string(b)), getFn)
 		if s, ok = val.(promModels.Matrix); !ok {
 			err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
 		}
