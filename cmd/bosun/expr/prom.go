@@ -105,23 +105,32 @@ func promMGroupTags(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+// PromQuery is a wrapper from promQuery so there is a function signature that doesn't require the rate argument in the expr language.
+// It also sets promQuery's addPrefixTag argument to false since this only queries one backend.
 func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
 	return promQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur, false)
 }
 
+// PromRate is a wrapper for promQuery like PromQuery except that it has a rateDuration argument for the step of the rate calculation.
+// This enables rate calculation for counters.
 func PromRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
 	return promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, false)
 }
 
+// PromMQuery is a wrapper from promMQuery in the way that PromQuery is a wrapper from promQuery.
 func PromMQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
-	return promMQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur, false)
+	return promMQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur)
 }
 
+// PromMRate is a wrapper from promMQuery in the way that PromRate is a wrapper from promQuery. It has a stepDuration argument
+// for rate calculation.
 func PromMRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
-	return promMQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, false)
+	return promMQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur)
 }
 
-func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, multi bool) (r *Results, err error) {
+// promMQuery makes call to multiple prometheus TSDBs and combines the results into a single series set.
+// It adds the "bosun_prefix" tag key with the value of prefix label to the results. Queries are executed in parallel.
+func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	prefixes := strings.Split(prefix, ",")
 	if len(prefixes) == 1 && prefixes[0] == "," {
@@ -168,7 +177,9 @@ func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDu
 	return
 }
 
-func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, multi bool) (r *Results, err error) {
+// promQuery uses the information passed to it to generate an PromQL query using the promQueryTemplate.
+// It then calls timePromRequest to execute the query and process that results in to a Bosun Results object.
+func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, addPrefixTag bool) (r *Results, err error) {
 	r = new(Results)
 	start, end, err := parseDurationPair(e, sdur, edur)
 	if err != nil {
@@ -201,7 +212,7 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 		for tagk, tagv := range row.Metric {
 			tags[string(tagk)] = string(tagv)
 		}
-		if multi {
+		if addPrefixTag {
 			tags["bosun_prefix"] = prefix
 		}
 		if e.Squelched(tags) {
@@ -219,6 +230,8 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 	return r, nil
 }
 
+// promQueryTemplate is a template for PromQL time series queries. It supports
+// filtering and aggregation
 var promQueryTemplate = template.Must(template.New("promQueryTemplate").Parse(`
 {{ .AgFunc }}(
 {{- if ne .RateDuration "" }}rate({{ end }} {{ .Metric -}}
@@ -226,6 +239,7 @@ var promQueryTemplate = template.Must(template.New("promQueryTemplate").Parse(`
 {{- if ne .RateDuration "" -}} {{ .RateDuration | printf " [%v] )"  }} {{- end -}}
 ) by ( {{ .Tags }} )`))
 
+// promQueryTemplateData is the struct the contains the fields to render the promQueryTemplate
 type promQueryTemplateData struct {
 	Metric       string
 	AgFunc       string
@@ -234,6 +248,8 @@ type promQueryTemplateData struct {
 	RateDuration string
 }
 
+// timePromRequest takes a PromQL query string with the given time frame and step duration. The result
+// type of the PromQL query must be a Prometheus Matrix
 func timePromRequest(e *State, prefix, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
 	client, found := e.PromConfig[prefix]
 	if !found {
