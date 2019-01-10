@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -85,9 +86,19 @@ var Prom = map[string]parse.Func{
 		PrefixEnabled: true,
 	},
 	"prommetrics": {
-		Args:          []models.FuncType{models.TypeString},
+		Args:          []models.FuncType{},
 		Return:        models.TypeInfo,
 		F:             PromMetricList,
+		PrefixEnabled: true,
+	},
+	"promtags": {
+		Args: []models.FuncType{
+			models.TypeString, // metric
+			models.TypeString, // start duration
+			models.TypeString, // end duration
+		},
+		Return:        models.TypeInfo,
+		F:             PromTagInfo,
 		PrefixEnabled: true,
 	},
 }
@@ -135,6 +146,87 @@ func PromMetricList(prefix string, e *State) (r *Results, err error) {
 	}
 	metrics := val.(promModels.LabelValues)
 	r.Results = append(r.Results, &Result{Value: Info{metrics}})
+	return
+}
+
+// PromTagInfo does a range query for the given metric and returns info about the
+// tags and labels for the metric based on the data from the queried timeframe
+func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results, err error) {
+	r = new(Results)
+	client, found := e.PromConfig[prefix]
+	if !found {
+		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
+	}
+	start, end, err := parseDurationPair(e, sdur, edur)
+	if err != nil {
+		return
+	}
+
+	qRange := v1.Range{Start: start, End: end, Step: time.Minute}
+
+	getFn := func() (interface{}, error) {
+		var res promModels.Value
+		e.Timer.StepCustomTiming("prom", "taginfo", metric, func() {
+			res, err = client.QueryRange(context.Background(), metric, qRange)
+		})
+		if err != nil {
+			return nil, err
+		}
+		m, ok := res.(promModels.Matrix)
+		if !ok {
+			return nil, fmt.Errorf("prom: expected matrix result")
+		}
+		return m, nil
+	}
+	val, err, hit := e.Cache.Get(fmt.Sprintf("%v:%v:taginfo", prefix, metric), getFn)
+	collectCacheHit(e.Cache, "prom_metrics", hit)
+	if err != nil {
+		return nil, err
+	}
+	matrix, ok := val.(promModels.Matrix)
+	if !ok {
+		err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
+	}
+	tagInfo := struct {
+		Metric       string
+		Keys         []string
+		KeysToValues map[string][]string
+		UniqueSets   []string
+	}{}
+	tagInfo.Metric = metric
+	tagInfo.KeysToValues = make(map[string][]string)
+	sets := make(map[string]struct{})
+	keysToValues := make(map[string]map[string]struct{})
+	for _, row := range matrix {
+		tags := make(opentsdb.TagSet)
+		for rawTagK, rawTagV := range row.Metric {
+			tagK := string(rawTagK)
+			tagV := string(rawTagV)
+			if tagK == "__name__" {
+				continue
+			}
+			tags[tagK] = tagV
+			if _, ok := keysToValues[tagK]; !ok {
+				keysToValues[tagK] = make(map[string]struct{})
+			}
+			keysToValues[tagK][tagV] = struct{}{}
+		}
+		sets[tags.String()] = struct{}{}
+	}
+	for k, values := range keysToValues {
+		tagInfo.Keys = append(tagInfo.Keys, k)
+		for val := range values {
+			tagInfo.KeysToValues[k] = append(tagInfo.KeysToValues[k], val)
+		}
+	}
+	sort.Strings(tagInfo.Keys)
+	for s := range sets {
+		tagInfo.UniqueSets = append(tagInfo.UniqueSets, s)
+	}
+	sort.Strings(tagInfo.UniqueSets)
+	r.Results = append(r.Results, &Result{
+		Value: Info{tagInfo},
+	})
 	return
 }
 
