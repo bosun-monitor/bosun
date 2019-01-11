@@ -489,6 +489,35 @@ and those numbers created into a series.
 
 In addition to supporting Bosun's reduction functions that take on argument, percentile operations may be be done by setting `funcName` to p followed by number that is between 0 and 1 (inclusively). For example, `"p.25"` will be the 25th percentile, `"p.999"` will be the 99.9th percentile. `"p0"` and `"p1"` are min and max respectively (However, in these cases it is recommended to use `"min"` and `"max"` for the sake of clarity.
 
+## Prometheus Query Functions
+
+Prometheus query functions query Prometheus TSDB(s) using the using the [Prometheus HTTP v1 API](https://prometheus.io/docs/prometheus/latest/querying/api/).
+
+There are currently two types of functions: functions that return time series sets (seriesSet) and information functions that are meant to be used interactively in the expression editor for information about metrics tags.
+
+### PrefixKey
+The PrefixKey is a quoted string used to query different promthesus backends as defined in the system conf (TODO: Document and link). If the PrefixKey is missing then "default" is used.
+
+
+### prom(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+### promrate(metric, groupByTags, filter, agType, rateStepDruration, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+### promm(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+### promratem(metric, groupByTags, filter, agType, rateStepDruration, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+### prommetrics() Info
+{: .exprFunc}
+
+### promtags(metric string, endDuration string, startDuration string) Info
+{: .exprFunc}
+
+
 # Annotation Query Functions
 These function are available when annotate is enabled via Bosun's configuration.
 
