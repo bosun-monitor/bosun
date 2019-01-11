@@ -537,7 +537,7 @@ The above example generates a PromQL query `sum( up { service !~ "kubl.*" } ) by
 ### promrate(metric, groupByTags, filter, agType, rateStepDuration, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
 
-promrate is like `prom()`, except that is for rate per-second calculations on metrics that are counters. It therefore includes the extra `rateStepDuration` argument which is for calculating the step of the rate calculation. The `stepDuration` is then for the step of the aggregation operation that is on top of the calculated rate. This is performed using [the `rate()` function in PromQL](https://prometheus.io/docs/prometheus/latest/querying/functions/#rate).
+promrate is like `prom` function, except that is for rate per-second calculations on metrics that are counters. It therefore includes the extra `rateStepDuration` argument which is for calculating the step of the rate calculation. The `stepDuration` is then for the step of the aggregation operation that is on top of the calculated rate. This is performed using [the `rate()` function in PromQL](https://prometheus.io/docs/prometheus/latest/querying/functions/#rate).
 
 Example:
 
@@ -552,20 +552,56 @@ $step     = "5m"
 promrate($metric, $tags, $filter, $agg, $rateStep, $step, "1h", "")
 ```
 
-The above example generates a PromQL query `sum(rate( container_memory_working_set_bytes { container_name !~ "pvc-.*$" }  [1m] )) by ( container_name,namespace )` setting the HTTP params like `prom()`.
+The above example generates a PromQL query `sum(rate( container_memory_working_set_bytes { container_name !~ "pvc-.*$" }  [1m] )) by ( container_name,namespace )` setting the HTTP params like in the `prom` function.
 
 ### promm(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
 
-### promratem(metric, groupByTags, filter, agType, rateStepDruration, stepDuration, startDuration, endDuration string) seriesSet
+promm (Prometheus Multiple) is like the `prom` function, except that it queries multiple Prometheus TSDBs and combines the result into a single seriesSet. This function will at the `bosun_prefix` tag key with the tag value set to the prefix to the results.
+
+Example:
+
+```
+$metric   = "container_memory_working_set_bytes"
+$tags     = "container_name,namespace"
+$filter   = ''' container_name !~ "pvc-.*$" '''
+$agg      = "sum"
+$step     = "5m"
+
+$q = ["it,default"]promm($metric, $tags, $filter, $agg, $step, "1h", "")
+max($q)
+
+# You could use the aggr function to aggregate across clusters if you like
+# aggr($q, $tags, $agg)
+```
+
+In the above example `$q` will be a seriesSet with the tag keys of `container_name`, `namespace`, and `bosun_prefix`. The values for the `bosun_prefix` key will be either `it` or `default` for each series in the set.
+
+### promratem(metric, groupByTags, filter, agType, rateStepDuration, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
+
+promratem (Prometheus Rate Multiple) is like the `promm` function is to the `prom` function. It allows you to do a per-second rate query against multiple Prometheus TSDBs and combines the result into a single seriesSet -- adding the `bosun_prefix` tag key to the result. It behaves the same as the `promm` function, but like `promrate`, it has the extra `rateStepDuration` argument.
 
 ### prommetrics() Info
 {: .exprFunc}
 
+prommetrics returns a list of metrics that are available in the Prometheus TSDB. This is not meant to be used in alerting, it is for use in the expression editor for getting information to build queries. For you example, you might open up another expression tab in bosun and use the output as a reference. This function supports a prefix so examples would be `prommetrics()` and `["it"]prommetrics()`.
+
+It gets the list of metrics by using the [Prometheus Label Values HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values) to get the values for the `__name__` value.
+
 ### promtags(metric string, endDuration string, startDuration string) Info
 {: .exprFunc}
 
+promtags returns the tag ("tag" ~= "Label" in Prometheus terminology) for the metric. It does a raw query (querying the metric only) for the provided duration and returns the tag information for the metric in that given time period. This is not meant to be used in alerting, it is for use in the expression editor for getting information to build queries.
+
+The result has the following Properties:
+
+ * Metric: The name of the metric
+ * Keys: A list of the tag keys available for the metric
+ * KeysToValues: A map/dictionary of tag keys to an array of their unique values
+ * UniqueSets: A list of unique tag key/value combination pairs that represent complete series
+
+ Examples: `promtags("up", "10", "")`, `["it]promtags("container_memory_working_set_bytes")`.
 
 # Annotation Query Functions
 These function are available when annotate is enabled via Bosun's configuration.
