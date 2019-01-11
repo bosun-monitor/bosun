@@ -798,7 +798,23 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 type MultiError map[string]error
 
 func (m MultiError) Error() string {
-	return fmt.Sprint(map[string]error(m))
+	data, err := json.Marshal(m)
+	if err != nil {
+		return fmt.Sprint(map[string]error(m))
+	}
+	return string(data)
+}
+
+func (m MultiError) MarshalJSON() ([]byte, error) {
+	res := make(map[string]interface{})
+	for i, e := range m {
+		if _, ok := e.(json.Marshaler); ok {
+			res[i] = e
+		} else {
+			res[i] = e.Error()
+		}
+	}
+	return json.Marshal(res)
 }
 
 func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
