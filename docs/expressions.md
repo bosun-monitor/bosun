@@ -532,10 +532,27 @@ $step   = "1m"
 prom($metric, $tags, $filter, $agg, $step, "1h", "")
 ```
 
-The above example would generate a PromQL query `sum( up { service !~ "kubl.*" } ) by ( namespace )` setting the time range and step HTTP query parameters.
+The above example generates a PromQL query `sum( up { service !~ "kubl.*" } ) by ( namespace )` setting the time range and step HTTP query parameters.
 
-### promrate(metric, groupByTags, filter, agType, rateStepDruration, stepDuration, startDuration, endDuration string) seriesSet
+### promrate(metric, groupByTags, filter, agType, rateStepDuration, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
+
+promrate is like `prom()`, except that is for rate per-second calculations on metrics that are counters. It therefore includes the extra `rateStepDuration` argument which is for calculating the step of the rate calculation. The `stepDuration` is then for the step of the aggregation operation that is on top of the calculated rate. This is performed using [the `rate()` function in PromQL](https://prometheus.io/docs/prometheus/latest/querying/functions/#rate).
+
+Example:
+
+```
+$metric   = "container_memory_working_set_bytes"
+$tags     = "container_name,namespace"
+$filter   = ''' container_name !~ "pvc-.*$" '''
+$agg      = "sum"
+$rateStep = "1m"
+$step     = "5m"
+
+promrate($metric, $tags, $filter, $agg, $rateStep, $step, "1h", "")
+```
+
+The above example generates a PromQL query `sum(rate( container_memory_working_set_bytes { container_name !~ "pvc-.*$" }  [1m] )) by ( container_name,namespace )` setting the HTTP params like `prom()`.
 
 ### promm(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
