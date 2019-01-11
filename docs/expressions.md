@@ -493,7 +493,7 @@ In addition to supporting Bosun's reduction functions that take on argument, per
 
 Prometheus query functions query Prometheus TSDB(s) using the using the [Prometheus HTTP v1 API](https://prometheus.io/docs/prometheus/latest/querying/api/).
 
-There are currently two types of functions: functions that return time series sets (seriesSet) and information functions that are meant to be used interactively in the expression editor for information about metrics tags.
+There are currently two types of functions: functions that return time series sets (seriesSet) and information functions that are meant to be used interactively in the expression editor for information about metrics and tags.
 
 ### PrefixKey
 The PrefixKey is a quoted string used to query different promthesus backends as defined in the system conf (TODO: Document and link). If the PrefixKey is missing (there are no brackets before the function), then "default" is used. For example the prefix in the following is `["it"]`:
@@ -515,24 +515,24 @@ prom queries a Promethesus TSDB for time series data. It accomplishes this by ge
 
  * `metric` is the name of the to query. To get a list of available metrics use the `prommetrics()` function.
  * `groupByTags` is a comma separate list of tag keys to aggregate the response by.
- * `filter` filters to results using [Prometheus Time Series Selectors](https://prometheus.io/docs/prometheus/latest/querying/basics/#time-series-selectors). This functions analogous to a `WHERE` clause in SQL. For example: `job=~".*",method="get"`. Operators are `=`, `!=`, `=~`, and `!~` for equals, not equals, RE2 match, not RE2 match respectively. This string is inserted into the generate promQL query directly.
- * `agType` is the the aggregation function to perform. It can be any [Prometheus Aggregation operator](https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators)
- * `stepDuration`  Prometheus's evaluation step duration. This is like downsampling, except that takes the datapoint that is most recently before (or matching) the step based on the start time. If there are no samples in that duration, the sample will be repeated. See [Prometheus Docs Issue #699](https://github.com/prometheus/docs/issues/699)
+ * `filter` filters to results using [Prometheus Time Series Selectors](https://prometheus.io/docs/prometheus/latest/querying/basics/#time-series-selectors). This functions analogous to a `WHERE` clause in SQL. For example: `job=~".*",method="get"`. Operators are `=`, `!=`, `=~`, and `!~` for equals, not equals, [RE2](https://github.com/google/re2/wiki/Syntax) match, and not RE2 match respectively. This string is inserted into the generated promQL query directly.
+ * `agType` is the the aggregation function to perform such as `"sum"` or `"avg"`. It can be any [Prometheus Aggregation operator].(https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators)
+ * `stepDuration` is Prometheus's evaluation step duration. This is like downsampling, except that takes the datapoint that is most recently before (or matching) the step based on the start time. If there are no samples in that duration, the sample will be repeated. See [Prometheus Docs Issue #699].(https://github.com/prometheus/docs/issues/699).
  * `startDuration` and `endDuration` determain the start and end time based on the current time (or currently selected time in the expression/rule editor). They are then used to send an absolute time range for the Prometheus request.
 
 Example:
 
 ```
-$metric = "up"
-$tags   = "namespace"
-$filter = ''' service !~ "kubl.*" '''
-$agg    = "sum"
-$step   = "1m"
+$metric      = "up"
+$groupByTags = "namespace"
+$filter      = ''' service !~ "kubl.*" '''
+$agg         = "sum"
+$step        = "1m"
 
-prom($metric, $tags, $filter, $agg, $step, "1h", "")
+prom($metric, $groupByTags, $filter, $agg, $step, "1h", "")
 ```
 
-The above example generates a PromQL query `sum( up { service !~ "kubl.*" } ) by ( namespace )` setting the time range and step HTTP query parameters.
+The above example would generate a PromQL query of `sum( up { service !~ "kubl.*" } ) by ( namespace )`. The time range and step are sent via HTTP query parameters.
 
 ### promrate(metric, groupByTags, filter, agType, rateStepDuration, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
@@ -542,37 +542,37 @@ promrate is like `prom` function, except that is for rate per-second calculation
 Example:
 
 ```
-$metric   = "container_memory_working_set_bytes"
-$tags     = "container_name,namespace"
-$filter   = ''' container_name !~ "pvc-.*$" '''
-$agg      = "sum"
-$rateStep = "1m"
-$step     = "5m"
+$metric      = "container_memory_working_set_bytes"
+$groupByTags = "container_name,namespace"
+$filter      = ''' container_name !~ "pvc-.*$" '''
+$agg         = "sum"
+$rateStep    = "1m"
+$step        = "5m"
 
-promrate($metric, $tags, $filter, $agg, $rateStep, $step, "1h", "")
+promrate($metric, $groupByTags, $filter, $agg, $rateStep, $step, "1h", "")
 ```
 
-The above example generates a PromQL query `sum(rate( container_memory_working_set_bytes { container_name !~ "pvc-.*$" }  [1m] )) by ( container_name,namespace )` setting the HTTP params like in the `prom` function.
+The above example would generate a PromQL query of `sum(rate( container_memory_working_set_bytes { container_name !~ "pvc-.*$" }  [1m] )) by ( container_name,namespace )`. The time range and step are sent via HTTP query parameters.
 
 ### promm(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
 
-promm (Prometheus Multiple) is like the `prom` function, except that it queries multiple Prometheus TSDBs and combines the result into a single seriesSet. This function will at the `bosun_prefix` tag key with the tag value set to the prefix to the results.
+promm (Prometheus Multiple) is like the `prom` function, except that it queries multiple Prometheus TSDBs and combines the result into a single seriesSet. A tag key of `bosun_prefix` with the tag value set to the prefix is added to the results to ensure that series are unique in the result.
 
 Example:
 
 ```
-$metric   = "container_memory_working_set_bytes"
-$tags     = "container_name,namespace"
-$filter   = ''' container_name !~ "pvc-.*$" '''
-$agg      = "sum"
-$step     = "5m"
+$metric      = "container_memory_working_set_bytes"
+$groupByTags = "container_name,namespace"
+$filter      = ''' container_name !~ "pvc-.*$" '''
+$agg         = "sum"
+$step        = "5m"
 
-$q = ["it,default"]promm($metric, $tags, $filter, $agg, $step, "1h", "")
+$q = ["it,default"]promm($metric, $groupByTags, $filter, $agg, $step, "1h", "")
 max($q)
 
 # You could use the aggr function to aggregate across clusters if you like
-# aggr($q, $tags, $agg)
+# aggr($q, $groupByTags, $agg)
 ```
 
 In the above example `$q` will be a seriesSet with the tag keys of `container_name`, `namespace`, and `bosun_prefix`. The values for the `bosun_prefix` key will be either `it` or `default` for each series in the set.
@@ -592,16 +592,16 @@ It gets the list of metrics by using the [Prometheus Label Values HTTP API](http
 ### promtags(metric string, endDuration string, startDuration string) Info
 {: .exprFunc}
 
-promtags returns the tag ("tag" ~= "Label" in Prometheus terminology) for the metric. It does a raw query (querying the metric only) for the provided duration and returns the tag information for the metric in that given time period. This is not meant to be used in alerting, it is for use in the expression editor for getting information to build queries.
+promtags returns various tag information for the metric  ("tag" ~= "Label" in Prometheus terminology). It does a raw query (querying the metric only) for the provided duration and returns the tag information for the metric in that given time period. This is not meant to be used in alerting, it is for use in the expression editor for getting information to build queries.
 
 The result has the following Properties:
 
  * Metric: The name of the metric
  * Keys: A list of the tag keys available for the metric
- * KeysToValues: A map/dictionary of tag keys to an array of their unique values
+ * KeysToValues: A map/dictionary of tag keys to a list of their unique values
  * UniqueSets: A list of unique tag key/value combination pairs that represent complete series
 
- Examples: `promtags("up", "10", "")`, `["it]promtags("container_memory_working_set_bytes")`.
+ Examples: `promtags("up", "10", "")`, `["it"]promtags("container_memory_working_set_bytes")`.
 
 # Annotation Query Functions
 These function are available when annotate is enabled via Bosun's configuration.
