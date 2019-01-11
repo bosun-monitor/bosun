@@ -496,11 +496,43 @@ Prometheus query functions query Prometheus TSDB(s) using the using the [Prometh
 There are currently two types of functions: functions that return time series sets (seriesSet) and information functions that are meant to be used interactively in the expression editor for information about metrics tags.
 
 ### PrefixKey
-The PrefixKey is a quoted string used to query different promthesus backends as defined in the system conf (TODO: Document and link). If the PrefixKey is missing then "default" is used.
+The PrefixKey is a quoted string used to query different promthesus backends as defined in the system conf (TODO: Document and link). If the PrefixKey is missing (there are no brackets before the function), then "default" is used. For example the prefix in the following is `["it"]`:
 
+```
+["it"]prom("up", "namespace", "", "sum", "5m", "1h", "")
+```
+
+In the case of `promm` and `promratem`, the prefix may have multiple keys separated by commas to allow for querying multiple prom datasources at once, for example:
+
+```
+["it,default"]promm("up", "namespace", "", "sum", "5m", "1h", "")
+```
 
 ### prom(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
+
+prom queries a Promethesus TSDB for time series data. It accomplishes this by generating a PromQL query from the given arguments.
+
+ * `metric` is the name of the to query. To get a list of available metrics use the `prommetrics()` function.
+ * `groupByTags` is a comma separate list of tag keys to aggregate the response by.
+ * `filter` filters to results using [Prometheus Time Series Selectors](https://prometheus.io/docs/prometheus/latest/querying/basics/#time-series-selectors). This functions analogous to a `WHERE` clause in SQL. For example: `job=~".*",method="get"`. Operators are `=`, `!=`, `=~`, and `!~` for equals, not equals, RE2 match, not RE2 match respectively. This string is inserted into the generate promQL query directly.
+ * `agType` is the the aggregation function to perform. It can be any [Prometheus Aggregation operator](https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators)
+ * `stepDuration`  Prometheus's evaluation step duration. This is like downsampling, except that takes the datapoint that is most recently before (or matching) the step based on the start time. If there are no samples in that duration, the sample will be repeated. See [Prometheus Docs Issue #699](https://github.com/prometheus/docs/issues/699)
+ * `startDuration` and `endDuration` determain the start and end time based on the current time (or currently selected time in the expression/rule editor). They are then used to send an absolute time range for the Prometheus request.
+
+Example:
+
+```
+$metric = "up"
+$tags   = "namespace"
+$filter = ''' service !~ "kubl.*" '''
+$agg    = "sum"
+$step   = "1m"
+
+prom($metric, $tags, $filter, $agg, $step, "1h", "")
+```
+
+The above example would generate a PromQL query `sum( up { service !~ "kubl.*" } ) by ( namespace )` setting the time range and step HTTP query parameters.
 
 ### promrate(metric, groupByTags, filter, agType, rateStepDruration, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
