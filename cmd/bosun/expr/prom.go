@@ -258,7 +258,7 @@ func PromMRate(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	prefixes := strings.Split(prefix, ",")
-	if len(prefixes) == 1 && prefixes[0] == "," {
+	if len(prefixes) == 1 && prefixes[0] == "" {
 		return promQuery("default", e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, true)
 	}
 
@@ -328,14 +328,36 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 		return
 	}
 	query := buf.String()
-	qres, err := timePromRequest(e, prefix, query, start, end, step)
+	qRes, err := timePromRequest(e, prefix, query, start, end, step)
 	if err != nil {
 		return
 	}
-	for _, row := range qres.(promModels.Matrix) {
+
+	groupByTagSet := make(opentsdb.TagSet)
+	for _, v := range strings.Split(groupBy, ",") {
+		if v != "" {
+			groupByTagSet[v] = ""
+		}
+	}
+	for _, row := range qRes.(promModels.Matrix) {
 		tags := make(opentsdb.TagSet)
-		for tagk, tagv := range row.Metric {
-			tags[string(tagk)] = string(tagv)
+		for tagK, tagV := range row.Metric {
+			tags[string(tagK)] = string(tagV)
+		}
+		// Remove results where the tag keys in the response are a subset of the request
+		// in order to ensure a consistent set of keys for each series in the response.
+		// For example if the request is group by "foo,bar" seriest in the result that 
+		// have only "foo", "bar", or "" will be removed.
+		if len(tags) < len(groupByTagSet) {
+			validSubSet := true
+			for tagK := range tags {
+				if _, ok := groupByTagSet[tagK]; !ok {
+					validSubSet = false
+				}
+			}
+			if validSubSet {
+				continue // Skip to drop from result
+			}
 		}
 		if addPrefixTag {
 			tags["bosun_prefix"] = prefix
