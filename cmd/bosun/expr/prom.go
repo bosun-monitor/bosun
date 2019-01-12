@@ -381,15 +381,19 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 		return s, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
 	}
 	r := v1.Range{Start: start, End: end, Step: step}
-	key := struct {
-		Query string
-		Range v1.Range
+	cacheKey := struct {
+		Query  string
+		Range  v1.Range
+		Step   time.Duration
+		Prefix string
 	}{
 		query,
 		r,
+		step,
+		prefix,
 	}
-	b, _ := json.MarshalIndent(key, "", "  ")
-	e.Timer.StepCustomTiming("prom", "query", query, func() {
+	cacheKeyBytes, _ := json.MarshalIndent(cacheKey, "", "  ")
+	e.Timer.StepCustomTiming("prom", fmt.Sprintf("query (%v)", prefix), query, func() {
 		getFn := func() (interface{}, error) {
 			res, err := client.QueryRange(context.Background(), query, r)
 			if err != nil {
@@ -401,7 +405,7 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 			}
 			return m, nil
 		}
-		val, err, hit := e.Cache.Get(fmt.Sprintf("%v:%v", prefix, string(b)), getFn)
+		val, err, hit := e.Cache.Get(string(cacheKeyBytes), getFn)
 		collectCacheHit(e.Cache, "prom_ts", hit)
 		var ok bool
 		if s, ok = val.(promModels.Matrix); !ok {
