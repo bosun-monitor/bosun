@@ -30,8 +30,8 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // filter string
 			models.TypeString, // aggregation type
 			models.TypeString, // step interval duration
-			models.TypeString, // StartDuration
-			models.TypeString, // EndDuration
+			models.TypeString, // start duration
+			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
 		Tags:          promGroupTags,
@@ -45,8 +45,8 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // filter string
 			models.TypeString, // aggregation type
 			models.TypeString, // step interval duration
-			models.TypeString, // StartDuration
-			models.TypeString, // EndDuration
+			models.TypeString, // start duration
+			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
 		Tags:          promMGroupTags,
@@ -103,6 +103,7 @@ var Prom = map[string]parse.Func{
 	},
 }
 
+// promGroupTags parses the csv tags argument of the prom based functions
 func promGroupTags(args []parse.Node) (parse.Tags, error) {
 	tags := make(parse.Tags)
 	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
@@ -112,6 +113,8 @@ func promGroupTags(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+// promMGroupTags parses the csv tags argument of the prom based functions
+// and also adds the "bosun_prefix" tag
 func promMGroupTags(args []parse.Node) (parse.Tags, error) {
 	tags := make(parse.Tags)
 	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
@@ -123,6 +126,7 @@ func promMGroupTags(args []parse.Node) (parse.Tags, error) {
 }
 
 // PromMetricList returns a list of available metrics for the prometheus backend
+// by using querying the Prometheus Lable Values API for "__name__"
 func PromMetricList(prefix string, e *State) (r *Results, err error) {
 	r = new(Results)
 	client, found := e.PromConfig[prefix]
@@ -174,7 +178,7 @@ func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results
 		}
 		m, ok := res.(promModels.Matrix)
 		if !ok {
-			return nil, fmt.Errorf("prom: expected matrix result")
+			return nil, fmt.Errorf("prom: expected a prometheus matrix type in result but got %v", res.Type().String())
 		}
 		return m, nil
 	}
@@ -230,7 +234,7 @@ func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results
 	return
 }
 
-// PromQuery is a wrapper from promQuery so there is a function signature that doesn't require the rate argument in the expr language.
+// PromQuery is a wrapper for promQuery so there is a function signature that doesn't require the rate argument in the expr language.
 // It also sets promQuery's addPrefixTag argument to false since this only queries one backend.
 func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
 	return promQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur, false)
@@ -346,8 +350,8 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 		}
 		// Remove results where the tag keys in the response are a subset of the request
 		// in order to ensure a consistent set of keys for each series in the response.
-		// For example if the request is group by "foo,bar" seriest in the result that 
-		// have only "foo", "bar", or "" will be removed.
+		// For example if the request is to group by "foo,bar", then each series in the result
+		// that has only "foo", "bar", or "" as their tag keys will be removed.
 		if len(tags) < len(groupByTagSet) {
 			validSubSet := true
 			for tagK := range tags {
