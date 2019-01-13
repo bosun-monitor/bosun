@@ -462,6 +462,23 @@ Graphite request.
 		X-Meow = "Mix"
 ```
 
+### PromConf
+Enables querying multiple [Prometheus TSDBs](https://prometheus.io/docs/introduction/overview/) via the Prometheus HTTP v1 endpoint. The [Prometheus Query Expression
+Functions](/expressions#prometheus-query-functions) become available when this is defined.
+
+#### PromConf.default
+Default cluster to query when [PrefixKey](/expressions#prefixkey-2) is not passed to the [prometheus query functions](/expressions#prometheus-query-functions).
+
+#### Example
+
+```
+[PromConf]
+    [PromConf.default]
+        URL = "https://prometheus.kubea.example.com"
+    [PromConf.kubeb]
+        URL = "https://prometheus.kubeb.example.com"
+```
+
 ### AnnotateConf
 Embeds the annotation service. This enables the ability to submit and
 edit annotations via the UI or API. It also enables the annotation

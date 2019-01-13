@@ -491,12 +491,12 @@ In addition to supporting Bosun's reduction functions that take on argument, per
 
 ## Prometheus Query Functions
 
-Prometheus query functions query Prometheus TSDB(s) using the using the [Prometheus HTTP v1 API](https://prometheus.io/docs/prometheus/latest/querying/api/).
+Prometheus query functions query Prometheus TSDB(s) using the using the [Prometheus HTTP v1 API](https://prometheus.io/docs/prometheus/latest/querying/api/). When [`PromConf` in the system configuration](/system_configuration#promconf) is added these functions become available. 
 
 There are currently two types of functions: functions that return time series sets (seriesSet) and information functions that are meant to be used interactively in the expression editor for information about metrics and tags.
 
 ### PrefixKey
-The PrefixKey is a quoted string used to query different promthesus backends as defined in the system conf (TODO: Document and link). If the PrefixKey is missing (there are no brackets before the function), then "default" is used. For example the prefix in the following is `["it"]`:
+The PrefixKey is a quoted string used to query different promthesus backends in [`PromConf` in the system configuration](/system_configuration#promconf). If the PrefixKey is missing (there are no brackets before the function), then "default" is used. For example the prefix in the following is `["it"]`:
 
 ```
 ["it"]prom("up", "namespace", "", "sum", "5m", "1h", "")
@@ -510,7 +510,7 @@ In the case of `promm` and `promratem`, the prefix may have multiple keys separa
 
 ### Series Removed from Responses
 
-When a Prometheus query is made all time series in the response do not have to have the same set of tag keys. For example, when making a PromQL request that has group `by (host,interface)` results may be included in the response that contain only `host`, only `interface`, or no tag keys at all. Bosun requires that the tag keys be consistent for each series within a seriesSet. Therefore, these results are removed from the responses when using functions like `prom`, `promrate`, `promm`, and `promrate`.
+When a Prometheus query is made all time series in the response do not have to have the same set of tag keys. For example, when making a PromQL request that has group `by (host,interface)` results may be included in the response that contain only `host`, only `interface`, or no tag keys at all. Bosun requires that the tag keys be consistent for each series within a seriesSet. Therefore, these results are removed from the responses when using functions like `prom`, `promrate`, `promm`, and `promratem`.
 
 ### prom(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
