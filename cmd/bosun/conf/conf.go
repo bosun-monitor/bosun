@@ -45,6 +45,7 @@ type SystemConfProvider interface {
 	GetRedisHost() string
 	GetRedisDb() int
 	GetRedisPassword() string
+	IsRedisClientSetName() bool
 	GetTimeAndDate() []int
 	GetSearchSince() time.Duration
 

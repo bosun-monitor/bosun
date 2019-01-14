@@ -48,9 +48,10 @@ func TestSystemToml(t *testing.T) {
 		Hosts: []string{"http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"},
 	})
 	assert.Equal(t, sc.DBConf, DBConf{
-		RedisHost:     "localhost:6389", // From Config
-		LedisDir:      "ledis_data",     // Default
-		LedisBindAddr: "127.0.0.1:9565", // Default
+		RedisHost:          "localhost:6389", // From Config
+		RedisClientSetName: true,
+		LedisDir:           "ledis_data",     // Default
+		LedisBindAddr:      "127.0.0.1:9565", // Default
 
 	}, "DBConf does not match")
 	assert.Equal(t, sc.SMTPConf, SMTPConf{

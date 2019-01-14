@@ -319,7 +319,7 @@ func quit() {
 func initDataAccess(systemConf conf.SystemConfProvider) (database.DataAccess, error) {
 	var da database.DataAccess
 	if systemConf.GetRedisHost() != "" {
-		da = database.NewDataAccess(systemConf.GetRedisHost(), true, systemConf.GetRedisDb(), systemConf.GetRedisPassword())
+		da = database.NewDataAccess(systemConf.GetRedisHost(), systemConf.IsRedisClientSetName(), systemConf.GetRedisDb(), systemConf.GetRedisPassword())
 	} else {
 		_, err := database.StartLedis(systemConf.GetLedisDir(), systemConf.GetLedisBindAddr())
 		if err != nil {

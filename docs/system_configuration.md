@@ -263,6 +263,10 @@ Optional integer database to store bosun data.  Defaults to 0.
 #### RedisPassword
 Optional password to use when connecting to Redis.
 
+#### RedisClentSetName
+Optional key defining the sending of client's name `bosun` to Redis. Defaults to true.
+If you use Netflix/dynomite then RedisClentSetName must be set to false.
+
 #### LedisDir
 Directory in which ledis will store data. Default: `LedisDir = "ledis_data"`
 
