@@ -297,9 +297,10 @@ Address from which emails will be sent.
 Outgoing SMTP server hostname or IP address.
 
 #### Username
-(TODO: See how this and Password is used with email auth, don't have a current example.)
+SMTP username
 
 #### Password
+SMTP password
 
 #### Example
 
@@ -307,6 +308,8 @@ Outgoing SMTP server hostname or IP address.
 [SMTPConf]
 	EmailFrom = "bosun@example.com"
 	Host = "mail.example.com"
+	Username = "username"
+	Password = "fe8h392wh"
 ```
 
 ### AzureMonitorConf
