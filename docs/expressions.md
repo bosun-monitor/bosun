@@ -512,6 +512,11 @@ In the case of `promm` and `promratem`, the prefix may have multiple keys separa
 
 When a Prometheus query is made all time series in the response do not have to have the same set of tag keys. For example, when making a PromQL request that has group `by (host,interface)` results may be included in the response that contain only `host`, only `interface`, or no tag keys at all. Bosun requires that the tag keys be consistent for each series within a seriesSet. Therefore, these results are removed from the responses when using functions like `prom`, `promrate`, `promm`, and `promratem`.
 
+<div class="admonition">
+<p class="admonition-title">Note</p>
+<p>This behavior may change in the future to an alternative design. Instead of dropping these series, the series could be retained but the missing tag keys would be added to the response with some sort of value to represent that the tag is missing.</p>
+</div>
+
 ### prom(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
 
