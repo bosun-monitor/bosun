@@ -14,12 +14,12 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	promModels "github.com/prometheus/common/model"
 )
 
 // PromClients is a collection of Prometheus API v1 client APIs (connections)
-type PromClients map[string]v1.API
+type PromClients map[string]promv1.API
 
 // Prom is a map of functions to query Prometheus.
 var Prom = map[string]parse.Func{
@@ -166,7 +166,7 @@ func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results
 		return
 	}
 
-	qRange := v1.Range{Start: start, End: end, Step: time.Minute}
+	qRange := promv1.Range{Start: start, End: end, Step: time.Minute}
 
 	getFn := func() (interface{}, error) {
 		var res promModels.Value
@@ -348,20 +348,9 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 		for tagK, tagV := range row.Metric {
 			tags[string(tagK)] = string(tagV)
 		}
-		// Remove results where the tag keys in the response are a subset of the request
-		// in order to ensure a consistent set of keys for each series in the response.
-		// For example if the request is to group by "foo,bar", then each series in the result
-		// that has only "foo", "bar", or "" as their tag keys will be removed.
+		// Remove results with less tag keys than those requests
 		if len(tags) < len(groupByTagSet) {
-			validSubSet := true
-			for tagK := range tags {
-				if _, ok := groupByTagSet[tagK]; !ok {
-					validSubSet = false
-				}
-			}
-			if validSubSet {
-				continue // Skip to drop from result
-			}
+			continue
 		}
 		if addPrefixTag {
 			tags["bosun_prefix"] = prefix
@@ -406,10 +395,10 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 	if !found {
 		return s, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
 	}
-	r := v1.Range{Start: start, End: end, Step: step}
+	r := promv1.Range{Start: start, End: end, Step: step}
 	cacheKey := struct {
 		Query  string
-		Range  v1.Range
+		Range  promv1.Range
 		Step   time.Duration
 		Prefix string
 	}{

@@ -523,7 +523,7 @@ When a Prometheus query is made all time series in the response do not have to h
 prom queries a Promethesus TSDB for time series data. It accomplishes this by generating a PromQL query from the given arguments.
 
  * `metric` is the name of the to query. To get a list of available metrics use the `prommetrics()` function.
- * `groupByTags` is a comma separate list of tag keys to aggregate the response by.
+ * `groupByTags` is a comma separated list of tag keys to aggregate the response by.
  * `filter` filters to results using [Prometheus Time Series Selectors](https://prometheus.io/docs/prometheus/latest/querying/basics/#time-series-selectors). This functions analogous to a `WHERE` clause in SQL. For example: `job=~".*",method="get"`. Operators are `=`, `!=`, `=~`, and `!~` for equals, not equals, [RE2](https://github.com/google/re2/wiki/Syntax) match, and not RE2 match respectively. This string is inserted into the generated promQL query directly.
  * `agType` is the the aggregation function to perform such as `"sum"` or `"avg"`. It can be any [Prometheus Aggregation operator].(https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators)
  * `stepDuration` is Prometheus's evaluation step duration. This is like downsampling, except that takes the datapoint that is most recently before (or matching) the step based on the start time. If there are no samples in that duration, the sample will be repeated. See [Prometheus Docs Issue #699].(https://github.com/prometheus/docs/issues/699).

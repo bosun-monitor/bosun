@@ -16,8 +16,8 @@ import (
 	"bosun.org/opentsdb"
 	ainsightsmgmt "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
 	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
-	"github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	promapi "github.com/prometheus/client_golang/api"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 
 	"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
@@ -220,7 +220,8 @@ func (pc PromConf) Valid() error {
 	if pc.URL == "" {
 		return fmt.Errorf("missing URL field")
 	}
-	_, err := api.NewClient(api.Config{Address: pc.URL})
+	// NewClient makes sure the url is valid, no connections are made in this call
+	_, err := promapi.NewClient(promapi.Config{Address: pc.URL})
 	if err != nil {
 		return err
 	}
@@ -642,8 +643,8 @@ func (sc *SystemConf) GetPromContext() expr.PromClients {
 	clients := make(expr.PromClients)
 	for prefix, conf := range sc.PromConf {
 		// Error is checked in validation (PromConf Valid())
-		client, _ := api.NewClient(api.Config{Address: conf.URL})
-		clients[prefix] = v1.NewAPI(client)
+		client, _ := promapi.NewClient(promapi.Config{Address: conf.URL})
+		clients[prefix] = promv1.NewAPI(client)
 	}
 	return clients
 }
