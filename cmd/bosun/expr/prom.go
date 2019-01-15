@@ -319,19 +319,14 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 		return
 	}
 	step := time.Duration(st)
-	qs := promQueryTemplateData{
+	qd := promQueryTemplateData{
 		Metric:       metric,
 		AgFunc:       agType,
 		Tags:         groupBy,
 		Filter:       filter,
 		RateDuration: rateDuration,
 	}
-	buf := new(bytes.Buffer)
-	err = promQueryTemplate.Execute(buf, qs)
-	if err != nil {
-		return
-	}
-	query := buf.String()
+	query, err := qd.RenderString()
 	qRes, err := timePromRequest(e, prefix, query, start, end, step)
 	if err != nil {
 		return
@@ -386,6 +381,16 @@ type promQueryTemplateData struct {
 	Tags         string
 	Filter       string
 	RateDuration string
+}
+
+// RenderString creates a query string using promQueryTemplate
+func (pq promQueryTemplateData) RenderString() (string, error) {
+	buf := new(bytes.Buffer)
+	err := promQueryTemplate.Execute(buf, pq)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 // timePromRequest takes a PromQL query string with the given time frame and step duration. The result
