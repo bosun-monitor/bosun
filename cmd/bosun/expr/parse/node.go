@@ -336,7 +336,14 @@ func (p *PrefixNode) Return() models.FuncType {
 }
 
 func (p *PrefixNode) Tags() (Tags, error) {
-	return nil, nil
+	prefixFuncNode, ok := p.Arg.(*FuncNode)
+	if !ok {
+		return nil, fmt.Errorf("unexpected arg to prefix node, expected funcNode")
+	}
+	if prefixFuncNode.F.Tags == nil {
+		return nil, nil
+	}
+	return prefixFuncNode.F.Tags(prefixFuncNode.Args)
 }
 
 // BinaryNode holds two arguments and an operator.
