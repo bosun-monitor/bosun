@@ -289,7 +289,7 @@ func c_elasticsearch(collectIndices bool, instance conf.Elastic) (opentsdb.Multi
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Old, opentsdb.TagSet{"gc": "old"}.Merge(ts))
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Young, opentsdb.TagSet{"gc": "young"}.Merge(ts))
 	}
-	if collectIndices {
+	if collectIndices && (isMaster || instance.AlwaysCollectIndices) {
 		for k, index := range indexStats.Indices {
 			if esSkipIndex(k) {
 				slog.Infof("Skipping index: %v", k)
