@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-//unc testQueryTemplate
-
 type promQueryTemplateTest struct {
 	title string
 	promQueryTemplateData
@@ -14,7 +12,7 @@ type promQueryTemplateTest struct {
 }
 
 var promQueryTemplateTests = []promQueryTemplateTest{
-	promQueryTemplateTest{
+	{
 		"minimal query",
 		promQueryTemplateData{
 			Metric: "up",
@@ -22,7 +20,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 		},
 		"sum( up) by (  )",
 	},
-	promQueryTemplateTest{
+	{
 		"query with tags",
 		promQueryTemplateData{
 			Metric: "up",
@@ -31,7 +29,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 		},
 		"sum( up) by ( namespace,pod )",
 	},
-	promQueryTemplateTest{
+	{
 		"query with tags and filter",
 		promQueryTemplateData{
 			Metric: "up",
@@ -41,7 +39,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 		},
 		`sum( up {service !~ "kubl.*"} ) by ( namespace,pod )`,
 	},
-	promQueryTemplateTest{
+	{
 		"minimal rate query",
 		promQueryTemplateData{
 			Metric:       "up",
@@ -50,7 +48,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 		},
 		`sum(rate( up [5m] )) by (  )`,
 	},
-	promQueryTemplateTest{
+	{
 		"rate query with tags and filter",
 		promQueryTemplateData{
 			Metric:       "up",
