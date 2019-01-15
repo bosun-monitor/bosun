@@ -16,6 +16,8 @@ import (
 	"bosun.org/opentsdb"
 	ainsightsmgmt "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
 	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
+	promapi "github.com/prometheus/client_golang/api"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 
 	"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
@@ -61,6 +63,7 @@ type SystemConf struct {
 	InfluxConf       InfluxConf
 	ElasticConf      map[string]ElasticConf
 	AzureMonitorConf map[string]AzureMonitorConf
+	PromConf         map[string]PromConf
 
 	AnnotateConf AnnotateConf
 
@@ -84,9 +87,9 @@ type EnabledBackends struct {
 	Graphite     bool
 	Influx       bool
 	Elastic      bool
-	Logstash     bool
 	Annotate     bool
 	AzureMonitor bool
+	Prom         bool
 }
 
 // EnabledBackends returns and EnabledBackends struct which contains fields
@@ -96,6 +99,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.OpenTSDB = sc.OpenTSDBConf.Host != ""
 	b.Graphite = sc.GraphiteConf.Host != ""
 	b.Influx = sc.InfluxConf.URL != ""
+	b.Prom = sc.PromConf["default"].URL != ""
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	b.AzureMonitor = len(sc.AzureMonitorConf) != 0
@@ -203,6 +207,25 @@ type InfluxConf struct {
 	Timeout   Duration
 	UnsafeSSL bool
 	Precision string
+}
+
+// PromConf contains configuration for a Prometheus TSDB that Bosun can query
+type PromConf struct {
+	URL string
+}
+
+// Valid returns if the configuration for the PromConf has required fields needed
+// to create a prometheus tsdb client
+func (pc PromConf) Valid() error {
+	if pc.URL == "" {
+		return fmt.Errorf("missing URL field")
+	}
+	// NewClient makes sure the url is valid, no connections are made in this call
+	_, err := promapi.NewClient(promapi.Config{Address: pc.URL})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // DBConf stores the connection information for Bosun's internal storage
@@ -349,6 +372,13 @@ func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 	for prefix, conf := range sc.AzureMonitorConf {
 		if err := conf.Valid(); err != nil {
 			return sc, fmt.Errorf(`error in configuration for Azure client "%v": %v`, prefix, err)
+		}
+	}
+
+	// Check Prometheus Monitor Configurations
+	for prefix, conf := range sc.PromConf {
+		if err := conf.Valid(); err != nil {
+			return sc, fmt.Errorf(`error in configuration for Prometheus client "%v": %v`, prefix, err)
 		}
 	}
 
@@ -612,6 +642,18 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
 	}
 	return c
+}
+
+// GetPromContext initializes returns a collection of Prometheus API v1 client APIs (connections)
+// from the configuration
+func (sc *SystemConf) GetPromContext() expr.PromClients {
+	clients := make(expr.PromClients)
+	for prefix, conf := range sc.PromConf {
+		// Error is checked in validation (PromConf Valid())
+		client, _ := promapi.NewClient(promapi.Config{Address: conf.URL})
+		clients[prefix] = promv1.NewAPI(client)
+	}
+	return clients
 }
 
 // GetElasticContext returns an Elastic context which contains all the information

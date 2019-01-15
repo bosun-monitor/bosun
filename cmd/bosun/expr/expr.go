@@ -58,6 +58,7 @@ type Backends struct {
 	InfluxConfig    client.HTTPConfig
 	ElasticConfig   ElasticConfig
 	AzureMonitor    AzureMonitorClients
+	PromConfig      PromClients
 }
 
 type BosunProviders struct {

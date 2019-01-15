@@ -1477,3 +1477,21 @@ func Transpose(e *State, d *Results, gp string) (*Results, error) {
 	}
 	return &r, nil
 }
+
+// parseDurationPair is a helper to parse Bosun/OpenTSDB style duration strings that are often
+// the last two arguments of tsdb query functions. It uses the State object's now property
+// and returns absolute start and end times
+func parseDurationPair(e *State, startDuration, endDuration string) (start, end time.Time, err error) {
+	sd, err := opentsdb.ParseDuration(startDuration)
+	if err != nil {
+		return
+	}
+	var ed opentsdb.Duration
+	if endDuration != "" {
+		ed, err = opentsdb.ParseDuration(endDuration)
+		if err != nil {
+			return
+		}
+	}
+	return e.now.Add(time.Duration(-sd)), e.now.Add(time.Duration(-ed)), nil
+}
