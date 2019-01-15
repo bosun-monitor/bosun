@@ -436,7 +436,6 @@ Collecting indices metrics from all nodes may flood database with tags. By
 default they are collected, only if current node is master. You can
 override this with AlwaysCollectIndices.
 
-
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
