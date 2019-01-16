@@ -33,7 +33,7 @@ type DataPoint []json.Number
 
 func (r *Request) CacheKey() string {
 	targets, _ := json.Marshal(r.Targets)
-	return fmt.Sprintf("graphite-%d-%d-%s", r.Start.Unix(), r.End.Unix(), targets)
+	return fmt.Sprintf("%s-%d-%d-%s", r.Prefix, r.Start.Unix(), r.End.Unix(), targets)
 }
 
 // Query performs a request to Graphite at the given host. host specifies
