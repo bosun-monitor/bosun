@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/prometheus/promql"
+
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
@@ -85,6 +87,18 @@ var Prom = map[string]parse.Func{
 		F:             PromMRate,
 		PrefixEnabled: true,
 	},
+	"promras": { // prom raw aggregated series
+		Args: []models.FuncType{
+			models.TypeString, // promql query
+			models.TypeString, // step interval duration
+			models.TypeString, // start duration
+			models.TypeString, // end duration
+		},
+		Return:        models.TypeSeriesSet,
+		Tags:          promAggregateRawTags,
+		F:             PromRawAggregateSeriesQuery,
+		PrefixEnabled: true,
+	},
 	"prommetrics": {
 		Args:          []models.FuncType{},
 		Return:        models.TypeInfo,
@@ -123,6 +137,74 @@ func promMGroupTags(args []parse.Node) (parse.Tags, error) {
 	}
 	tags["bosun_prefix"] = struct{}{}
 	return tags, nil
+}
+
+// promAggregateRawTags parses the promql argument to get the expected
+// grouping tags from an aggregated series
+func promAggregateRawTags(args []parse.Node) (parse.Tags, error) {
+	tags := make(parse.Tags)
+	pq := args[0].(*parse.StringNode).Text
+	parsedPromExpr, err := promql.ParseExpr(pq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract tags from promql query due to invalid promql expression: %v", err)
+	}
+	promAgExprNode, ok := parsedPromExpr.(*promql.AggregateExpr)
+	if !ok || promAgExprNode == nil {
+		return nil, fmt.Errorf("failed to extract tags from promql query, top level expression is not aggregation operation: %v", err)
+	}
+	for _, k := range promAgExprNode.Grouping {
+		tags[k] = struct{}{}
+	}
+	return tags, nil
+}
+
+func PromRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (r *Results, err error) {
+	r = new(Results)
+	parsedPromExpr, err := promql.ParseExpr(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse invalid promql expression: %v", err)
+	}
+	promAgExprNode, ok := parsedPromExpr.(*promql.AggregateExpr)
+	if !ok || promAgExprNode == nil {
+		return nil, fmt.Errorf("top level expression is not aggregation operation")
+	}
+	start, end, err := parseDurationPair(e, sdur, edur)
+	if err != nil {
+		return
+	}
+	st, err := opentsdb.ParseDuration(stepDuration)
+	if err != nil {
+		return
+	}
+	step := time.Duration(st)
+	tagLen := len(promAgExprNode.Grouping)
+	qRes, err := timePromRequest(e, prefix, query, start, end, step)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range qRes.(promModels.Matrix) {
+		tags := make(opentsdb.TagSet)
+		for tagK, tagV := range row.Metric {
+			tags[string(tagK)] = string(tagV)
+		}
+		// Remove results with less tag keys than those requests
+		if len(tags) < tagLen {
+			continue
+		}
+		if e.Squelched(tags) {
+			continue
+		}
+		values := make(Series, len(row.Values))
+		for _, v := range row.Values {
+			values[v.Timestamp.Time()] = float64(v.Value)
+		}
+		r.Results = append(r.Results, &Result{
+			Value: values,
+			Group: tags,
+		})
+	}
+	return r, nil
+	return
 }
 
 // PromMetricList returns a list of available metrics for the prometheus backend
