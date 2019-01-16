@@ -3,6 +3,8 @@ package expr
 import (
 	"strings"
 	"testing"
+
+	"github.com/prometheus/prometheus/promql"
 )
 
 type promQueryTemplateTest struct {
@@ -71,6 +73,10 @@ func TestPromQueryTemplate(t *testing.T) {
 		trimmedOut := strings.TrimSpace(out)
 		if trimmedOut != qTest.expect {
 			t.Errorf("unexpected output for test query %v: got ```%v``` want ```%v```", qTest.title, trimmedOut, qTest.expect)
+		}
+		_, err = promql.ParseExpr(trimmedOut)
+		if err != nil {
+			t.Errorf("failed to parse output of for test query %v as valid promql: %v", qTest, err)
 		}
 	}
 }
