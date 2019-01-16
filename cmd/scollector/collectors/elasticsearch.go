@@ -266,7 +266,7 @@ func c_elasticsearch(collectIndices bool, instance conf.Elastic) (opentsdb.Multi
 	// As we're pulling _local stats here, this will only process 1 node.
 	for nodeID, nodeStats := range clusterStats.Nodes {
 		isMaster = nodeID == clusterState.MasterNode
-		if isMaster {
+		if isMaster || instance.CollectAllMetrics {
 			s.add("elastic.health.cluster", clusterHealth, ts)
 			if statusCode, ok := elasticStatusMap[clusterHealth.Status]; ok {
 				Add(&md, "elastic.health.cluster.status", statusCode, ts, metadata.Gauge, metadata.StatusCode, "The current status of the cluster. Zero for green, one for yellow, two for red.")
@@ -289,7 +289,7 @@ func c_elasticsearch(collectIndices bool, instance conf.Elastic) (opentsdb.Multi
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Old, opentsdb.TagSet{"gc": "old"}.Merge(ts))
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Young, opentsdb.TagSet{"gc": "young"}.Merge(ts))
 	}
-	if collectIndices && (isMaster || instance.AlwaysCollectIndices) {
+	if collectIndices && (isMaster || instance.CollectAllMetrics) {
 		for k, index := range indexStats.Indices {
 			if esSkipIndex(k) {
 				slog.Infof("Skipping index: %v", k)

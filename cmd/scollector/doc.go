@@ -432,9 +432,8 @@ you specify basic auth credentials and using TLS by setting the Scheme to https:
 	  ClusterInterval = "10s"
 	  IndexInterval = "1m"
 
-Collecting indices metrics from all nodes may flood database with tags. By
-default they are collected, only if current node is master. You can
-override this with AlwaysCollectIndices.
+By default cluster-wide metrics are collected, only if current node is master.
+You can override this behaviour with CollectAllMetrics switch.
 
 Windows
 
