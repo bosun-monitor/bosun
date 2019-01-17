@@ -254,6 +254,11 @@ recommended for production setups.
 
 The default is to use ledis. If Both Redis and ledis are defined, Redis will take preference and the ledis configuration will be ignored. Ledis is the default, so if `RedisHost` is not specified ledis will be used even if you have no `DBConf` configuration defined.
 
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Upgrading the database to newer versions only works with redis. With ledis you will have to delete the database to use a new version that involves a migration (schema upgrade) to the db.</p>
+</div>
+
 #### RedisHost
 The Redis hostname and port.
 
