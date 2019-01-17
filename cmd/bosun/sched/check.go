@@ -75,6 +75,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 			InfluxConfig:    s.SystemConf.GetInfluxContext(),
 			ElasticHosts:    s.SystemConf.GetElasticContext(),
 			AzureMonitor:    s.SystemConf.GetAzureMonitorContext(),
+			PromConfig:      s.SystemConf.GetPromContext(),
 		},
 	}
 	return r
