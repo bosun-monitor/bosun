@@ -129,6 +129,8 @@ var Prom = map[string]parse.Func{
 	},
 }
 
+var promMultiKey = "bosun_prefix"
+
 // promGroupTags parses the csv tags argument of the prom based functions
 func promGroupTags(args []parse.Node) (parse.Tags, error) {
 	tags := make(parse.Tags)
@@ -140,13 +142,13 @@ func promGroupTags(args []parse.Node) (parse.Tags, error) {
 }
 
 // promMGroupTags parses the csv tags argument of the prom based functions
-// and also adds the "bosun_prefix" tag
+// and also adds the promMultiKey tag
 func promMGroupTags(args []parse.Node) (parse.Tags, error) {
 	tags, err := promGroupTags(args)
 	if err != nil {
 		return nil, err
 	}
-	tags["bosun_prefix"] = struct{}{}
+	tags[promMultiKey] = struct{}{}
 	return tags, nil
 }
 
@@ -174,7 +176,7 @@ func promMAggregateRawTags(args []parse.Node) (parse.Tags, error) {
 	if err != nil {
 		return nil, err
 	}
-	tags["bosun_prefix"] = struct{}{}
+	tags[promMultiKey] = struct{}{}
 	return tags, nil
 }
 
@@ -288,7 +290,7 @@ func PromMRate(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 }
 
 // promMQuery makes call to multiple prometheus TSDBs and combines the results into a single series set.
-// It adds the "bosun_prefix" tag key with the value of prefix label to the results. Queries are executed in parallel.
+// It adds the promMultiKey tag key with the value of prefix label to the results. Queries are executed in parallel.
 func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	prefixes := strings.Split(prefix, ",")
@@ -458,7 +460,7 @@ func promMatrixToResults(prefix string, e *State, res promModels.Value, expected
 			continue
 		}
 		if addPrefix {
-			tags["bosun_prefix"] = prefix
+			tags[promMultiKey] = prefix
 		}
 		if e.Squelched(tags) {
 			continue
