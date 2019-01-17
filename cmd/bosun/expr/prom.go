@@ -182,29 +182,8 @@ func PromRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, s
 	if err != nil {
 		return nil, err
 	}
-	for _, row := range qRes.(promModels.Matrix) {
-		tags := make(opentsdb.TagSet)
-		for tagK, tagV := range row.Metric {
-			tags[string(tagK)] = string(tagV)
-		}
-		// Remove results with less tag keys than those requests
-		if len(tags) < tagLen {
-			continue
-		}
-		if e.Squelched(tags) {
-			continue
-		}
-		values := make(Series, len(row.Values))
-		for _, v := range row.Values {
-			values[v.Timestamp.Time()] = float64(v.Value)
-		}
-		r.Results = append(r.Results, &Result{
-			Value: values,
-			Group: tags,
-		})
-	}
-	return r, nil
-	return
+	err = promMatrixToResults(prefix, e, qRes, tagLen, false, r)
+	return r, err
 }
 
 // PromMetricList returns a list of available metrics for the prometheus backend
@@ -413,38 +392,14 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 	if err != nil {
 		return
 	}
-
 	groupByTagSet := make(opentsdb.TagSet)
 	for _, v := range strings.Split(groupBy, ",") {
 		if v != "" {
 			groupByTagSet[v] = ""
 		}
 	}
-	for _, row := range qRes.(promModels.Matrix) {
-		tags := make(opentsdb.TagSet)
-		for tagK, tagV := range row.Metric {
-			tags[string(tagK)] = string(tagV)
-		}
-		// Remove results with less tag keys than those requests
-		if len(tags) < len(groupByTagSet) {
-			continue
-		}
-		if addPrefixTag {
-			tags["bosun_prefix"] = prefix
-		}
-		if e.Squelched(tags) {
-			continue
-		}
-		values := make(Series, len(row.Values))
-		for _, v := range row.Values {
-			values[v.Timestamp.Time()] = float64(v.Value)
-		}
-		r.Results = append(r.Results, &Result{
-			Value: values,
-			Group: tags,
-		})
-	}
-	return r, nil
+	err = promMatrixToResults(prefix, e, qRes, len(groupByTagSet), addPrefixTag, r)
+	return r, err
 }
 
 // promQueryTemplate is a template for PromQL time series queries. It supports
@@ -514,5 +469,39 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 			err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
 		}
 	})
+	return
+}
+
+// promMatrixToResults takes the Value result of a prometheus response and
+// update the Results property of a Results object
+func promMatrixToResults(prefix string, e *State, res promModels.Value, expectedTagLen int, addPrefix bool, r *Results) (err error) {
+	matrix, ok := res.(promModels.Matrix)
+	if !ok {
+		return fmt.Errorf("result not of type matrix")
+	}
+	for _, row := range matrix {
+		tags := make(opentsdb.TagSet)
+		for tagK, tagV := range row.Metric {
+			tags[string(tagK)] = string(tagV)
+		}
+		// Remove results with less tag keys than those requests
+		if len(tags) < expectedTagLen {
+			continue
+		}
+		if addPrefix {
+			tags["bosun_prefix"] = prefix
+		}
+		if e.Squelched(tags) {
+			continue
+		}
+		values := make(Series, len(row.Values))
+		for _, v := range row.Values {
+			values[v.Timestamp.Time()] = float64(v.Value)
+		}
+		r.Results = append(r.Results, &Result{
+			Value: values,
+			Group: tags,
+		})
+	}
 	return
 }
