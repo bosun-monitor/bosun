@@ -336,7 +336,7 @@ func (p *PrefixNode) Return() models.FuncType {
 }
 
 func (p *PrefixNode) Tags() (Tags, error) {
-	return nil, nil
+	return p.Arg.Tags()
 }
 
 // BinaryNode holds two arguments and an operator.
