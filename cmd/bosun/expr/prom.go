@@ -95,8 +95,8 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
-		Tags:          promAggregateRawTags,
-		F:             PromRawAggregateSeriesQuery,
+		Tags:          promAggRawTags,
+		F:             PromRawAggSeriesQuery,
 		PrefixEnabled: true,
 	},
 	"prommras": { // prom multi raw aggregated series
@@ -107,8 +107,8 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
-		Tags:          promMAggregateRawTags,
-		F:             PromMRawAggregateSeriesQuery,
+		Tags:          promMAggRawTags,
+		F:             PromMRawAggSeriesQuery,
 		PrefixEnabled: true,
 	},
 	"prommetrics": {
@@ -129,6 +129,7 @@ var Prom = map[string]parse.Func{
 	},
 }
 
+// promMultiKey is the value for the tag key that is added to multibackend queries.
 var promMultiKey = "bosun_prefix"
 
 // promGroupTags parses the csv tags argument of the prom based functions
@@ -152,9 +153,9 @@ func promMGroupTags(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
-// promAggregateRawTags parses the promql argument to get the expected
+// promAggRawTags parses the promql argument to get the expected
 // grouping tags from an aggregated series
-func promAggregateRawTags(args []parse.Node) (parse.Tags, error) {
+func promAggRawTags(args []parse.Node) (parse.Tags, error) {
 	tags := make(parse.Tags)
 	pq := args[0].(*parse.StringNode).Text
 	parsedPromExpr, err := promql.ParseExpr(pq)
@@ -171,8 +172,9 @@ func promAggregateRawTags(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
-func promMAggregateRawTags(args []parse.Node) (parse.Tags, error) {
-	tags, err := promAggregateRawTags(args)
+// promMAggRawTags is a wrapper for promAggRawTags but adds the promMultiKey tag.
+func promMAggRawTags(args []parse.Node) (parse.Tags, error) {
+	tags, err := promAggRawTags(args)
 	if err != nil {
 		return nil, err
 	}
@@ -180,15 +182,20 @@ func promMAggregateRawTags(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
-func PromRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (*Results, error) {
-	return promRawAggregateSeriesQuery(prefix, e, query, stepDuration, sdur, edur, false)
+// PromRawAggSeriesQuery is wrapper for promRawAggSeriesQuery setting the multi argument to false.
+func PromRawAggSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (*Results, error) {
+	return promRawAggSeriesQuery(prefix, e, query, stepDuration, sdur, edur, false)
 }
 
-func PromMRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (*Results, error) {
-	return promRawAggregateSeriesQuery(prefix, e, query, stepDuration, sdur, edur, true)
+// PromMRawAggSeriesQuery is wrapper for promRawAggSeriesQuery setting the multi argument to true.
+func PromMRawAggSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (*Results, error) {
+	return promRawAggSeriesQuery(prefix, e, query, stepDuration, sdur, edur, true)
 }
 
-func promRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string, multi bool) (r *Results, err error) {
+// promRawAggSeriesQuery takes a raw promql query that has a top level promql aggregation function
+// and returns a seriesSet. If multi is true then the promMultiKey is added to each series in the result
+// and multiple prometheus tsdbs are queried.
+func promRawAggSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string, multi bool) (r *Results, err error) {
 	r = new(Results)
 	parsedPromExpr, err := promql.ParseExpr(query)
 	if err != nil {
@@ -374,7 +381,7 @@ func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDur
 }
 
 // promQueryTemplate is a template for PromQL time series queries. It supports
-// filtering and aggregation
+// filtering and aggregation.
 var promQueryTemplate = template.Must(template.New("promQueryTemplate").Parse(`
 {{ .AgFunc }}(
 {{- if ne .RateDuration "" }}rate({{ end }} {{ .Metric -}}
@@ -382,7 +389,7 @@ var promQueryTemplate = template.Must(template.New("promQueryTemplate").Parse(`
 {{- if ne .RateDuration "" -}} {{ .RateDuration | printf " [%v] )"  }} {{- end -}}
 ) by ( {{ .Tags }} )`))
 
-// promQueryTemplateData is the struct the contains the fields to render the promQueryTemplate
+// promQueryTemplateData is the struct the contains the fields to render the promQueryTemplate.
 type promQueryTemplateData struct {
 	Metric       string
 	AgFunc       string
@@ -391,7 +398,7 @@ type promQueryTemplateData struct {
 	RateDuration string
 }
 
-// RenderString creates a query string using promQueryTemplate
+// RenderString creates a query string using promQueryTemplate.
 func (pq promQueryTemplateData) RenderString() (string, error) {
 	buf := new(bytes.Buffer)
 	err := promQueryTemplate.Execute(buf, pq)
@@ -402,7 +409,7 @@ func (pq promQueryTemplateData) RenderString() (string, error) {
 }
 
 // timePromRequest takes a PromQL query string with the given time frame and step duration. The result
-// type of the PromQL query must be a Prometheus Matrix
+// type of the PromQL query must be a Prometheus Matrix.
 func timePromRequest(e *State, prefix, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
 	client, found := e.PromConfig[prefix]
 	if !found {
@@ -478,7 +485,7 @@ func promMatrixToResults(prefix string, e *State, res promModels.Value, expected
 }
 
 // PromMetricList returns a list of available metrics for the prometheus backend
-// by using querying the Prometheus Lable Values API for "__name__"
+// by using querying the Prometheus Label Values API for "__name__"
 func PromMetricList(prefix string, e *State) (r *Results, err error) {
 	r = new(Results)
 	client, found := e.PromConfig[prefix]
