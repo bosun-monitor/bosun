@@ -99,6 +99,18 @@ var Prom = map[string]parse.Func{
 		F:             PromRawAggregateSeriesQuery,
 		PrefixEnabled: true,
 	},
+	"prommras": { // prom multi raw aggregated series
+		Args: []models.FuncType{
+			models.TypeString, // promql query
+			models.TypeString, // step interval duration
+			models.TypeString, // start duration
+			models.TypeString, // end duration
+		},
+		Return:        models.TypeSeriesSet,
+		Tags:          promMAggregateRawTags,
+		F:             PromMRawAggregateSeriesQuery,
+		PrefixEnabled: true,
+	},
 	"prommetrics": {
 		Args:          []models.FuncType{},
 		Return:        models.TypeInfo,
@@ -130,10 +142,9 @@ func promGroupTags(args []parse.Node) (parse.Tags, error) {
 // promMGroupTags parses the csv tags argument of the prom based functions
 // and also adds the "bosun_prefix" tag
 func promMGroupTags(args []parse.Node) (parse.Tags, error) {
-	tags := make(parse.Tags)
-	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
-	for _, k := range csvTags {
-		tags[k] = struct{}{}
+	tags, err := promGroupTags(args)
+	if err != nil {
+		return nil, err
 	}
 	tags["bosun_prefix"] = struct{}{}
 	return tags, nil
@@ -158,7 +169,24 @@ func promAggregateRawTags(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
-func PromRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (r *Results, err error) {
+func promMAggregateRawTags(args []parse.Node) (parse.Tags, error) {
+	tags, err := promAggregateRawTags(args)
+	if err != nil {
+		return nil, err
+	}
+	tags["bosun_prefix"] = struct{}{}
+	return tags, nil
+}
+
+func PromRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (*Results, error) {
+	return promRawAggregateSeriesQuery(prefix, e, query, stepDuration, sdur, edur, false)
+}
+
+func PromMRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (*Results, error) {
+	return promRawAggregateSeriesQuery(prefix, e, query, stepDuration, sdur, edur, true)
+}
+
+func promRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string, multi bool) (r *Results, err error) {
 	r = new(Results)
 	parsedPromExpr, err := promql.ParseExpr(query)
 	if err != nil {
@@ -178,120 +206,61 @@ func PromRawAggregateSeriesQuery(prefix string, e *State, query, stepDuration, s
 	}
 	step := time.Duration(st)
 	tagLen := len(promAgExprNode.Grouping)
-	qRes, err := timePromRequest(e, prefix, query, start, end, step)
-	if err != nil {
-		return nil, err
-	}
-	err = promMatrixToResults(prefix, e, qRes, tagLen, false, r)
-	return r, err
-}
 
-// PromMetricList returns a list of available metrics for the prometheus backend
-// by using querying the Prometheus Lable Values API for "__name__"
-func PromMetricList(prefix string, e *State) (r *Results, err error) {
-	r = new(Results)
-	client, found := e.PromConfig[prefix]
-	if !found {
-		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
-	}
-	getFn := func() (interface{}, error) {
-		var metrics promModels.LabelValues
-		e.Timer.StepCustomTiming("prom", "metriclist", "", func() {
-			metrics, err = client.LabelValues(context.Background(), "__name__")
-		})
+	prefixes := strings.Split(prefix, ",")
+
+	// Single prom backend case
+	if !multi || (len(prefixes) == 1 && prefixes[0] == "") {
+		qRes, err := timePromRequest(e, prefix, query, start, end, step)
 		if err != nil {
 			return nil, err
 		}
-		return metrics, nil
-	}
-	val, err, hit := e.Cache.Get(fmt.Sprintf("%v:metriclist", prefix), getFn)
-	collectCacheHit(e.Cache, "prom_metrics", hit)
-	if err != nil {
-		return nil, err
-	}
-	metrics := val.(promModels.LabelValues)
-	r.Results = append(r.Results, &Result{Value: Info{metrics}})
-	return
-}
-
-// PromTagInfo does a range query for the given metric and returns info about the
-// tags and labels for the metric based on the data from the queried timeframe
-func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results, err error) {
-	r = new(Results)
-	client, found := e.PromConfig[prefix]
-	if !found {
-		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
-	}
-	start, end, err := parseDurationPair(e, sdur, edur)
-	if err != nil {
-		return
+		err = promMatrixToResults(prefix, e, qRes, tagLen, false, r)
+		return r, err
 	}
 
-	qRange := promv1.Range{Start: start, End: end, Step: time.Minute}
+	// Multibackend case
+	wg := sync.WaitGroup{}
+	wg.Add(len(prefixes))
+	resCh := make(chan struct {
+		prefix  string
+		promVal promModels.Value
+	}, len(prefixes))
+	errCh := make(chan error, len(prefixes))
 
-	getFn := func() (interface{}, error) {
-		var res promModels.Value
-		e.Timer.StepCustomTiming("prom", "taginfo", metric, func() {
-			res, err = client.QueryRange(context.Background(), metric, qRange)
-		})
+	for _, prefix := range prefixes {
+		go func(prefix string) {
+			defer wg.Done()
+			res, err := timePromRequest(e, prefix, query, start, end, step)
+			resCh <- struct {
+				prefix  string
+				promVal promModels.Value
+			}{prefix, res}
+			errCh <- err
+		}(prefix)
+	}
+
+	wg.Wait()
+	close(resCh)
+	close(errCh)
+	errors := []string{}
+	for err := range errCh {
+		if err == nil {
+			continue
+		}
+		errors = append(errors, err.Error())
+	}
+	if len(errors) > 0 {
+		return r, fmt.Errorf(strings.Join(errors, " :: "))
+	}
+
+	for promRes := range resCh {
+		err = promMatrixToResults(promRes.prefix, e, promRes.promVal, tagLen, true, r)
 		if err != nil {
-			return nil, err
-		}
-		m, ok := res.(promModels.Matrix)
-		if !ok {
-			return nil, fmt.Errorf("prom: expected a prometheus matrix type in result but got %v", res.Type().String())
-		}
-		return m, nil
-	}
-	val, err, hit := e.Cache.Get(fmt.Sprintf("%v:%v:taginfo", prefix, metric), getFn)
-	collectCacheHit(e.Cache, "prom_metrics", hit)
-	if err != nil {
-		return nil, err
-	}
-	matrix, ok := val.(promModels.Matrix)
-	if !ok {
-		err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
-	}
-	tagInfo := struct {
-		Metric       string
-		Keys         []string
-		KeysToValues map[string][]string
-		UniqueSets   []string
-	}{}
-	tagInfo.Metric = metric
-	tagInfo.KeysToValues = make(map[string][]string)
-	sets := make(map[string]struct{})
-	keysToValues := make(map[string]map[string]struct{})
-	for _, row := range matrix {
-		tags := make(opentsdb.TagSet)
-		for rawTagK, rawTagV := range row.Metric {
-			tagK := string(rawTagK)
-			tagV := string(rawTagV)
-			if tagK == "__name__" {
-				continue
-			}
-			tags[tagK] = tagV
-			if _, ok := keysToValues[tagK]; !ok {
-				keysToValues[tagK] = make(map[string]struct{})
-			}
-			keysToValues[tagK][tagV] = struct{}{}
-		}
-		sets[tags.String()] = struct{}{}
-	}
-	for k, values := range keysToValues {
-		tagInfo.Keys = append(tagInfo.Keys, k)
-		for val := range values {
-			tagInfo.KeysToValues[k] = append(tagInfo.KeysToValues[k], val)
+			return
 		}
 	}
-	sort.Strings(tagInfo.Keys)
-	for s := range sets {
-		tagInfo.UniqueSets = append(tagInfo.UniqueSets, s)
-	}
-	sort.Strings(tagInfo.UniqueSets)
-	r.Results = append(r.Results, &Result{
-		Value: Info{tagInfo},
-	})
+
 	return
 }
 
@@ -473,7 +442,7 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 }
 
 // promMatrixToResults takes the Value result of a prometheus response and
-// update the Results property of a Results object
+// updates the Results property of the passed Results object
 func promMatrixToResults(prefix string, e *State, res promModels.Value, expectedTagLen int, addPrefix bool, r *Results) (err error) {
 	matrix, ok := res.(promModels.Matrix)
 	if !ok {
@@ -503,5 +472,114 @@ func promMatrixToResults(prefix string, e *State, res promModels.Value, expected
 			Group: tags,
 		})
 	}
+	return
+}
+
+// PromMetricList returns a list of available metrics for the prometheus backend
+// by using querying the Prometheus Lable Values API for "__name__"
+func PromMetricList(prefix string, e *State) (r *Results, err error) {
+	r = new(Results)
+	client, found := e.PromConfig[prefix]
+	if !found {
+		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
+	}
+	getFn := func() (interface{}, error) {
+		var metrics promModels.LabelValues
+		e.Timer.StepCustomTiming("prom", "metriclist", "", func() {
+			metrics, err = client.LabelValues(context.Background(), "__name__")
+		})
+		if err != nil {
+			return nil, err
+		}
+		return metrics, nil
+	}
+	val, err, hit := e.Cache.Get(fmt.Sprintf("%v:metriclist", prefix), getFn)
+	collectCacheHit(e.Cache, "prom_metrics", hit)
+	if err != nil {
+		return nil, err
+	}
+	metrics := val.(promModels.LabelValues)
+	r.Results = append(r.Results, &Result{Value: Info{metrics}})
+	return
+}
+
+// PromTagInfo does a range query for the given metric and returns info about the
+// tags and labels for the metric based on the data from the queried timeframe
+func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results, err error) {
+	r = new(Results)
+	client, found := e.PromConfig[prefix]
+	if !found {
+		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
+	}
+	start, end, err := parseDurationPair(e, sdur, edur)
+	if err != nil {
+		return
+	}
+
+	qRange := promv1.Range{Start: start, End: end, Step: time.Minute}
+
+	getFn := func() (interface{}, error) {
+		var res promModels.Value
+		e.Timer.StepCustomTiming("prom", "taginfo", metric, func() {
+			res, err = client.QueryRange(context.Background(), metric, qRange)
+		})
+		if err != nil {
+			return nil, err
+		}
+		m, ok := res.(promModels.Matrix)
+		if !ok {
+			return nil, fmt.Errorf("prom: expected a prometheus matrix type in result but got %v", res.Type().String())
+		}
+		return m, nil
+	}
+	val, err, hit := e.Cache.Get(fmt.Sprintf("%v:%v:taginfo", prefix, metric), getFn)
+	collectCacheHit(e.Cache, "prom_metrics", hit)
+	if err != nil {
+		return nil, err
+	}
+	matrix, ok := val.(promModels.Matrix)
+	if !ok {
+		err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
+	}
+	tagInfo := struct {
+		Metric       string
+		Keys         []string
+		KeysToValues map[string][]string
+		UniqueSets   []string
+	}{}
+	tagInfo.Metric = metric
+	tagInfo.KeysToValues = make(map[string][]string)
+	sets := make(map[string]struct{})
+	keysToValues := make(map[string]map[string]struct{})
+	for _, row := range matrix {
+		tags := make(opentsdb.TagSet)
+		for rawTagK, rawTagV := range row.Metric {
+			tagK := string(rawTagK)
+			tagV := string(rawTagV)
+			if tagK == "__name__" {
+				continue
+			}
+			tags[tagK] = tagV
+			if _, ok := keysToValues[tagK]; !ok {
+				keysToValues[tagK] = make(map[string]struct{})
+			}
+			keysToValues[tagK][tagV] = struct{}{}
+		}
+		sets[tags.String()] = struct{}{}
+	}
+	for k, values := range keysToValues {
+		tagInfo.Keys = append(tagInfo.Keys, k)
+		for val := range values {
+			tagInfo.KeysToValues[k] = append(tagInfo.KeysToValues[k], val)
+		}
+	}
+	sort.Strings(tagInfo.Keys)
+	for s := range sets {
+		tagInfo.UniqueSets = append(tagInfo.UniqueSets, s)
+	}
+	sort.Strings(tagInfo.UniqueSets)
+	r.Results = append(r.Results, &Result{
+		Value: Info{tagInfo},
+	})
 	return
 }
