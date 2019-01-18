@@ -132,7 +132,7 @@ func timeESRequest5(e *State, req *ElasticRequest5) (resp *elastic.SearchResult,
 		var val interface{}
 		var hit bool
 		val, err, hit = e.Cache.Get(key, getFn)
-		collectCacheHit(e.Cache, "elastic", hit)
+		CollectCacheHit(e.Cache, "elastic", hit)
 		resp = val.(*elastic.SearchResult)
 	})
 	return

@@ -241,7 +241,7 @@ func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resou
 	if err != nil {
 		return r, err
 	}
-	collectCacheHit(e.Cache, "azure_ts", hit)
+	CollectCacheHit(e.Cache, "azure_ts", hit)
 	resp := val.(insights.Response)
 	rawReadsRemaining := resp.Header.Get("X-Ms-Ratelimit-Remaining-Subscription-Reads")
 	readsRemaining, err := strconv.ParseInt(rawReadsRemaining, 10, 64)
@@ -425,7 +425,7 @@ func azureListResources(prefix string, e *State) (AzureResources, error) {
 		return r, nil
 	}
 	val, err, hit := e.Cache.Get(key, getFn)
-	collectCacheHit(e.Cache, "azure_resource", hit)
+	CollectCacheHit(e.Cache, "azure_resource", hit)
 	if err != nil {
 		return AzureResources{}, err
 	}

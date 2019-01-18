@@ -84,7 +84,7 @@ func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, ap
 		if err != nil {
 			return r, err
 		}
-		collectCacheHit(e.Cache, "azureai_ts", hit)
+		CollectCacheHit(e.Cache, "azureai_ts", hit)
 		res := val.(ainsights.MetricsResult)
 
 		basetags := opentsdb.TagSet{"app": appName}
@@ -302,7 +302,7 @@ func AzureAIListApps(prefix string, e *State) (r *Results, err error) {
 		return r, nil
 	}
 	val, err, hit := e.Cache.Get(key, getFn)
-	collectCacheHit(e.Cache, "azure_aiapplist", hit)
+	CollectCacheHit(e.Cache, "azure_aiapplist", hit)
 	if err != nil {
 		return r, err
 	}

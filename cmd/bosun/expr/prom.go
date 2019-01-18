@@ -441,7 +441,7 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 			return m, nil
 		}
 		val, err, hit := e.Cache.Get(string(cacheKeyBytes), getFn)
-		collectCacheHit(e.Cache, "prom_ts", hit)
+		CollectCacheHit(e.Cache, "prom_ts", hit)
 		var ok bool
 		if s, ok = val.(promModels.Matrix); !ok {
 			err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
@@ -503,7 +503,7 @@ func PromMetricList(prefix string, e *State) (r *Results, err error) {
 		return metrics, nil
 	}
 	val, err, hit := e.Cache.Get(fmt.Sprintf("%v:metriclist", prefix), getFn)
-	collectCacheHit(e.Cache, "prom_metrics", hit)
+	CollectCacheHit(e.Cache, "prom_metrics", hit)
 	if err != nil {
 		return nil, err
 	}
@@ -542,7 +542,7 @@ func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results
 		return m, nil
 	}
 	val, err, hit := e.Cache.Get(fmt.Sprintf("%v:%v:taginfo", prefix, metric), getFn)
-	collectCacheHit(e.Cache, "prom_metrics", hit)
+	CollectCacheHit(e.Cache, "prom_metrics", hit)
 	if err != nil {
 		return nil, err
 	}

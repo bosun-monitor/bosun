@@ -48,7 +48,7 @@ type State struct {
 	graphiteQueries []graphite.Request
 
 	// OpenTSDB
-	tsdbQueries []opentsdb.Request
+	OpenTSDBQueries []opentsdb.Request
 }
 
 type Backends struct {
@@ -129,7 +129,7 @@ func (e *Expr) ExecuteState(s *State) (r *Results, queries []opentsdb.Request, e
 	s.Timer.Step("expr execute", func(T miniprofiler.Timer) {
 		r = s.walk(e.Tree.Root)
 	})
-	queries = s.tsdbQueries
+	queries = s.OpenTSDBQueries
 	return
 }
 
@@ -385,6 +385,14 @@ func (e *State) AddComputation(r *Result, text string, value interface{}) {
 		return
 	}
 	r.Computations = append(r.Computations, models.Computation{Text: opentsdb.ReplaceTags(text, r.Group), Value: value})
+}
+
+func (e *State) AutoDS() int {
+	return e.autods
+}
+
+func (e *State) Now() time.Time {
+	return e.now
 }
 
 type Union struct {
@@ -774,7 +782,7 @@ func (e *State) walkFunc(node *parse.FuncNode) *Results {
 				argType = node.F.Args[i]
 			}
 			if f, ok := v.(float64); ok && (argType == models.TypeNumberSet || argType == models.TypeVariantSet) {
-				v = fromScalar(f)
+				v = FromScalar(f)
 			}
 			in = append(in, reflect.ValueOf(v))
 		}
@@ -836,7 +844,7 @@ func extract(res *Results) interface{} {
 
 // collectCache is a helper function for collecting metrics on
 // the expression cache
-func collectCacheHit(c *cache.Cache, qType string, hit bool) {
+func CollectCacheHit(c *cache.Cache, qType string, hit bool) {
 	if c == nil {
 		return // if no cache
 	}

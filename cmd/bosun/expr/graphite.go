@@ -220,7 +220,7 @@ func timeGraphiteRequest(e *State, req *graphite.Request) (resp graphite.Respons
 		var val interface{}
 		var hit bool
 		val, err, hit = e.Cache.Get(key, getFn)
-		collectCacheHit(e.Cache, "graphite", hit)
+		CollectCacheHit(e.Cache, "graphite", hit)
 		resp = val.(graphite.Response)
 	})
 	return

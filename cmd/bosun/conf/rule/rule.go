@@ -18,6 +18,7 @@ import (
 	"bosun.org/cmd/bosun/conf/rule/parse"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
+	exprOpenTSDB "bosun.org/cmd/bosun/expr/opentsdb"
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/opentsdb"
 )
@@ -647,7 +648,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		}
 	}
 	if backends.OpenTSDB {
-		merge(expr.TSDB)
+		merge(exprOpenTSDB.ExprFuncs)
 	}
 	if backends.Graphite {
 		merge(expr.Graphite)

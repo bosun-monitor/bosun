@@ -224,7 +224,7 @@ func timeInfluxRequest(e *State, db, query, startDuration, endDuration, groupByI
 		var ok bool
 		var hit bool
 		val, err, hit = e.Cache.Get(q_key, getFn)
-		collectCacheHit(e.Cache, "influx", hit)
+		CollectCacheHit(e.Cache, "influx", hit)
 		if s, ok = val.([]influxModels.Row); !ok {
 			err = fmt.Errorf("influx: did not get a valid result from InfluxDB")
 		}

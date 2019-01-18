@@ -17,21 +17,6 @@ import (
 	"github.com/jinzhu/now"
 )
 
-func tagQuery(args []parse.Node) (parse.Tags, error) {
-	n := args[0].(*parse.StringNode)
-	// Since all 2.1 queries are valid 2.2 queries, at this time
-	// we can just use 2.2 to parse to identify group by tags
-	q, err := opentsdb.ParseQuery(n.Text, opentsdb.Version2_2)
-	if q == nil && err != nil {
-		return nil, err
-	}
-	t := make(parse.Tags)
-	for k := range q.GroupByTags {
-		t[k] = struct{}{}
-	}
-	return t, nil
-}
-
 func tagFirst(args []parse.Node) (parse.Tags, error) {
 	return args[0].Tags()
 }
@@ -427,7 +412,7 @@ var builtins = map[string]parse.Func{
 
 // Aggr combines multiple series matching the specified groups using an aggregator function. If group
 // is empty, all given series are combined, regardless of existing groups.
-// Available aggregator functions include: avg, min, max, sum, and pN, where N is a float between
+// Available aggregator functions include: SeriesAvg, min, max, sum, and pN, where N is a float between
 // 0 and 1 inclusive, e.g. p.50 represents the 50th percentile. p0 and p1 are equal to min and max,
 // respectively, but min and max are preferred for readability.
 func Aggr(e *State, series *Results, groups string, aggregator string) (*Results, error) {
@@ -517,12 +502,12 @@ func aggr(e *State, series *Results, aggfunc string) (*Result, error) {
 		newSeries = aggrPercentile(series.Results, 0.0)
 	case "max":
 		newSeries = aggrPercentile(series.Results, 1.0)
-	case "avg":
+	case "SeriesAvg":
 		newSeries = aggrAverage(series.Results)
 	case "sum":
 		newSeries = aggrSum(series.Results)
 	default:
-		return &res, fmt.Errorf("unknown aggfunc: %v. Options are avg, p50, min, max", aggfunc)
+		return &res, fmt.Errorf("unknown aggfunc: %v. Options are SeriesAvg, p50, min, max", aggfunc)
 	}
 
 	res.Value = newSeries
@@ -597,14 +582,14 @@ func aggrCheck(t *parse.Tree, f *parse.FuncNode) error {
 		return nil
 	}
 	switch name {
-	case "avg", "min", "max", "sum":
+	case "SeriesAvg", "min", "max", "sum":
 		return nil
 	}
 	return fmt.Errorf("aggr: unrecognized aggregation function %s", name)
 }
 
 func V(e *State) (*Results, error) {
-	return fromScalar(e.vValue), nil
+	return FromScalar(e.vValue), nil
 }
 
 func Map(e *State, series *Results, expr *Results) (*Results, error) {
@@ -1011,10 +996,10 @@ func DropNA(e *State, series *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool {
 		return math.IsNaN(float64(value)) || math.IsInf(float64(value), 0)
 	}
-	return DropValues(e, series, fromScalar(0), dropFunction)
+	return DropValues(e, series, FromScalar(0), dropFunction)
 }
 
-func fromScalar(f float64) *Results {
+func FromScalar(f float64) *Results {
 	return &Results{
 		Results: ResultSlice{
 			&Result{
@@ -1050,7 +1035,7 @@ func match(f func(res *Results, series *Result, floats []float64) error, series 
 	return &res, nil
 }
 
-func reduce(e *State, series *Results, F func(Series, ...float64) float64, args ...*Results) (*Results, error) {
+func ReduceSeriesSet(e *State, series *Results, F func(Series, ...float64) float64, args ...*Results) (*Results, error) {
 	f := func(res *Results, s *Result, floats []float64) error {
 		switch tp := s.Value.(type) {
 		case Series:
@@ -1064,7 +1049,7 @@ func reduce(e *State, series *Results, F func(Series, ...float64) float64, args 
 		default:
 			return errors.New(
 				fmt.Sprintf(
-					"Unsupported type passed to reduce for alarm [%s]. Want: Series, got: %s. "+
+					"Unsupported type passed to ReduceSeriesSet for alarm [%s]. Want: Series, got: %s. "+
 						"It can happen when we can't unjoin values. Please set IgnoreUnjoined and/or "+
 						"IgnoreOtherUnjoined for distiguish this error.", e.Origin, reflect.TypeOf(tp).String(),
 				),
@@ -1089,20 +1074,20 @@ func Abs(e *State, set *Results) *Results {
 	return set
 }
 
-func Diff(e *State, series *Results) (r *Results, err error) {
-	return reduce(e, series, diff)
+func Diff(e *State, seriesSet *Results) (r *Results, err error) {
+	return ReduceSeriesSet(e, seriesSet, diff)
 }
 
 func diff(dps Series, args ...float64) float64 {
 	return last(dps) - first(dps)
 }
 
-func Avg(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, avg)
+func Avg(e *State, seriesSet *Results) (*Results, error) {
+	return ReduceSeriesSet(e, seriesSet, SeriesAvg)
 }
 
-// avg returns the mean of x.
-func avg(dps Series, args ...float64) (a float64) {
+// SeriesAvg returns the mean of x.
+func SeriesAvg(dps Series, args ...float64) (a float64) {
 	for _, v := range dps {
 		a += float64(v)
 	}
@@ -1111,7 +1096,7 @@ func avg(dps Series, args ...float64) (a float64) {
 }
 
 func CCount(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, cCount)
+	return ReduceSeriesSet(e, series, cCount)
 }
 
 func cCount(dps Series, args ...float64) (a float64) {
@@ -1151,20 +1136,8 @@ func TimeDelta(e *State, series *Results) (*Results, error) {
 	return series, nil
 }
 
-func Count(e *State, query, sduration, eduration string) (r *Results, err error) {
-	r, err = Query(e, query, sduration, eduration)
-	if err != nil {
-		return
-	}
-	return &Results{
-		Results: []*Result{
-			{Value: Scalar(len(r.Results))},
-		},
-	}, nil
-}
-
 func Sum(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, sum)
+	return ReduceSeriesSet(e, series, sum)
 }
 
 func sum(dps Series, args ...float64) (a float64) {
@@ -1195,7 +1168,7 @@ func Des(e *State, series *Results, alpha float64, beta float64) *Results {
 }
 
 func Streak(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, streak)
+	return ReduceSeriesSet(e, series, streak)
 }
 
 func streak(dps Series, args ...float64) (a float64) {
@@ -1223,7 +1196,7 @@ func streak(dps Series, args ...float64) (a float64) {
 }
 
 func Dev(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, dev)
+	return ReduceSeriesSet(e, series, dev)
 }
 
 // dev returns the sample standard deviation of x.
@@ -1231,7 +1204,7 @@ func dev(dps Series, args ...float64) (d float64) {
 	if len(dps) == 1 {
 		return 0
 	}
-	a := avg(dps)
+	a := SeriesAvg(dps)
 	for _, v := range dps {
 		d += math.Pow(float64(v)-a, 2)
 	}
@@ -1240,7 +1213,7 @@ func dev(dps Series, args ...float64) (d float64) {
 }
 
 func Length(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, length)
+	return ReduceSeriesSet(e, series, length)
 }
 
 func length(dps Series, args ...float64) (a float64) {
@@ -1248,7 +1221,7 @@ func length(dps Series, args ...float64) (a float64) {
 }
 
 func Last(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, last)
+	return ReduceSeriesSet(e, series, last)
 }
 
 func last(dps Series, args ...float64) (a float64) {
@@ -1263,7 +1236,7 @@ func last(dps Series, args ...float64) (a float64) {
 }
 
 func First(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, first)
+	return ReduceSeriesSet(e, series, first)
 }
 
 func first(dps Series, args ...float64) (a float64) {
@@ -1278,7 +1251,7 @@ func first(dps Series, args ...float64) (a float64) {
 }
 
 func Since(e *State, series *Results) (*Results, error) {
-	return reduce(e, series, e.since)
+	return ReduceSeriesSet(e, series, e.since)
 }
 
 func (e *State) since(dps Series, args ...float64) (a float64) {
@@ -1294,7 +1267,7 @@ func (e *State) since(dps Series, args ...float64) (a float64) {
 }
 
 func Forecast_lr(e *State, series *Results, y *Results) (r *Results, err error) {
-	return reduce(e, series, e.forecast_lr, y)
+	return ReduceSeriesSet(e, series, e.forecast_lr, y)
 }
 
 // forecast_lr returns the number of seconds a linear regression predicts the
@@ -1367,19 +1340,19 @@ func line_lr(dps Series, d time.Duration) Series {
 }
 
 func Percentile(e *State, series *Results, p *Results) (r *Results, err error) {
-	return reduce(e, series, percentile, p)
+	return ReduceSeriesSet(e, series, percentile, p)
 }
 
 func Min(e *State, series *Results) (r *Results, err error) {
-	return reduce(e, series, percentile, fromScalar(0))
+	return ReduceSeriesSet(e, series, percentile, FromScalar(0))
 }
 
 func Median(e *State, series *Results) (r *Results, err error) {
-	return reduce(e, series, percentile, fromScalar(.5))
+	return ReduceSeriesSet(e, series, percentile, FromScalar(.5))
 }
 
 func Max(e *State, series *Results) (r *Results, err error) {
-	return reduce(e, series, percentile, fromScalar(1))
+	return ReduceSeriesSet(e, series, percentile, FromScalar(1))
 }
 
 // percentile returns the value at the corresponding percentile between 0 and 1.
