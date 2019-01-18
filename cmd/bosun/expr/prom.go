@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/prometheus/promql"
+
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
@@ -85,6 +87,30 @@ var Prom = map[string]parse.Func{
 		F:             PromMRate,
 		PrefixEnabled: true,
 	},
+	"promras": { // prom raw aggregated series
+		Args: []models.FuncType{
+			models.TypeString, // promql query
+			models.TypeString, // step interval duration
+			models.TypeString, // start duration
+			models.TypeString, // end duration
+		},
+		Return:        models.TypeSeriesSet,
+		Tags:          promAggRawTags,
+		F:             PromRawAggSeriesQuery,
+		PrefixEnabled: true,
+	},
+	"prommras": { // prom multi raw aggregated series
+		Args: []models.FuncType{
+			models.TypeString, // promql query
+			models.TypeString, // step interval duration
+			models.TypeString, // start duration
+			models.TypeString, // end duration
+		},
+		Return:        models.TypeSeriesSet,
+		Tags:          promMAggRawTags,
+		F:             PromMRawAggSeriesQuery,
+		PrefixEnabled: true,
+	},
 	"prommetrics": {
 		Args:          []models.FuncType{},
 		Return:        models.TypeInfo,
@@ -103,6 +129,9 @@ var Prom = map[string]parse.Func{
 	},
 }
 
+// promMultiKey is the value for the tag key that is added to multibackend queries.
+var promMultiKey = "bosun_prefix"
+
 // promGroupTags parses the csv tags argument of the prom based functions
 func promGroupTags(args []parse.Node) (parse.Tags, error) {
 	tags := make(parse.Tags)
@@ -114,19 +143,349 @@ func promGroupTags(args []parse.Node) (parse.Tags, error) {
 }
 
 // promMGroupTags parses the csv tags argument of the prom based functions
-// and also adds the "bosun_prefix" tag
+// and also adds the promMultiKey tag
 func promMGroupTags(args []parse.Node) (parse.Tags, error) {
-	tags := make(parse.Tags)
-	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
-	for _, k := range csvTags {
-		tags[k] = struct{}{}
+	tags, err := promGroupTags(args)
+	if err != nil {
+		return nil, err
 	}
-	tags["bosun_prefix"] = struct{}{}
+	tags[promMultiKey] = struct{}{}
 	return tags, nil
 }
 
+// promAggRawTags parses the promql argument to get the expected
+// grouping tags from an aggregated series
+func promAggRawTags(args []parse.Node) (parse.Tags, error) {
+	tags := make(parse.Tags)
+	pq := args[0].(*parse.StringNode).Text
+	parsedPromExpr, err := promql.ParseExpr(pq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract tags from promql query due to invalid promql expression: %v", err)
+	}
+	promAgExprNode, ok := parsedPromExpr.(*promql.AggregateExpr)
+	if !ok || promAgExprNode == nil {
+		return nil, fmt.Errorf("failed to extract tags from promql query, top level expression is not aggregation operation: %v", err)
+	}
+	for _, k := range promAgExprNode.Grouping {
+		tags[k] = struct{}{}
+	}
+	return tags, nil
+}
+
+// promMAggRawTags is a wrapper for promAggRawTags but adds the promMultiKey tag.
+func promMAggRawTags(args []parse.Node) (parse.Tags, error) {
+	tags, err := promAggRawTags(args)
+	if err != nil {
+		return nil, err
+	}
+	tags[promMultiKey] = struct{}{}
+	return tags, nil
+}
+
+// PromRawAggSeriesQuery is wrapper for promRawAggSeriesQuery setting the multi argument to false.
+func PromRawAggSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (*Results, error) {
+	return promRawAggSeriesQuery(prefix, e, query, stepDuration, sdur, edur, false)
+}
+
+// PromMRawAggSeriesQuery is wrapper for promRawAggSeriesQuery setting the multi argument to true.
+func PromMRawAggSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string) (*Results, error) {
+	return promRawAggSeriesQuery(prefix, e, query, stepDuration, sdur, edur, true)
+}
+
+// promRawAggSeriesQuery takes a raw promql query that has a top level promql aggregation function
+// and returns a seriesSet. If multi is true then the promMultiKey is added to each series in the result
+// and multiple prometheus tsdbs are queried.
+func promRawAggSeriesQuery(prefix string, e *State, query, stepDuration, sdur, edur string, multi bool) (r *Results, err error) {
+	r = new(Results)
+	parsedPromExpr, err := promql.ParseExpr(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse invalid promql expression: %v", err)
+	}
+	promAgExprNode, ok := parsedPromExpr.(*promql.AggregateExpr)
+	if !ok || promAgExprNode == nil {
+		return nil, fmt.Errorf("top level expression is not aggregation operation")
+	}
+	start, end, err := parseDurationPair(e, sdur, edur)
+	if err != nil {
+		return
+	}
+	st, err := opentsdb.ParseDuration(stepDuration)
+	if err != nil {
+		return
+	}
+	step := time.Duration(st)
+	tagLen := len(promAgExprNode.Grouping)
+
+	prefixes := strings.Split(prefix, ",")
+
+	// Single prom backend case
+	if !multi || (len(prefixes) == 1 && prefixes[0] == "") {
+		qRes, err := timePromRequest(e, prefix, query, start, end, step)
+		if err != nil {
+			return nil, err
+		}
+		err = promMatrixToResults(prefix, e, qRes, tagLen, false, r)
+		return r, err
+	}
+
+	// Multibackend case
+	wg := sync.WaitGroup{}
+	wg.Add(len(prefixes))
+	resCh := make(chan struct {
+		prefix  string
+		promVal promModels.Value
+	}, len(prefixes))
+	errCh := make(chan error, len(prefixes))
+
+	for _, prefix := range prefixes {
+		go func(prefix string) {
+			defer wg.Done()
+			res, err := timePromRequest(e, prefix, query, start, end, step)
+			resCh <- struct {
+				prefix  string
+				promVal promModels.Value
+			}{prefix, res}
+			errCh <- err
+		}(prefix)
+	}
+
+	wg.Wait()
+	close(resCh)
+	close(errCh)
+	errors := []string{}
+	for err := range errCh {
+		if err == nil {
+			continue
+		}
+		errors = append(errors, err.Error())
+	}
+	if len(errors) > 0 {
+		return r, fmt.Errorf(strings.Join(errors, " :: "))
+	}
+
+	for promRes := range resCh {
+		err = promMatrixToResults(promRes.prefix, e, promRes.promVal, tagLen, true, r)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+// PromQuery is a wrapper for promQuery so there is a function signature that doesn't require the rate argument in the expr language.
+// It also sets promQuery's addPrefixTag argument to false since this only queries one backend.
+func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
+	return promQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur, false)
+}
+
+// PromRate is a wrapper for promQuery like PromQuery except that it has a rateDuration argument for the step of the rate calculation.
+// This enables rate calculation for counters.
+func PromRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
+	return promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, false)
+}
+
+// PromMQuery is a wrapper from promMQuery in the way that PromQuery is a wrapper from promQuery.
+func PromMQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
+	return promMQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur)
+}
+
+// PromMRate is a wrapper from promMQuery in the way that PromRate is a wrapper from promQuery. It has a stepDuration argument
+// for rate calculation.
+func PromMRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
+	return promMQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur)
+}
+
+// promMQuery makes call to multiple prometheus TSDBs and combines the results into a single series set.
+// It adds the promMultiKey tag key with the value of prefix label to the results. Queries are executed in parallel.
+func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
+	r = new(Results)
+	prefixes := strings.Split(prefix, ",")
+	if len(prefixes) == 1 && prefixes[0] == "" {
+		return promQuery("default", e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, true)
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(prefixes))
+	resCh := make(chan *Results, len(prefixes))
+	errCh := make(chan error, len(prefixes))
+
+	for _, prefix := range prefixes {
+		go func(prefix string) {
+			defer wg.Done()
+			res, err := promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, true)
+			resCh <- res
+			errCh <- err
+		}(prefix)
+	}
+
+	wg.Wait()
+	close(resCh)
+	close(errCh)
+	// Gather errors from the request and return an error if any of the requests failled
+	errors := []string{}
+	for err := range errCh {
+		if err == nil {
+			continue
+		}
+		errors = append(errors, err.Error())
+	}
+	if len(errors) > 0 {
+		return r, fmt.Errorf(strings.Join(errors, " :: "))
+	}
+	resultCollection := []*Results{}
+	for res := range resCh {
+		resultCollection = append(resultCollection, res)
+	}
+	if len(resultCollection) == 1 { // no need to merge if there is only one item
+		return resultCollection[0], nil
+	}
+	// Merge the query results into a single seriesSet
+	r, err = Merge(e, resultCollection...)
+	return
+}
+
+// promQuery uses the information passed to it to generate an PromQL query using the promQueryTemplate.
+// It then calls timePromRequest to execute the query and process that results in to a Bosun Results object.
+func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, addPrefixTag bool) (r *Results, err error) {
+	r = new(Results)
+	start, end, err := parseDurationPair(e, sdur, edur)
+	if err != nil {
+		return
+	}
+	st, err := opentsdb.ParseDuration(stepDuration)
+	if err != nil {
+		return
+	}
+	step := time.Duration(st)
+	qd := promQueryTemplateData{
+		Metric:       metric,
+		AgFunc:       agType,
+		Tags:         groupBy,
+		Filter:       filter,
+		RateDuration: rateDuration,
+	}
+	query, err := qd.RenderString()
+	qRes, err := timePromRequest(e, prefix, query, start, end, step)
+	if err != nil {
+		return
+	}
+	groupByTagSet := make(opentsdb.TagSet)
+	for _, v := range strings.Split(groupBy, ",") {
+		if v != "" {
+			groupByTagSet[v] = ""
+		}
+	}
+	err = promMatrixToResults(prefix, e, qRes, len(groupByTagSet), addPrefixTag, r)
+	return r, err
+}
+
+// promQueryTemplate is a template for PromQL time series queries. It supports
+// filtering and aggregation.
+var promQueryTemplate = template.Must(template.New("promQueryTemplate").Parse(`
+{{ .AgFunc }}(
+{{- if ne .RateDuration "" }}rate({{ end }} {{ .Metric -}}
+{{- if ne .Filter "" }} {{ .Filter | printf "{%v} " -}} {{- end -}}
+{{- if ne .RateDuration "" -}} {{ .RateDuration | printf " [%v] )"  }} {{- end -}}
+) by ( {{ .Tags }} )`))
+
+// promQueryTemplateData is the struct the contains the fields to render the promQueryTemplate.
+type promQueryTemplateData struct {
+	Metric       string
+	AgFunc       string
+	Tags         string
+	Filter       string
+	RateDuration string
+}
+
+// RenderString creates a query string using promQueryTemplate.
+func (pq promQueryTemplateData) RenderString() (string, error) {
+	buf := new(bytes.Buffer)
+	err := promQueryTemplate.Execute(buf, pq)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// timePromRequest takes a PromQL query string with the given time frame and step duration. The result
+// type of the PromQL query must be a Prometheus Matrix.
+func timePromRequest(e *State, prefix, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
+	client, found := e.PromConfig[prefix]
+	if !found {
+		return s, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
+	}
+	r := promv1.Range{Start: start, End: end, Step: step}
+	cacheKey := struct {
+		Query  string
+		Range  promv1.Range
+		Step   time.Duration
+		Prefix string
+	}{
+		query,
+		r,
+		step,
+		prefix,
+	}
+	cacheKeyBytes, _ := json.MarshalIndent(cacheKey, "", "  ")
+	e.Timer.StepCustomTiming("prom", fmt.Sprintf("query (%v)", prefix), query, func() {
+		getFn := func() (interface{}, error) {
+			res, err := client.QueryRange(context.Background(), query, r)
+			if err != nil {
+				return nil, err
+			}
+			m, ok := res.(promModels.Matrix)
+			if !ok {
+				return nil, fmt.Errorf("prom: expected matrix result")
+			}
+			return m, nil
+		}
+		val, err, hit := e.Cache.Get(string(cacheKeyBytes), getFn)
+		collectCacheHit(e.Cache, "prom_ts", hit)
+		var ok bool
+		if s, ok = val.(promModels.Matrix); !ok {
+			err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
+		}
+	})
+	return
+}
+
+// promMatrixToResults takes the Value result of a prometheus response and
+// updates the Results property of the passed Results object
+func promMatrixToResults(prefix string, e *State, res promModels.Value, expectedTagLen int, addPrefix bool, r *Results) (err error) {
+	matrix, ok := res.(promModels.Matrix)
+	if !ok {
+		return fmt.Errorf("result not of type matrix")
+	}
+	for _, row := range matrix {
+		tags := make(opentsdb.TagSet)
+		for tagK, tagV := range row.Metric {
+			tags[string(tagK)] = string(tagV)
+		}
+		// Remove results with less tag keys than those requests
+		if len(tags) < expectedTagLen {
+			continue
+		}
+		if addPrefix {
+			tags[promMultiKey] = prefix
+		}
+		if e.Squelched(tags) {
+			continue
+		}
+		values := make(Series, len(row.Values))
+		for _, v := range row.Values {
+			values[v.Timestamp.Time()] = float64(v.Value)
+		}
+		r.Results = append(r.Results, &Result{
+			Value: values,
+			Group: tags,
+		})
+	}
+	return
+}
+
 // PromMetricList returns a list of available metrics for the prometheus backend
-// by using querying the Prometheus Lable Values API for "__name__"
+// by using querying the Prometheus Label Values API for "__name__"
 func PromMetricList(prefix string, e *State) (r *Results, err error) {
 	r = new(Results)
 	client, found := e.PromConfig[prefix]
@@ -230,207 +589,6 @@ func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results
 	sort.Strings(tagInfo.UniqueSets)
 	r.Results = append(r.Results, &Result{
 		Value: Info{tagInfo},
-	})
-	return
-}
-
-// PromQuery is a wrapper for promQuery so there is a function signature that doesn't require the rate argument in the expr language.
-// It also sets promQuery's addPrefixTag argument to false since this only queries one backend.
-func PromQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
-	return promQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur, false)
-}
-
-// PromRate is a wrapper for promQuery like PromQuery except that it has a rateDuration argument for the step of the rate calculation.
-// This enables rate calculation for counters.
-func PromRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
-	return promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, false)
-}
-
-// PromMQuery is a wrapper from promMQuery in the way that PromQuery is a wrapper from promQuery.
-func PromMQuery(prefix string, e *State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *Results, err error) {
-	return promMQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur)
-}
-
-// PromMRate is a wrapper from promMQuery in the way that PromRate is a wrapper from promQuery. It has a stepDuration argument
-// for rate calculation.
-func PromMRate(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
-	return promMQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur)
-}
-
-// promMQuery makes call to multiple prometheus TSDBs and combines the results into a single series set.
-// It adds the "bosun_prefix" tag key with the value of prefix label to the results. Queries are executed in parallel.
-func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *Results, err error) {
-	r = new(Results)
-	prefixes := strings.Split(prefix, ",")
-	if len(prefixes) == 1 && prefixes[0] == "" {
-		return promQuery("default", e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, true)
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(prefixes))
-	resCh := make(chan *Results, len(prefixes))
-	errCh := make(chan error, len(prefixes))
-
-	for _, prefix := range prefixes {
-		go func(prefix string) {
-			defer wg.Done()
-			res, err := promQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, true)
-			resCh <- res
-			errCh <- err
-		}(prefix)
-	}
-
-	wg.Wait()
-	close(resCh)
-	close(errCh)
-	// Gather errors from the request and return an error if any of the requests failled
-	errors := []string{}
-	for err := range errCh {
-		if err == nil {
-			continue
-		}
-		errors = append(errors, err.Error())
-	}
-	if len(errors) > 0 {
-		return r, fmt.Errorf(strings.Join(errors, " :: "))
-	}
-	resultCollection := []*Results{}
-	for res := range resCh {
-		resultCollection = append(resultCollection, res)
-	}
-	if len(resultCollection) == 1 { // no need to merge if there is only one item
-		return resultCollection[0], nil
-	}
-	// Merge the query results into a single seriesSet
-	r, err = Merge(e, resultCollection...)
-	return
-}
-
-// promQuery uses the information passed to it to generate an PromQL query using the promQueryTemplate.
-// It then calls timePromRequest to execute the query and process that results in to a Bosun Results object.
-func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, addPrefixTag bool) (r *Results, err error) {
-	r = new(Results)
-	start, end, err := parseDurationPair(e, sdur, edur)
-	if err != nil {
-		return
-	}
-	st, err := opentsdb.ParseDuration(stepDuration)
-	if err != nil {
-		return
-	}
-	step := time.Duration(st)
-	qd := promQueryTemplateData{
-		Metric:       metric,
-		AgFunc:       agType,
-		Tags:         groupBy,
-		Filter:       filter,
-		RateDuration: rateDuration,
-	}
-	query, err := qd.RenderString()
-	qRes, err := timePromRequest(e, prefix, query, start, end, step)
-	if err != nil {
-		return
-	}
-
-	groupByTagSet := make(opentsdb.TagSet)
-	for _, v := range strings.Split(groupBy, ",") {
-		if v != "" {
-			groupByTagSet[v] = ""
-		}
-	}
-	for _, row := range qRes.(promModels.Matrix) {
-		tags := make(opentsdb.TagSet)
-		for tagK, tagV := range row.Metric {
-			tags[string(tagK)] = string(tagV)
-		}
-		// Remove results with less tag keys than those requests
-		if len(tags) < len(groupByTagSet) {
-			continue
-		}
-		if addPrefixTag {
-			tags["bosun_prefix"] = prefix
-		}
-		if e.Squelched(tags) {
-			continue
-		}
-		values := make(Series, len(row.Values))
-		for _, v := range row.Values {
-			values[v.Timestamp.Time()] = float64(v.Value)
-		}
-		r.Results = append(r.Results, &Result{
-			Value: values,
-			Group: tags,
-		})
-	}
-	return r, nil
-}
-
-// promQueryTemplate is a template for PromQL time series queries. It supports
-// filtering and aggregation
-var promQueryTemplate = template.Must(template.New("promQueryTemplate").Parse(`
-{{ .AgFunc }}(
-{{- if ne .RateDuration "" }}rate({{ end }} {{ .Metric -}}
-{{- if ne .Filter "" }} {{ .Filter | printf "{%v} " -}} {{- end -}}
-{{- if ne .RateDuration "" -}} {{ .RateDuration | printf " [%v] )"  }} {{- end -}}
-) by ( {{ .Tags }} )`))
-
-// promQueryTemplateData is the struct the contains the fields to render the promQueryTemplate
-type promQueryTemplateData struct {
-	Metric       string
-	AgFunc       string
-	Tags         string
-	Filter       string
-	RateDuration string
-}
-
-// RenderString creates a query string using promQueryTemplate
-func (pq promQueryTemplateData) RenderString() (string, error) {
-	buf := new(bytes.Buffer)
-	err := promQueryTemplate.Execute(buf, pq)
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
-// timePromRequest takes a PromQL query string with the given time frame and step duration. The result
-// type of the PromQL query must be a Prometheus Matrix
-func timePromRequest(e *State, prefix, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
-	client, found := e.PromConfig[prefix]
-	if !found {
-		return s, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
-	}
-	r := promv1.Range{Start: start, End: end, Step: step}
-	cacheKey := struct {
-		Query  string
-		Range  promv1.Range
-		Step   time.Duration
-		Prefix string
-	}{
-		query,
-		r,
-		step,
-		prefix,
-	}
-	cacheKeyBytes, _ := json.MarshalIndent(cacheKey, "", "  ")
-	e.Timer.StepCustomTiming("prom", fmt.Sprintf("query (%v)", prefix), query, func() {
-		getFn := func() (interface{}, error) {
-			res, err := client.QueryRange(context.Background(), query, r)
-			if err != nil {
-				return nil, err
-			}
-			m, ok := res.(promModels.Matrix)
-			if !ok {
-				return nil, fmt.Errorf("prom: expected matrix result")
-			}
-			return m, nil
-		}
-		val, err, hit := e.Cache.Get(string(cacheKeyBytes), getFn)
-		collectCacheHit(e.Cache, "prom_ts", hit)
-		var ok bool
-		if s, ok = val.(promModels.Matrix); !ok {
-			err = fmt.Errorf("prom: did not get valid result from prometheus, %v", err)
-		}
 	})
 	return
 }

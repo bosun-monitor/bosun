@@ -591,6 +591,35 @@ In the above example `$q` will be a seriesSet with the tag keys of `container_na
 
 promratem (Prometheus Rate Multiple) is like the `promm` function is to the `prom` function. It allows you to do a per-second rate query against multiple Prometheus TSDBs and combines the result into a single seriesSet -- adding the `bosun_prefix` tag key to the result. It behaves the same as the `promm` function, but like `promrate`, it has the extra `rateStepDuration` argument.
 
+### promras(promql, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+Instead of building a promql query like the `prom` and `promrate` functions, promras (Prometheus Aggregate Raw Series) allows you to query Prometheus using promql with some restrictions:
+
+ 1. The query must return a time series (a Prometheus matrix)
+ 2. The top level function in promql must be an [Prometheus Aggregation Operator](https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators) with a `by` clause.
+
+Example:
+
+```
+promras(''' sum(rate(container_fs_reads_total[1m]) + rate(container_fs_writes_total[1m])) by (namespace) ''', "2m", "2h", "")
+```
+
+### prommras(promql, stepDuration, startDuration, endDuration string) seriestSet
+{: .exprFunc}
+
+prommras (Prometheus Raw Aggregate Raw Multiple) is like the `promras` function excepts that it queries multiple prometheus instances and adds the "bosun_prefix" tag to the results like the `promm` and `prommrate` functions.
+
+Example:
+
+```
+# You can still use string interpolation of $variables in promras and prommras
+$step = 1m
+$reads = container_fs_reads_total[$step]
+$writes = container_fs_writes_total[$step]
+["default,it"]prommras(''' sum(rate($reads) + rate($writes)) by (namespace) ''', "2m", "2h", "")
+```
+
 ### prommetrics() Info
 {: .exprFunc}
 
