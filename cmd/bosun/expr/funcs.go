@@ -347,6 +347,12 @@ var builtins = map[string]parse.Func{
 		Tags:          tagFirst,
 		F:             Limit,
 	},
+	"isnan": {
+		Args:   []models.FuncType{models.TypeNumberSet},
+		F:      IsNaN,
+		Return: models.TypeNumberSet,
+		Tags:   tagFirst,
+	},
 	"nv": {
 		Args:   []models.FuncType{models.TypeNumberSet, models.TypeScalar},
 		Return: models.TypeNumberSet,
@@ -718,6 +724,17 @@ func Epoch(e *State) (*Results, error) {
 			{Value: Scalar(float64(e.now.Unix()))},
 		},
 	}, nil
+}
+
+func IsNaN(e *State, nSet *Results) (*Results, error) {
+	for _, res := range nSet.Results {
+		if math.IsNaN(float64(res.Value.Value().(Number))) {
+			res.Value = Number(1)
+			continue
+		}
+		res.Value = Number(0)
+	}
+	return nSet, nil
 }
 
 func Month(e *State, offset float64, startEnd string) (*Results, error) {
