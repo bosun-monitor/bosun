@@ -17,6 +17,7 @@ import (
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/cmd/bosun/expr/tsdbs"
 	"bosun.org/graphite"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
@@ -80,8 +81,8 @@ type SystemConfProvider interface {
 	GetGraphiteContext() graphite.Context
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts
-	GetAzureMonitorContext() expr.AzureMonitorClients
-	GetPromContext() expr.PromClients
+	GetAzureMonitorContext() tsdbs.AzureMonitorClients
+	GetPromContext() tsdbs.PromClients
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string

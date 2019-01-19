@@ -12,6 +12,7 @@ import (
 	"bosun.org/slog"
 
 	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/expr/tsdbs"
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 	ainsightsmgmt "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
@@ -646,8 +647,8 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 
 // GetPromContext initializes returns a collection of Prometheus API v1 client APIs (connections)
 // from the configuration
-func (sc *SystemConf) GetPromContext() expr.PromClients {
-	clients := make(expr.PromClients)
+func (sc *SystemConf) GetPromContext() tsdbs.PromClients {
+	clients := make(tsdbs.PromClients)
 	for prefix, conf := range sc.PromConf {
 		// Error is checked in validation (PromConf Valid())
 		client, _ := promapi.NewClient(promapi.Config{Address: conf.URL})
@@ -664,10 +665,10 @@ func (sc *SystemConf) GetElasticContext() expr.ElasticHosts {
 
 // GetAzureMonitorContext returns a the collection of API clients needed
 // query the Azure Monitor and Application Insights APIs
-func (sc *SystemConf) GetAzureMonitorContext() expr.AzureMonitorClients {
-	allClients := make(expr.AzureMonitorClients)
+func (sc *SystemConf) GetAzureMonitorContext() tsdbs.AzureMonitorClients {
+	allClients := make(tsdbs.AzureMonitorClients)
 	for prefix, conf := range sc.AzureMonitorConf {
-		cc := expr.AzureMonitorClientCollection{}
+		cc := tsdbs.AzureMonitorClientCollection{}
 		cc.TenantId = conf.TenantId
 		if conf.Concurrency == 0 {
 			cc.Concurrency = 10

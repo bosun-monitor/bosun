@@ -17,6 +17,7 @@ import (
 
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/cmd/bosun/expr/tsdbs"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
@@ -97,7 +98,7 @@ func azMultiTags(args []parse.Node) (parse.TagKeys, error) {
 
 // azureTags adds tags for the csv argument along with the "name" and "rsg" tags
 func azureTags(arg parse.Node) (parse.TagKeys, error) {
-	tags := parse.TagKeys{expr.AzureTagName: struct{}{}, expr.AzureTagRSG: struct{}{}}
+	tags := parse.TagKeys{tsdbs.AzureTagName: struct{}{}, tsdbs.AzureTagRSG: struct{}{}}
 	csvTags := strings.Split(arg.(*parse.StringNode).Text, ",")
 	for _, k := range csvTags {
 		tags[k] = struct{}{}
@@ -265,8 +266,8 @@ func query(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resou
 				}
 				series := make(expr.Series)
 				tags := make(opentsdb.TagSet)
-				tags[expr.AzureTagRSG] = rsg
-				tags[expr.AzureTagName] = resName
+				tags[tsdbs.AzureTagRSG] = rsg
+				tags[tsdbs.AzureTagName] = resName
 				// Get the Key/Values that make up the Azure dimension and turn them into tags
 				if dataContainer.Metadatavalues != nil {
 					for _, md := range *dataContainer.Metadatavalues {
@@ -311,7 +312,7 @@ func Query(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg, res
 
 // MultiQuery queries multiple Azure resources and returns them as a single result set
 // It makes one HTTP request per resource and parallelizes the requests
-func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resources expr.AzureResources, agtype string, interval, sdur, edur string) (r *expr.Results, err error) {
+func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resources tsdbs.AzureResources, agtype string, interval, sdur, edur string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	if resources.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use resources from client "%v" on a query with client "%v"`, resources.Prefix, prefix)
@@ -323,7 +324,7 @@ func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resourc
 	queryResults := []*expr.Results{}
 	var wg sync.WaitGroup
 	// reqCh (Request Channel) is populated with Azure resources, and resources are pulled from channel to make a time series request per resource
-	reqCh := make(chan expr.AzureResource, nResources)
+	reqCh := make(chan tsdbs.AzureResource, nResources)
 	// resCh (Result Channel) contains the timeseries responses for requests for resource
 	resCh := make(chan *expr.Results, nResources)
 	// errCh (Error Channel) contains any request errors
@@ -379,13 +380,13 @@ func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resourc
 
 // listResources fetches all resources for the tenant/subscription and caches them for
 // up to one minute.
-func listResources(prefix string, e *expr.State) (expr.AzureResources, error) {
+func listResources(prefix string, e *expr.State) (tsdbs.AzureResources, error) {
 	// Cache will only last for one minute. In practice this will only apply for web sessions since a
 	// new cache is created for each check cycle in the cache
 	key := fmt.Sprintf("AzureResourceCache:%s:%s", prefix, time.Now().Truncate(time.Minute*1)) // https://github.com/golang/groupcache/issues/92
 	// getFn is a cacheable function for listing Azure resources
 	getFn := func() (interface{}, error) {
-		r := expr.AzureResources{Prefix: prefix}
+		r := tsdbs.AzureResources{Prefix: prefix}
 		cc, clientFound := e.Backends.AzureMonitor[prefix]
 		if !clientFound {
 			return r, fmt.Errorf("Azure client with name %v not defined", prefix)
@@ -411,7 +412,7 @@ func listResources(prefix string, e *expr.State) (expr.AzureResources, error) {
 						azTags[k] = *v
 					}
 				}
-				r.Resources = append(r.Resources, expr.AzureResource{
+				r.Resources = append(r.Resources, tsdbs.AzureResource{
 					Name:          *val.Name,
 					Type:          *val.Type,
 					ResourceGroup: splitID[4],
@@ -425,15 +426,15 @@ func listResources(prefix string, e *expr.State) (expr.AzureResources, error) {
 	val, err, hit := e.Cache.Get(key, getFn)
 	expr.CollectCacheHit(e.Cache, "azure_resource", hit)
 	if err != nil {
-		return expr.AzureResources{}, err
+		return tsdbs.AzureResources{}, err
 	}
-	return val.(expr.AzureResources), nil
+	return val.(tsdbs.AzureResources), nil
 }
 
 // ResourcesByType returns all resources of the specified type.
 // It fetches the complete list resources and then filters them relying on a Cache of that resource list.
 func ResourcesByType(prefix string, e *expr.State, tp string) (r *expr.Results, err error) {
-	resources := expr.AzureResources{Prefix: prefix}
+	resources := tsdbs.AzureResources{Prefix: prefix}
 	r = new(expr.Results)
 	allResources, err := listResources(prefix, e)
 	if err != nil {
@@ -450,14 +451,14 @@ func ResourcesByType(prefix string, e *expr.State, tp string) (r *expr.Results, 
 
 // FilterResources filters a list of resources based on the value of the name, resource group
 // or tags associated with that resource.
-func FilterResources(e *expr.State, resources expr.AzureResources, filter string) (r *expr.Results, err error) {
+func FilterResources(e *expr.State, resources tsdbs.AzureResources, filter string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Parse the filter once and then apply it to each item in the loop
 	bqf, err := boolq.Parse(filter)
 	if err != nil {
 		return r, err
 	}
-	filteredResources := expr.AzureResources{Prefix: resources.Prefix}
+	filteredResources := tsdbs.AzureResources{Prefix: resources.Prefix}
 	for _, res := range resources.Resources {
 		match, err := boolq.AskParsedExpr(bqf, res)
 		if err != nil {
@@ -472,14 +473,14 @@ func FilterResources(e *expr.State, resources expr.AzureResources, filter string
 }
 
 // FilterApps filters a list of applications based on the name of the app, or the Azure tags associated with the application resource
-func FilterApps(prefix string, e *expr.State, apps expr.AzureApplicationInsightsApps, filter string) (r *expr.Results, err error) {
+func FilterApps(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsightsApps, filter string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Parse the filter once and then apply it to each item in the loop
 	bqf, err := boolq.Parse(filter)
 	if err != nil {
 		return r, err
 	}
-	filteredApps := expr.AzureApplicationInsightsApps{Prefix: apps.Prefix}
+	filteredApps := tsdbs.AzureApplicationInsightsApps{Prefix: apps.Prefix}
 	for _, app := range apps.Applications {
 		match, err := boolq.AskParsedExpr(bqf, app)
 		if err != nil {

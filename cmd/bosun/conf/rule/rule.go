@@ -18,11 +18,11 @@ import (
 	"bosun.org/cmd/bosun/conf/rule/parse"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
-	annoExpr "bosun.org/cmd/bosun/expr/annotate"
-	exprAzure "bosun.org/cmd/bosun/expr/azure"
-	exprOpenTSDB "bosun.org/cmd/bosun/expr/opentsdb"
 	eparse "bosun.org/cmd/bosun/expr/parse"
-	exprProm "bosun.org/cmd/bosun/expr/prom"
+	annoExpr "bosun.org/cmd/bosun/expr/tsdbs/annotate"
+	exprAzure "bosun.org/cmd/bosun/expr/tsdbs/azure"
+	exprOpenTSDB "bosun.org/cmd/bosun/expr/tsdbs/opentsdb"
+	exprProm "bosun.org/cmd/bosun/expr/tsdbs/prom"
 	"bosun.org/opentsdb"
 )
 

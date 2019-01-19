@@ -19,6 +19,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/expr/tsdbs"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -734,11 +735,11 @@ func (c *Context) AzureResourceTags(prefix, rType, rsg, name string) map[string]
 	return selectedResource.Tags
 }
 
-func (c *Context) azureSelectResource(prefix, rType, rsg, name string) (expr.AzureResource, error) {
+func (c *Context) azureSelectResource(prefix, rType, rsg, name string) (tsdbs.AzureResource, error) {
 	if prefix == "" {
 		prefix = "default"
 	}
-	az := expr.AzureResource{}
+	az := tsdbs.AzureResource{}
 	resList, _, err := c.eval(fmt.Sprintf(`["%s"]azrt("%s")`, prefix, rType), false, false, 0)
 	if err != nil {
 		return az, err
@@ -746,7 +747,7 @@ func (c *Context) azureSelectResource(prefix, rType, rsg, name string) (expr.Azu
 	if len(resList) == 0 {
 		return az, fmt.Errorf("no azure resources found for subscription %s and type %s", prefix, rType)
 	}
-	resources, ok := resList[0].Value.(expr.AzureResources)
+	resources, ok := resList[0].Value.(tsdbs.AzureResources)
 	if !ok {
 		return az, fmt.Errorf("failed type assertion on azure resource list")
 	}
