@@ -502,12 +502,12 @@ func aggr(e *State, series *Results, aggfunc string) (*Result, error) {
 		newSeries = aggrPercentile(series.Results, 0.0)
 	case "max":
 		newSeries = aggrPercentile(series.Results, 1.0)
-	case "SeriesAvg":
+	case "avg":
 		newSeries = aggrAverage(series.Results)
 	case "sum":
 		newSeries = aggrSum(series.Results)
 	default:
-		return &res, fmt.Errorf("unknown aggfunc: %v. Options are SeriesAvg, p50, min, max", aggfunc)
+		return &res, fmt.Errorf("unknown aggfunc: %v. Options are avg, p50, min, max", aggfunc)
 	}
 
 	res.Value = newSeries
@@ -582,7 +582,7 @@ func aggrCheck(t *parse.Tree, f *parse.FuncNode) error {
 		return nil
 	}
 	switch name {
-	case "SeriesAvg", "min", "max", "sum":
+	case "avg", "min", "max", "sum":
 		return nil
 	}
 	return fmt.Errorf("aggr: unrecognized aggregation function %s", name)
@@ -1339,20 +1339,20 @@ func line_lr(dps Series, d time.Duration) Series {
 	return s
 }
 
-func Percentile(e *State, series *Results, p *Results) (r *Results, err error) {
-	return ReduceSeriesSet(e, series, percentile, p)
+func Percentile(e *State, seriesSet *Results, p *Results) (r *Results, err error) {
+	return ReduceSeriesSet(e, seriesSet, percentile, p)
 }
 
-func Min(e *State, series *Results) (r *Results, err error) {
-	return ReduceSeriesSet(e, series, percentile, FromScalar(0))
+func Min(e *State, seriesSet *Results) (r *Results, err error) {
+	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(0))
 }
 
-func Median(e *State, series *Results) (r *Results, err error) {
-	return ReduceSeriesSet(e, series, percentile, FromScalar(.5))
+func Median(e *State, seriesSet *Results) (r *Results, err error) {
+	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(.5))
 }
 
-func Max(e *State, series *Results) (r *Results, err error) {
-	return ReduceSeriesSet(e, series, percentile, FromScalar(1))
+func Max(e *State, seriesSet *Results) (r *Results, err error) {
+	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(1))
 }
 
 // percentile returns the value at the corresponding percentile between 0 and 1.

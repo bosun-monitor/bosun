@@ -1,13 +1,8 @@
 package expr
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"math"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
@@ -92,15 +87,15 @@ func TestExprParse(t *testing.T) {
 		valid bool
 		tags  string
 	}{
-		{`avg(q("test", "1m", 1))`, false, ""},
-		{`avg(q("avg:m", "1m", ""))`, true, ""},
-		{`avg(q("avg:m{a=*}", "1m", ""))`, true, "a"},
-		{`avg(q("avg:m{a=*,b=1}", "1m", ""))`, true, "a,b"},
-		{`avg(q("avg:m{a=*,b=1}", "1m", "")) + 1`, true, "a,b"},
+		{`avg(series("test", "1m", 1))`, false, ""},
+		{`avg(series("", 0, 1))`, true, ""},
+		{`avg(series("a=foo", 0, 22))`, true, "a"},
+		{`avg(series("a=foo,b=_whynot", 0, 1))`, true, "a,b"},
+		{`avg(series("a=foo,b=_whynot", 0, 1)) + 1`, true, "a,b"},
 	}
 
 	for _, et := range exprTests {
-		e, err := New(et.input, TSDB)
+		e, err := New(et.input, builtins)
 		if et.valid && err != nil {
 			t.Error(err)
 		} else if !et.valid && err == nil {
@@ -119,217 +114,6 @@ func TestExprParse(t *testing.T) {
 }
 
 var queryTime = time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
-
-func TestQueryExpr(t *testing.T) {
-	queries := map[string]opentsdb.ResponseSet{
-		`q("avg:m{a=*}", "9.467277e+08", "9.46728e+08")`: {
-			{
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "b"},
-				DPS:    map[string]opentsdb.Point{"0": 0, "1": 3},
-			},
-			{
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "c"},
-				DPS:    map[string]opentsdb.Point{"5": 1, "7": 4},
-			},
-		},
-
-		`q("avg:m{a=*}", "9.467241e+08", "9.467244e+08")`: {
-			{
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "b"},
-				DPS:    map[string]opentsdb.Point{"0": 1, "1": 2},
-			},
-			{
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "c"},
-				DPS:    map[string]opentsdb.Point{"3": 7, "1": 8},
-			},
-		},
-		`q("avg:m{a=*}", "9.467205e+08", "9.467208e+08")`: {
-			{
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "b"},
-				DPS:    map[string]opentsdb.Point{"2": 6, "3": 4},
-			},
-			{
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "d"},
-				DPS:    map[string]opentsdb.Point{"8": 8, "9": 9},
-			},
-		},
-	}
-	d := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
-	tests := map[string]map[string]Value{
-		`window("avg:m{a=*}", "5m", "1h", 2, "max")`: {
-			"a=b": Series{
-				d:                      2,
-				d.Add(time.Second * 2): 6,
-			},
-			"a=c": Series{
-				d.Add(time.Second * 1): 8,
-			},
-			"a=d": Series{
-				d.Add(time.Second * 8): 9,
-			},
-		},
-		`window("avg:m{a=*}", "5m", "1h", 2, "avg")`: {
-			"a=b": Series{
-				d:                      1.5,
-				d.Add(time.Second * 2): 5,
-			},
-			"a=c": Series{
-				d.Add(time.Second * 1): 7.5,
-			},
-			"a=d": Series{
-				d.Add(time.Second * 8): 8.5,
-			},
-		},
-		`over("avg:m{a=*}", "5m", "1h", 3)`: {
-			"a=b,shift=0s": Series{
-				d:                      0,
-				d.Add(time.Second * 1): 3,
-			},
-			"a=b,shift=1h0m0s": Series{
-				d.Add(time.Hour):                 1,
-				d.Add(time.Hour + time.Second*1): 2,
-			},
-			"a=b,shift=2h0m0s": Series{
-				d.Add(time.Hour*2 + time.Second*2): 6,
-				d.Add(time.Hour*2 + time.Second*3): 4,
-			},
-			"a=c,shift=0s": Series{
-				d.Add(time.Second * 5): 1,
-				d.Add(time.Second * 7): 4,
-			},
-			"a=c,shift=1h0m0s": Series{
-				d.Add(time.Hour + time.Second*3): 7,
-				d.Add(time.Hour + time.Second*1): 8,
-			},
-			"a=d,shift=2h0m0s": Series{
-				d.Add(time.Hour*2 + time.Second*8): 8,
-				d.Add(time.Hour*2 + time.Second*9): 9,
-			},
-		},
-		`band("avg:m{a=*}", "5m", "1h", 2)`: {
-			"a=b": Series{
-				d:                      1,
-				d.Add(time.Second * 1): 2,
-				d.Add(time.Second * 2): 6,
-				d.Add(time.Second * 3): 4,
-			},
-			"a=c": Series{
-				d.Add(time.Second * 3): 7,
-				d.Add(time.Second * 1): 8,
-			},
-			"a=d": Series{
-				d.Add(time.Second * 8): 8,
-				d.Add(time.Second * 9): 9,
-			},
-		},
-		`shiftBand("avg:m{a=*}", "5m", "1h", 2)`: {
-			"a=b,shift=1h0m0s": Series{
-				d.Add(time.Hour):                 1,
-				d.Add(time.Hour + time.Second*1): 2,
-			},
-			"a=b,shift=2h0m0s": Series{
-				d.Add(time.Hour*2 + time.Second*2): 6,
-				d.Add(time.Hour*2 + time.Second*3): 4,
-			},
-			"a=c,shift=1h0m0s": Series{
-				d.Add(time.Hour + time.Second*3): 7,
-				d.Add(time.Hour + time.Second*1): 8,
-			},
-			"a=d,shift=2h0m0s": Series{
-				d.Add(time.Hour*2 + time.Second*8): 8,
-				d.Add(time.Hour*2 + time.Second*9): 9,
-			},
-		},
-		`abs(-1)`: {"": Number(1)},
-	}
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var req opentsdb.Request
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			log.Fatal(err)
-		}
-		var resp opentsdb.ResponseSet
-		for _, rq := range req.Queries {
-			qs := fmt.Sprintf(`q("%s", "%v", "%v")`, rq, req.Start, req.End)
-			q, ok := queries[qs]
-			if !ok {
-				t.Errorf("unknown query: %s", qs)
-				return
-			}
-			if q == nil {
-				return // Put nil entry in map to simulate opentsdb error.
-			}
-			resp = append(resp, q...)
-		}
-		if err := json.NewEncoder(w).Encode(&resp); err != nil {
-			log.Fatal(err)
-		}
-	}))
-	defer ts.Close()
-	u, err := url.Parse(ts.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for exprText, expected := range tests {
-		e, err := New(exprText, TSDB)
-		if err != nil {
-			t.Fatal(err)
-		}
-		backends := &Backends{
-			TSDBContext:  &opentsdb.LimitContext{Host: u.Host, Limit: 1e10, TSDBVersion: opentsdb.Version2_1},
-			InfluxConfig: client.HTTPConfig{},
-		}
-		providers := &BosunProviders{}
-		results, _, err := e.Execute(backends, providers, nil, queryTime, 0, false, t.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, r := range results.Results {
-			tag := r.Group.Tags()
-			ex := expected[tag]
-			if ex == nil {
-				t.Errorf("missing tag %v", tag)
-				continue
-			}
-			switch val := r.Value.(type) {
-			case Series:
-				ex, ok := ex.(Series)
-				if !ok {
-					t.Errorf("%v: bad type %T", exprText, ex)
-					continue
-				}
-				if len(val) != len(ex) {
-					t.Errorf("unmatched values in %v", tag)
-					continue
-				}
-				for k, v := range ex {
-					got := val[k]
-					if got != v {
-						t.Errorf("%v, %v: got %v, expected %v", tag, k, got, v)
-					}
-				}
-			case Number:
-				ex, ok := ex.(Number)
-				if !ok {
-					t.Errorf("%v: bad type %T", exprText, ex)
-					continue
-				}
-				if ex != val {
-					t.Errorf("%v: got %v, expected %v", exprText, r.Value, ex)
-				}
-			default:
-				t.Errorf("%v: unknown type %T", exprText, r.Value)
-			}
-		}
-	}
-}
 
 func TestSetVariant(t *testing.T) {
 	series := `series("key1=a,key2=b", 0, 1, 1, 3)`
