@@ -1,3 +1,4 @@
+// Package opentsdb contains the OpenTSDB query functions for the Bosun expression language.
 package opentsdb
 
 import (
@@ -16,7 +17,7 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 )
 
-// ExprFuncs defines functions for use with an OpenTSDB backend.
+// ExprFuncs defines Bosun expression functions for use with an OpenTSDB backend.
 var ExprFuncs = map[string]parse.Func{
 	"band": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},

@@ -18,6 +18,7 @@ import (
 	"bosun.org/cmd/bosun/conf/rule/parse"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
+	annoExpr "bosun.org/cmd/bosun/expr/annotate"
 	exprAzure "bosun.org/cmd/bosun/expr/azure"
 	exprOpenTSDB "bosun.org/cmd/bosun/expr/opentsdb"
 	eparse "bosun.org/cmd/bosun/expr/parse"
@@ -661,7 +662,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		merge(expr.Influx)
 	}
 	if backends.Annotate {
-		merge(expr.Annotate)
+		merge(annoExpr.ExprFuncs)
 	}
 	if backends.AzureMonitor {
 		merge(exprAzure.ExprFuncs)

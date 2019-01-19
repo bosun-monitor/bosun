@@ -205,7 +205,7 @@ func promRawAggSeriesQuery(prefix string, e *State, query, stepDuration, sdur, e
 	if !ok || promAgExprNode == nil {
 		return nil, fmt.Errorf("top level expression is not aggregation operation")
 	}
-	start, end, err := parseDurationPair(e, sdur, edur)
+	start, end, err := ParseDurationPair(e, sdur, edur)
 	if err != nil {
 		return
 	}
@@ -349,7 +349,7 @@ func promMQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDu
 // It then calls timePromRequest to execute the query and process that results in to a Bosun Results object.
 func promQuery(prefix string, e *State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, addPrefixTag bool) (r *Results, err error) {
 	r = new(Results)
-	start, end, err := parseDurationPair(e, sdur, edur)
+	start, end, err := ParseDurationPair(e, sdur, edur)
 	if err != nil {
 		return
 	}
@@ -520,7 +520,7 @@ func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results
 	if !found {
 		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
 	}
-	start, end, err := parseDurationPair(e, sdur, edur)
+	start, end, err := ParseDurationPair(e, sdur, edur)
 	if err != nil {
 		return
 	}

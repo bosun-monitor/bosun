@@ -1,4 +1,5 @@
-package expr
+// Package annotate contains Bosun Annotation query functions for the Bosun expression language.
+package annotate
 
 import (
 	"fmt"
@@ -9,24 +10,25 @@ import (
 	"math"
 
 	"bosun.org/annotate"
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
-	"bosun.org/opentsdb"
 	"github.com/kylebrandt/boolq"
 )
 
-var Annotate = map[string]parse.Func{
+// ExprFuncs defines Bosun expression functions for use with an Bosun annotations.
+var ExprFuncs = map[string]parse.Func{
 	// Funcs for querying elastic
 	"ancounts": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
 		Return:  models.TypeSeriesSet,
-		TagKeys: TagFirst,
+		TagKeys: expr.TagFirst,
 		F:       AnCounts,
 	},
 	"andurations": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
 		Return:  models.TypeSeriesSet,
-		TagKeys: TagFirst,
+		TagKeys: expr.TagFirst,
 		F:       AnDurations,
 	},
 	"antable": {
@@ -36,24 +38,7 @@ var Annotate = map[string]parse.Func{
 	},
 }
 
-func procDuration(e *State, startDuration, endDuration string) (time.Time, time.Time, error) {
-	start, err := opentsdb.ParseDuration(startDuration)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-	var end opentsdb.Duration
-	if endDuration != "" {
-		end, err = opentsdb.ParseDuration(endDuration)
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-	}
-	st := e.now.Add(time.Duration(-start))
-	en := e.now.Add(time.Duration(-end))
-	return st, en, nil
-}
-
-func getAndFilterAnnotations(e *State, start, end time.Time, filter string) (annotate.Annotations, error) {
+func getAndFilterAnnotations(e *expr.State, start, end time.Time, filter string) (annotate.Annotations, error) {
 	annotations, err := e.Annotate.GetAnnotations(&start, &end)
 	if err != nil {
 		return nil, err
@@ -84,8 +69,8 @@ func getAndFilterAnnotations(e *State, start, end time.Time, filter string) (ann
 	return filteredAnnotations, nil
 }
 
-func AnDurations(e *State, filter, startDuration, endDuration string) (r *Results, err error) {
-	reqStart, reqEnd, err := procDuration(e, startDuration, endDuration)
+func AnDurations(e *expr.State, filter, startDuration, endDuration string) (r *expr.Results, err error) {
+	reqStart, reqEnd, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +78,7 @@ func AnDurations(e *State, filter, startDuration, endDuration string) (r *Result
 	if err != nil {
 		return nil, err
 	}
-	series := make(Series)
+	series := make(expr.Series)
 	for i, a := range filteredAnnotations {
 		aStart := a.StartDate.Time
 		aEnd := a.EndDate.Time
@@ -121,15 +106,15 @@ func AnDurations(e *State, filter, startDuration, endDuration string) (r *Result
 	if len(series) == 0 {
 		series[time.Unix(0, 0).UTC()] = math.NaN()
 	}
-	return &Results{
-		Results: []*Result{
+	return &expr.Results{
+		Results: []*expr.Result{
 			{Value: series},
 		},
 	}, nil
 }
 
-func AnCounts(e *State, filter, startDuration, endDuration string) (r *Results, err error) {
-	reqStart, reqEnd, err := procDuration(e, startDuration, endDuration)
+func AnCounts(e *expr.State, filter, startDuration, endDuration string) (r *expr.Results, err error) {
+	reqStart, reqEnd, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +122,7 @@ func AnCounts(e *State, filter, startDuration, endDuration string) (r *Results, 
 	if err != nil {
 		return nil, err
 	}
-	series := make(Series)
+	series := make(expr.Series)
 	for i, a := range filteredAnnotations {
 		aStart := a.StartDate.Time
 		aEnd := a.EndDate.Time
@@ -165,16 +150,16 @@ func AnCounts(e *State, filter, startDuration, endDuration string) (r *Results, 
 	if len(series) == 0 {
 		series[time.Unix(0, 0).UTC()] = math.NaN()
 	}
-	return &Results{
-		Results: []*Result{
+	return &expr.Results{
+		Results: []*expr.Result{
 			{Value: series},
 		},
 	}, nil
 }
 
 // AnTable returns a table response (meant for Grafana) of matching annotations based on the requested fields
-func AnTable(e *State, filter, fieldsCSV, startDuration, endDuration string) (r *Results, err error) {
-	start, end, err := procDuration(e, startDuration, endDuration)
+func AnTable(e *expr.State, filter, fieldsCSV, startDuration, endDuration string) (r *expr.Results, err error) {
+	start, end, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +183,7 @@ func AnTable(e *State, filter, fieldsCSV, startDuration, endDuration string) (r 
 	if err != nil {
 		return nil, err
 	}
-	t := Table{Columns: columns}
+	t := expr.Table{Columns: columns}
 	for _, a := range filteredAnnotations {
 		row := make([]interface{}, columnLen)
 		for _, c := range columns {
@@ -237,8 +222,8 @@ func AnTable(e *State, filter, fieldsCSV, startDuration, endDuration string) (r 
 		}
 		t.Rows = append(t.Rows, row)
 	}
-	return &Results{
-		Results: []*Result{
+	return &expr.Results{
+		Results: []*expr.Result{
 			{Value: t},
 		},
 	}, nil

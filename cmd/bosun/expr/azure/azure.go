@@ -1,4 +1,5 @@
-package expr
+// Package azure contains Azure Montior and Application Insights query functions for the Bosun expression language.
+package azure
 
 import (
 	"context"
