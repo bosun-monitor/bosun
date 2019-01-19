@@ -624,22 +624,22 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 
 	funcs := map[string]eparse.Func{
 		"alert": {
-			Args:   []models.FuncType{models.TypeString, models.TypeString},
-			Return: models.TypeNumberSet,
-			Tags:   tagAlert,
-			F:      c.alert,
+			Args:    []models.FuncType{models.TypeString, models.TypeString},
+			Return:  models.TypeNumberSet,
+			TagKeys: tagAlert,
+			F:       c.alert,
 		},
 		"lookup": {
-			Args:   []models.FuncType{models.TypeString, models.TypeString},
-			Return: models.TypeNumberSet,
-			Tags:   lookupTags,
-			F:      lookup,
+			Args:    []models.FuncType{models.TypeString, models.TypeString},
+			Return:  models.TypeNumberSet,
+			TagKeys: lookupTags,
+			F:       lookup,
 		},
 		"lookupSeries": {
-			Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
-			Return: models.TypeNumberSet,
-			Tags:   lookupSeriesTags,
-			F:      lookupSeries,
+			Args:    []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
+			Return:  models.TypeNumberSet,
+			TagKeys: lookupSeriesTags,
+			F:       lookupSeries,
 		},
 	}
 	merge := func(fs map[string]eparse.Func) {

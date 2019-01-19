@@ -36,7 +36,7 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
-		Tags:          promGroupTags,
+		TagKeys:       promGroupTags,
 		F:             PromQuery,
 		PrefixEnabled: true,
 	},
@@ -51,7 +51,7 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
-		Tags:          promMGroupTags,
+		TagKeys:       promMGroupTags,
 		F:             PromMQuery,
 		PrefixEnabled: true,
 	},
@@ -67,7 +67,7 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
-		Tags:          promGroupTags,
+		TagKeys:       promGroupTags,
 		F:             PromRate,
 		PrefixEnabled: true,
 	},
@@ -83,7 +83,7 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
-		Tags:          promMGroupTags,
+		TagKeys:       promMGroupTags,
 		F:             PromMRate,
 		PrefixEnabled: true,
 	},
@@ -95,7 +95,7 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
-		Tags:          promAggRawTags,
+		TagKeys:       promAggRawTags,
 		F:             PromRawAggSeriesQuery,
 		PrefixEnabled: true,
 	},
@@ -107,7 +107,7 @@ var Prom = map[string]parse.Func{
 			models.TypeString, // end duration
 		},
 		Return:        models.TypeSeriesSet,
-		Tags:          promMAggRawTags,
+		TagKeys:       promMAggRawTags,
 		F:             PromMRawAggSeriesQuery,
 		PrefixEnabled: true,
 	},

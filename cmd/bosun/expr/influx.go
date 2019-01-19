@@ -17,10 +17,10 @@ import (
 // Influx is a map of functions to query InfluxDB.
 var Influx = map[string]parse.Func{
 	"influx": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   influxTag,
-		F:      InfluxQuery,
+		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
+		Return:  models.TypeSeriesSet,
+		TagKeys: influxTag,
+		F:       InfluxQuery,
 	},
 }
 

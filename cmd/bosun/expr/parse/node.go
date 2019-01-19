@@ -158,10 +158,10 @@ func (f *FuncNode) Return() models.FuncType {
 }
 
 func (f *FuncNode) Tags() (Tags, error) {
-	if f.F.Tags == nil {
+	if f.F.TagKeys == nil {
 		return nil, nil
 	}
-	return f.F.Tags(f.Args)
+	return f.F.TagKeys(f.Args)
 }
 
 // NumberNode holds a number: signed or unsigned integer or float.

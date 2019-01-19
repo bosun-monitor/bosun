@@ -30,21 +30,21 @@ var AzureMonitor = map[string]parse.Func{
 	"az": {
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
-		Tags:          azTags,
+		TagKeys:       azTags,
 		F:             AzureQuery,
 		PrefixEnabled: true,
 	},
 	"azmulti": {
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeAzureResourceList, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
-		Tags:          azMultiTags,
+		TagKeys:       azMultiTags,
 		F:             AzureMultiQuery,
 		PrefixEnabled: true,
 	},
 	"azmd": { // TODO Finish and document this func
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet, // TODO return type
-		Tags:          tagFirst,             //TODO: Appropriate tags func
+		TagKeys:       tagFirst,             //TODO: Appropriate tags func
 		F:             AzureMetricDefinitions,
 		PrefixEnabled: true,
 	},
@@ -81,7 +81,7 @@ var AzureMonitor = map[string]parse.Func{
 	"ai": {
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeAzureAIApps, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
-		Tags:          azAITags,
+		TagKeys:       azAITags,
 		F:             AzureAIQuery,
 		PrefixEnabled: true,
 	},

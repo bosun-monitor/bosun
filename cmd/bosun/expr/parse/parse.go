@@ -31,19 +31,36 @@ type Tree struct {
 	peekCount int
 }
 
+// returnTagsFunc is the type for functions that return the expected tag keys
+// for an expression function
+type returnTagsFunc func([]Node) (Tags, error)
+
+// Func is used to represent an Function within Bosun's expression language and has
+// the properties of the function needed to check validity of the expression.
 type Func struct {
-	Args          []models.FuncType
-	Return        models.FuncType
-	Tags          func([]Node) (Tags, error)
-	F             interface{}
-	VArgs         bool
-	VArgsPos      int
-	VArgsOmit     bool
-	MapFunc       bool // Func is only valid in map expressions
-	PrefixEnabled bool
-	PrefixKey     bool
+	Args    []models.FuncType // an array of the the expected types to the function argument.
+	Return  models.FuncType   // expected return type of the function.
+	TagKeys returnTagsFunc    // function that returns the expected tag keys for the result of the function.
+	F       interface{}       // a pointer to the actual Go code that will execute.
+
+	VArgs     bool // if this function support variable length arguments.
+	VArgsPos  int  // what argument index variable length arguments start at.
+	VArgsOmit bool // if in a variable argument functions the variable arguments may be ommited entirely.
+
+	// if the function is a generic function that will return a seriesSet or NumberSet depending
+	// on what type was passed to it.
 	VariantReturn bool
-	Check         func(*Tree, *FuncNode) error
+
+	MapFunc bool // indiciates if the function is only valid within a map expression.
+
+	// if this function supports "Prefix Notation", for example ["foo"]myFunc. When this is the
+	// case the first argument passed to the F function will be the string in the prefix.
+	PrefixEnabled bool
+	// a property that is set to indicate the presence of the optional prefix.
+	PrefixKey bool
+	// an optional function, that if defined will be used to check the validy of the function at parse time
+	// before the function is ever called.
+	Check func(*Tree, *FuncNode) error
 }
 
 type Tags map[string]struct{}
@@ -200,18 +217,18 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	for _, funcMap := range funcs {
 		for name, f := range funcMap {
 			if f.VariantReturn {
-				if f.Tags == nil {
+				if f.TagKeys == nil {
 					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
 				}
 				continue
 			}
 			switch f.Return {
 			case models.TypeSeriesSet, models.TypeNumberSet:
-				if f.Tags == nil {
+				if f.TagKeys == nil {
 					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
 				}
 			default:
-				if f.Tags != nil {
+				if f.TagKeys != nil {
 					panic(fmt.Errorf("%v: unexpected Tags definition: expected nil", name))
 				}
 			}

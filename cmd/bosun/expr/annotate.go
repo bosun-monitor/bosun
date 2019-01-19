@@ -18,16 +18,16 @@ import (
 var Annotate = map[string]parse.Func{
 	// Funcs for querying elastic
 	"ancounts": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      AnCounts,
+		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       AnCounts,
 	},
 	"andurations": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      AnDurations,
+		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       AnDurations,
 	},
 	"antable": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},

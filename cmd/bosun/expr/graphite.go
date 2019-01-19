@@ -16,16 +16,16 @@ import (
 // Graphite defines functions for use with a Graphite backend.
 var Graphite = map[string]parse.Func{
 	"graphiteBand": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
-		Return: models.TypeSeriesSet,
-		Tags:   graphiteTagQuery,
-		F:      GraphiteBand,
+		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
+		Return:  models.TypeSeriesSet,
+		TagKeys: graphiteTagQuery,
+		F:       GraphiteBand,
 	},
 	"graphite": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   graphiteTagQuery,
-		F:      GraphiteQuery,
+		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
+		Return:  models.TypeSeriesSet,
+		TagKeys: graphiteTagQuery,
+		F:       GraphiteQuery,
 	},
 }
 

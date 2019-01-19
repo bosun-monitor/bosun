@@ -17,10 +17,17 @@ import (
 	"github.com/jinzhu/now"
 )
 
+// tagFirst uses the Tags method on the first argument of a function. The first argument
+// should be an already parsed node in order to identify the tags for the first node.
+// This function is commonly used to extract the expects tags of functions where the tag
+// keys will be the same as the first argument's object.
 func tagFirst(args []parse.Node) (parse.Tags, error) {
 	return args[0].Tags()
 }
 
+// tagRemove extracts the expected resulting tags keys from a call to the Remove function.
+// It determines that tags by looking at the tags of the first node, and and removing the specified key of
+// the second argument from the tagset
 func tagRemove(args []parse.Node) (parse.Tags, error) {
 	tags, err := tagFirst(args)
 	if err != nil {
@@ -31,11 +38,14 @@ func tagRemove(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+// seriesFuncTag extracts the expected resulting tags keys from a call to the SeriesFunc.
+// it extracts the keys from the opentsdb style tags/value pairs of the first argument.
 func seriesFuncTags(args []parse.Node) (parse.Tags, error) {
 	s := args[0].(*parse.StringNode).Text
 	return tagsFromString(s)
 }
 
+// aggrFuncTags extracts the expected resulting tags keys from a call to the Aggr func
 func aggrFuncTags(args []parse.Node) (parse.Tags, error) {
 	if len(args) < 3 {
 		return nil, errors.New("aggr: expect 3 arguments")
@@ -54,6 +64,8 @@ func aggrFuncTags(args []parse.Node) (parse.Tags, error) {
 	return tagsFromString(strings.Join(tags, ","))
 }
 
+// tagsFromString parse opentsdb style tags from the text and returns
+// the tag keys.
 func tagsFromString(text string) (parse.Tags, error) {
 	t := make(parse.Tags)
 	if text == "" {
@@ -70,6 +82,10 @@ func tagsFromString(text string) (parse.Tags, error) {
 	return t, nil
 }
 
+// tagTranspose extracts the expected resulting tags keys from a call to the Transpose function.
+// It parses the tags from the second CSV string argument and ensures that they are
+// a subset of the first arguments expected tags. The returned tags will be based on the
+// second argument.
 func tagTranspose(args []parse.Node) (parse.Tags, error) {
 	tags := make(parse.Tags)
 	sp := strings.Split(args[1].(*parse.StringNode).Text, ",")
@@ -86,6 +102,9 @@ func tagTranspose(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+// tagRename extracts the expected resulting tags keys from a call to the Rename function.
+// it use the a specification of oldKey=New parsed from the second argument to discover
+// the newly named tag keys after processing the keys from the first's arguments Node.
 func tagRename(args []parse.Node) (parse.Tags, error) {
 	tags, err := tagFirst(args)
 	if err != nil {
@@ -109,139 +128,142 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+// builtins is a map of the function name in the expression language to the Func specifications
+// for all functions available to Bosun even when no datasource is enabled.
+
 var builtins = map[string]parse.Func{
 	// Reduction functions
 
 	"avg": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Avg,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Avg,
 	},
 	"cCount": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      CCount,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       CCount,
 	},
 	"dev": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Dev,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Dev,
 	},
 	"diff": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Diff,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Diff,
 	},
 	"first": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      First,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       First,
 	},
 	"forecastlr": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Forecast_lr,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Forecast_lr,
 	},
 	"linelr": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Line_lr,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       Line_lr,
 	},
 	"last": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Last,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Last,
 	},
 	"len": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Length,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Length,
 	},
 	"max": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Max,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Max,
 	},
 	"median": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Median,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Median,
 	},
 	"min": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Min,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Min,
 	},
 	"percentile": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Percentile,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Percentile,
 	},
 	"since": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Since,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Since,
 	},
 	"sum": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Sum,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Sum,
 	},
 	"streak": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Streak,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Streak,
 	},
 
 	// Aggregation functions
 	"aggr": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   aggrFuncTags,
-		F:      Aggr,
-		Check:  aggrCheck,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
+		Return:  models.TypeSeriesSet,
+		TagKeys: aggrFuncTags,
+		F:       Aggr,
+		Check:   aggrCheck,
 	},
 
 	// Group functions
 	"addtags": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
 		VariantReturn: true,
-		Tags:          tagRename,
+		TagKeys:       tagRename,
 		F:             AddTags,
 	},
 	"rename": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
 		VariantReturn: true,
-		Tags:          tagRename,
+		TagKeys:       tagRename,
 		F:             Rename,
 	},
 	"remove": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
 		VariantReturn: true,
-		Tags:          tagRemove,
+		TagKeys:       tagRemove,
 		F:             Remove,
 	},
 	"t": {
-		Args:   []models.FuncType{models.TypeNumberSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagTranspose,
-		F:      Transpose,
+		Args:    []models.FuncType{models.TypeNumberSet, models.TypeString},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagTranspose,
+		F:       Transpose,
 	},
 	"ungroup": {
 		Args:   []models.FuncType{models.TypeNumberSet},
@@ -254,14 +276,14 @@ var builtins = map[string]parse.Func{
 	"abs": {
 		Args:          []models.FuncType{models.TypeVariantSet},
 		VariantReturn: true,
-		Tags:          tagFirst,
+		TagKeys:       tagFirst,
 		F:             Abs,
 	},
 	"crop": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Crop,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet, models.TypeNumberSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       Crop,
 	},
 	"d": {
 		Args:   []models.FuncType{models.TypeString},
@@ -274,46 +296,46 @@ var builtins = map[string]parse.Func{
 		F:      ToDuration,
 	},
 	"des": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeScalar, models.TypeScalar},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Des,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeScalar, models.TypeScalar},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       Des,
 	},
 	"dropge": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropGe,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       DropGe,
 	},
 	"dropg": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropG,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       DropG,
 	},
 	"drople": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropLe,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       DropLe,
 	},
 	"dropl": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropL,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       DropL,
 	},
 	"dropna": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropNA,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       DropNA,
 	},
 	"dropbool": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeSeriesSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropBool,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeSeriesSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       DropBool,
 	},
 	"epoch": {
 		Args:   []models.FuncType{},
@@ -323,26 +345,26 @@ var builtins = map[string]parse.Func{
 	"filter": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeNumberSet},
 		VariantReturn: true,
-		Tags:          tagFirst,
+		TagKeys:       tagFirst,
 		F:             Filter,
 	},
 	"limit": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeScalar},
 		VariantReturn: true,
-		Tags:          tagFirst,
+		TagKeys:       tagFirst,
 		F:             Limit,
 	},
 	"isnan": {
-		Args:   []models.FuncType{models.TypeNumberSet},
-		F:      IsNaN,
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
+		Args:    []models.FuncType{models.TypeNumberSet},
+		F:       IsNaN,
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
 	},
 	"nv": {
-		Args:   []models.FuncType{models.TypeNumberSet, models.TypeScalar},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      NV,
+		Args:    []models.FuncType{models.TypeNumberSet, models.TypeScalar},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       NV,
 	},
 	"series": {
 		Args:      []models.FuncType{models.TypeString, models.TypeScalar},
@@ -350,35 +372,35 @@ var builtins = map[string]parse.Func{
 		VArgsPos:  1,
 		VArgsOmit: true,
 		Return:    models.TypeSeriesSet,
-		Tags:      seriesFuncTags,
+		TagKeys:   seriesFuncTags,
 		F:         SeriesFunc,
 	},
 	"sort": {
-		Args:   []models.FuncType{models.TypeNumberSet, models.TypeString},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Sort,
+		Args:    []models.FuncType{models.TypeNumberSet, models.TypeString},
+		Return:  models.TypeNumberSet,
+		TagKeys: tagFirst,
+		F:       Sort,
 	},
 	"shift": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Shift,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       Shift,
 	},
 	"leftjoin": {
 		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeNumberSet},
 		VArgs:    true,
 		VArgsPos: 2,
 		Return:   models.TypeTable,
-		Tags:     nil, // TODO
+		TagKeys:  nil, // TODO
 		F:        LeftJoin,
 	},
 	"merge": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		VArgs:  true,
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Merge,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		VArgs:   true,
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       Merge,
 	},
 	"month": {
 		Args:   []models.FuncType{models.TypeScalar, models.TypeString},
@@ -386,22 +408,22 @@ var builtins = map[string]parse.Func{
 		F:      Month,
 	},
 	"timedelta": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      TimeDelta,
+		Args:    []models.FuncType{models.TypeSeriesSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       TimeDelta,
 	},
 	"tail": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Tail,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       Tail,
 	},
 	"map": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberExpr},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Map,
+		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberExpr},
+		Return:  models.TypeSeriesSet,
+		TagKeys: tagFirst,
+		F:       Map,
 	},
 	"v": {
 		Return:  models.TypeScalar,

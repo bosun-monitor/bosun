@@ -23,14 +23,14 @@ var Elastic = map[string]parse.Func{
 	"escount": {
 		Args:          []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
-		Tags:          elasticTagQuery,
+		TagKeys:       elasticTagQuery,
 		F:             ESCount,
 		PrefixEnabled: true,
 	},
 	"esstat": {
 		Args:          []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
-		Tags:          elasticTagQuery,
+		TagKeys:       elasticTagQuery,
 		F:             ESStat,
 		PrefixEnabled: true,
 	},
