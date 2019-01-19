@@ -186,42 +186,70 @@ type Value interface {
 }
 
 // Number is the expression type that should be the value type for all numbers
-// in a
+// in a ResultSet that is a numberSet
 type Number float64
 
-func (n Number) Type() models.FuncType        { return models.TypeNumberSet }
-func (n Number) Value() interface{}           { return n }
+// Type returns the type representation so it fullfills the Value interface.
+func (n Number) Type() models.FuncType { return models.TypeNumberSet }
+
+// Value returns the value of the number and exists so it fullfills the Value interface.
+func (n Number) Value() interface{} { return n }
+
+// MarshalJSON allows the value of the number to be reprented in JSON while also
+// allowing for NaN and InF values to be represented.
 func (n Number) MarshalJSON() ([]byte, error) { return marshalFloat(float64(n)) }
 
+// Scalar is the expression type that represents a single untagged number.
 type Scalar float64
 
-func (s Scalar) Type() models.FuncType        { return models.TypeScalar }
-func (s Scalar) Value() interface{}           { return s }
+// Type returns the type representation so it fullfills the Value interface.
+func (s Scalar) Type() models.FuncType { return models.TypeScalar }
+
+// Value returns the value of the Scalar and exists so it fullfills the Value interface.
+func (s Scalar) Value() interface{} { return s }
+
+// MarshalJSON allows the value of the Scalar to be reprented in JSON while also
+// allowing for NaN and InF values to be represented.
 func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
+// String is the expression type that represents a string.
 type String string
 
+// Type returns the type representation so it fullfills the Value interface.
 func (s String) Type() models.FuncType { return models.TypeString }
-func (s String) Value() interface{}    { return s }
 
+// Value returns the value of the string and exists so it fullfills the Value interface.
+func (s String) Value() interface{} { return s }
+
+// NumberExpr represents a sub number expression in the expression language which is used with map().
 type NumberExpr Expr
 
+// Type returns the type representation so it fullfills the Value interface.
 func (s NumberExpr) Type() models.FuncType { return models.TypeNumberExpr }
-func (s NumberExpr) Value() interface{}    { return s }
 
+// Value returns the value of the NumberExpr and exists so it fullfills the Value interface.
+func (s NumberExpr) Value() interface{} { return s }
+
+// Info is a generic object in the expression language which is only used to return
+// interative information to the user.
 type Info []interface{}
 
+// Type returns the type representation so it fullfills the Value interface.
 func (i Info) Type() models.FuncType { return models.TypeInfo }
-func (i Info) Value() interface{}    { return i }
 
-//func (s String) MarshalJSON() ([]byte, error) { return json.Marshal(s) }
+// Value returns the value of the Info object and exists so it fullfills the Value interface.
+func (i Info) Value() interface{} { return i }
 
 // Series is the standard form within bosun to represent timeseries data.
 type Series map[time.Time]float64
 
+// Type returns the type representation of the series so it fullfills the Value interface.
 func (s Series) Type() models.FuncType { return models.TypeSeriesSet }
-func (s Series) Value() interface{}    { return s }
 
+// Value returns the value of the Series and exists so it fullfills the Value interface.
+func (s Series) Value() interface{} { return s }
+
+// MarshalJSON returns the Series object in JSON.
 func (s Series) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, len(s))
 	for k, v := range s {
@@ -230,9 +258,9 @@ func (s Series) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// Equal returns if series a is equal to series b.
-func (a Series) Equal(b Series) bool {
-	return reflect.DeepEqual(a, b)
+// Equal returns if series s is equal to series b.
+func (s Series) Equal(b Series) bool {
+	return reflect.DeepEqual(s, b)
 }
 
 // Table is a return type that lines up with Grafana Tables. It can be viewed in the expression
@@ -242,8 +270,11 @@ type Table struct {
 	Rows    [][]interface{}
 }
 
+// Type returns the type representation of the Table so it fullfills the Value interface.
 func (t Table) Type() models.FuncType { return models.TypeTable }
-func (t Table) Value() interface{}    { return t }
+
+// Value returns the value of the Series and exists so it fullfills the Value interface.
+func (t Table) Value() interface{} { return t }
 
 // SortableSeries is an alternative datastructure for timeseries data,
 // which stores points in a time-ordered fashion instead of a map.
@@ -270,7 +301,7 @@ func NewSortedSeries(dps Series) SortableSeries {
 	return series
 }
 
-// Result contains holds a single result and is generally contained within a Results Object.
+// Result contains a single result and is generally contained within a Results Object.
 type Result struct {
 	// a list of sub computations for the expression. Collecting computations is not always enabled.
 	models.Computations
@@ -281,10 +312,12 @@ type Result struct {
 }
 
 // ResultSet contains the results of an expression operation or a expression function.
-// It will also be the type returned from any completed evaluation of a complete expression.ResultSet.
+// It will also be the type returned from any completed evaluation of a complete expression.
 // In addition it contains properties about how those results should behave in with certain Union
 // operations.
-// Each Result in the Results property should be of the same type.
+//
+// Each Result in the Results property should be of the same type. It is up to functions in the expression
+// language to ensure the Results are a set with no conflicting entries and that all entries are of the same type.
 type ResultSet struct {
 	Results ResultSlice
 	// If true, ungrouped joins from this set will be ignored.
@@ -295,23 +328,32 @@ type ResultSet struct {
 	NaNValue *float64
 }
 
-// Equal inspects if two results have the same content
-// error will return why they are not equal if they
-// are not equal
-func (a *ResultSet) Equal(b *ResultSet) (bool, error) {
-	if len(a.Results) != len(b.Results) {
-		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(a.Results), len(b.Results))
+// NaN returns the specified substitue value for NaN on the if one is present as a property on
+// the ResultSet, else "NaN" is returned.
+// The NaNValue property of the ResultSet is set when the nv() function is used in the expression language.
+func (r *ResultSet) NaN() Number {
+	if r.NaNValue != nil {
+		return Number(*r.NaNValue)
 	}
-	if a.IgnoreUnjoined != b.IgnoreUnjoined {
-		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreUnjoined, b.IgnoreUnjoined)
+	return Number(math.NaN())
+}
+
+// Equal inspects if two ResultSets have the same content.
+// An error will return explaing why they are not equal if they are not equal.
+func (r *ResultSet) Equal(b *ResultSet) (bool, error) {
+	if len(r.Results) != len(b.Results) {
+		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(r.Results), len(b.Results))
 	}
-	if a.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
-		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
+	if r.IgnoreUnjoined != b.IgnoreUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreUnjoined, b.IgnoreUnjoined)
 	}
-	if a.NaNValue != b.NaNValue {
-		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", a.NaNValue, b.NaNValue)
+	if r.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
 	}
-	sortedA := ResultSliceByGroup(a.Results)
+	if r.NaNValue != b.NaNValue {
+		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", r.NaNValue, b.NaNValue)
+	}
+	sortedA := ResultSliceByGroup(r.Results)
 	sort.Sort(sortedA)
 	sortedB := ResultSliceByGroup(b.Results)
 	sort.Sort(sortedB)
@@ -341,19 +383,16 @@ func (a *ResultSet) Equal(b *ResultSet) (bool, error) {
 	return true, nil
 }
 
+// ResultSlice is a slice of Result Pointers.
 type ResultSlice []*Result
 
+// ResultSliceByGroup allows a ResultSlice to be sorted by Group (a.k.a. Tags).
 type ResultSliceByGroup ResultSlice
 
+// ResultSliceByValue allows a ResultSlice to be sorted by value.
 type ResultSliceByValue ResultSlice
 
-func (r *ResultSet) NaN() Number {
-	if r.NaNValue != nil {
-		return Number(*r.NaNValue)
-	}
-	return Number(math.NaN())
-}
-
+// DescByValue sorts a ResultSlice in Descending order by value.
 func (r ResultSlice) DescByValue() ResultSlice {
 	for _, v := range r {
 		if _, ok := v.Value.(Number); !ok {
@@ -384,6 +423,11 @@ func (r ResultSliceByGroup) Len() int           { return len(r) }
 func (r ResultSliceByGroup) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func (r ResultSliceByGroup) Less(i, j int) bool { return r[i].Group.String() < r[j].Group.String() }
 
+// AddComputation adds a computation to the State if the state has the enabledComputations
+// property enabled.
+// If the computation has OpenTSDB style tags each individual computation will correctly represent the specific
+// tag value for the computation. Otherwise it will be the raw text part of the expression that represents the
+// computation as inputted.
 func (e *State) AddComputation(r *Result, text string, value interface{}) {
 	if !e.enableComputations {
 		return
@@ -391,6 +435,8 @@ func (e *State) AddComputation(r *Result, text string, value interface{}) {
 	r.Computations = append(r.Computations, models.Computation{Text: opentsdb.ReplaceTags(text, r.Group), Value: value})
 }
 
+// AutoDS returns the auto-downsampling value for the expression. Not all TSDBs support the
+// auto-downsampling feature.
 func (e *State) AutoDS() int {
 	return e.autods
 }
