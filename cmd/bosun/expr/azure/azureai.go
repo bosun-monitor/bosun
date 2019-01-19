@@ -12,8 +12,8 @@ import (
 	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
 )
 
-// AzureAIQuery queries the Azure Application Insights API for metrics data and transforms the response into a series set
-func AzureAIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, apps expr.AzureApplicationInsightsApps, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
+// AIQuery queries the Azure Application Insights API for metrics data and transforms the response into a series set
+func AIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, apps expr.AzureApplicationInsightsApps, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	if apps.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use apps from client "%v" on a query with client "%v"`, apps.Prefix, prefix)
@@ -25,7 +25,7 @@ func AzureAIQuery(prefix string, e *expr.State, metric, segmentCSV, filter strin
 	c := cc.AIMetricsClient
 
 	// Parse Relative Time to absolute time
-	timespan, err := azureTimeSpan(e, sdur, edur)
+	timespan, err := timeSpan(e, sdur, edur)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func AzureAIQuery(prefix string, e *expr.State, metric, segmentCSV, filter strin
 	// Handle the timegrain (downsampling)
 	var tg string
 	if interval != "" {
-		tg = *azureIntervalToTimegrain(interval)
+		tg = *intervalToTimegrain(interval)
 	} else {
 		tg = "PT1M"
 	}
@@ -192,8 +192,8 @@ func AzureAIQuery(prefix string, e *expr.State, metric, segmentCSV, filter strin
 	return r, nil
 }
 
-// AzureAIListApps get a list of all applications on the subscription and returns those apps in a AzureApplicationInsightsApps within the result
-func AzureAIListApps(prefix string, e *expr.State) (r *expr.Results, err error) {
+// AIListApps get a list of all applications on the subscription and returns those apps in a AzureApplicationInsightsApps within the result
+func AIListApps(prefix string, e *expr.State) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	key := fmt.Sprintf("AzureAIAppCache:%s:%s", prefix, time.Now().Truncate(time.Minute*1)) // https://github.com/golang/groupcache/issues/92
@@ -239,9 +239,9 @@ func AzureAIListApps(prefix string, e *expr.State) (r *expr.Results, err error) 
 	return val.(*expr.Results), nil
 }
 
-// AzureAIMetricMD returns metric metadata for the listed AzureApplicationInsightsApps. This is not meant
+// AIMetricMD returns metric metadata for the listed AzureApplicationInsightsApps. This is not meant
 // as core expression function, but rather one for interactive inspection through the expression UI.
-func AzureAIMetricMD(prefix string, e *expr.State, apps expr.AzureApplicationInsightsApps) (r *expr.Results, err error) {
+func AIMetricMD(prefix string, e *expr.State, apps expr.AzureApplicationInsightsApps) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	if apps.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use apps from client "%v" on a query with client "%v"`, apps.Prefix, prefix)
@@ -264,8 +264,8 @@ func AzureAIMetricMD(prefix string, e *expr.State, apps expr.AzureApplicationIns
 	return
 }
 
-// azAITags is the tag function for the "az" expression function
-func azAITags(args []parse.Node) (parse.TagKeys, error) {
+// aiTags is the tag function for the "az" expression function
+func aiTags(args []parse.Node) (parse.TagKeys, error) {
 	tags := parse.TagKeys{"app": struct{}{}}
 	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
 	if len(csvTags) == 1 && csvTags[0] == "" {

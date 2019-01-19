@@ -29,58 +29,58 @@ var ExprFuncs = map[string]parse.Func{
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
 		TagKeys:       azTags,
-		F:             AzureQuery,
+		F:             Query,
 		PrefixEnabled: true,
 	},
 	"azmulti": {
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeAzureResourceList, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
 		TagKeys:       azMultiTags,
-		F:             AzureMultiQuery,
+		F:             MultiQuery,
 		PrefixEnabled: true,
 	},
 	"azmd": { // TODO Finish and document this func
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet, // TODO return type
 		TagKeys:       expr.TagFirst,        //TODO: Appropriate tags func
-		F:             AzureMetricDefinitions,
+		F:             MetricDefinitions,
 		PrefixEnabled: true,
 	},
 	"azrt": {
 		Args:          []models.FuncType{models.TypeString},
 		Return:        models.TypeAzureResourceList,
-		F:             AzureResourcesByType,
+		F:             ResourcesByType,
 		PrefixEnabled: true,
 	},
 	"azrf": {
 		Args:   []models.FuncType{models.TypeAzureResourceList, models.TypeString},
 		Return: models.TypeAzureResourceList,
-		F:      AzureFilterResources,
+		F:      FilterResources,
 	},
 	// Azure function for application insights, See azureai.go
 	"aiapp": {
 		Args:          []models.FuncType{},
 		Return:        models.TypeAzureAIApps,
-		F:             AzureAIListApps,
+		F:             AIListApps,
 		PrefixEnabled: true,
 	},
 	"aiappf": {
 		Args:          []models.FuncType{models.TypeAzureAIApps, models.TypeString},
 		Return:        models.TypeAzureAIApps,
-		F:             AzureAIFilterApps,
+		F:             FilterApps,
 		PrefixEnabled: true,
 	},
 	"aimd": {
 		Args:          []models.FuncType{models.TypeAzureAIApps},
 		Return:        models.TypeInfo,
-		F:             AzureAIMetricMD,
+		F:             AIMetricMD,
 		PrefixEnabled: true,
 	},
 	"ai": {
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeAzureAIApps, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
-		TagKeys:       azAITags,
-		F:             AzureAIQuery,
+		TagKeys:       aiTags,
+		F:             AIQuery,
 		PrefixEnabled: true,
 	},
 }
@@ -119,9 +119,9 @@ func azResourceURI(subscription, resourceGrp, Namespace, Resource string) string
 	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/%s/%s", subscription, resourceGrp, Namespace, Resource)
 }
 
-// AzureMetricDefinitions fetches metric information for a specific resource and metric tuple
+// MetricDefinitions fetches metric information for a specific resource and metric tuple
 // TODO make this return and not fmt.Printf
-func AzureMetricDefinitions(prefix string, e *expr.State, namespace, metric, rsg, resource string) (r *expr.Results, err error) {
+func MetricDefinitions(prefix string, e *expr.State, namespace, metric, rsg, resource string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
 	if !clientFound {
@@ -151,7 +151,7 @@ func AzureMetricDefinitions(prefix string, e *expr.State, namespace, metric, rsg
 	return
 }
 
-func azureTimeSpan(e *expr.State, sdur, edur string) (span string, err error) {
+func timeSpan(e *expr.State, sdur, edur string) (span string, err error) {
 	sd, err := opentsdb.ParseDuration(sdur)
 	if err != nil {
 		return
@@ -168,8 +168,8 @@ func azureTimeSpan(e *expr.State, sdur, edur string) (span string, err error) {
 	return fmt.Sprintf("%s/%s", st, en), nil
 }
 
-// azureQuery queries Azure metrics for time series data based on the resourceUri
-func azureQuery(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resourceUri, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
+// query queries Azure metrics for time series data based on the resourceURI
+func query(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
@@ -179,7 +179,7 @@ func azureQuery(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, 
 	c := cc.MetricsClient
 	r = new(expr.Results)
 	// Parse Relative Time to absolute time
-	timespan, err := azureTimeSpan(e, sdur, edur)
+	timespan, err := timeSpan(e, sdur, edur)
 	if err != nil {
 		return nil, err
 	}
@@ -200,17 +200,17 @@ func azureQuery(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, 
 	// Set the Interval/Timegrain (Azure metric downsampling)
 	var tg *string
 	if interval != "" {
-		tg = azureIntervalToTimegrain(interval)
+		tg = intervalToTimegrain(interval)
 	}
 
 	// Set Azure aggregation method
-	aggLong, err := azureShortAggToLong(agtype)
+	aggLong, err := shortAggToLong(agtype)
 	if err != nil {
 		return
 	}
-	cacheKey := strings.Join([]string{metric, filter, resourceUri, aggLong, interval, timespan}, ":")
+	cacheKey := strings.Join([]string{metric, filter, resourceURI, aggLong, interval, timespan}, ":")
 	getFn := func() (interface{}, error) {
-		req, err := c.ListPreparer(context.Background(), resourceUri,
+		req, err := c.ListPreparer(context.Background(), resourceURI,
 			timespan,
 			tg,
 			metric,
@@ -277,7 +277,7 @@ func azureQuery(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, 
 				}
 				for _, mValue := range *dataContainer.Data {
 					// extract the value that corresponds the the request aggregation
-					exValue := azureExtractMetricValue(&mValue, aggLong)
+					exValue := extractMetricValue(&mValue, aggLong)
 					if exValue != nil && mValue.TimeStamp != nil {
 						series[mValue.TimeStamp.ToTime()] = *exValue
 					}
@@ -295,9 +295,9 @@ func azureQuery(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, 
 	return r, nil
 }
 
-// AzureQuery queries an Azure monitor metric for the given resource and returns a series set tagged by
+// Query queries an Azure monitor metric for the given resource and returns a series set tagged by
 // rsg (resource group), name (resource name), and any tag keys parsed from the tagKeysCSV argument
-func AzureQuery(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
+func Query(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
@@ -306,12 +306,12 @@ func AzureQuery(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg
 	}
 	c := cc.MetricsClient
 	resourceURI := azResourceURI(c.SubscriptionID, rsg, namespace, resName)
-	return azureQuery(prefix, e, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur)
+	return query(prefix, e, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur)
 }
 
-// AzureMultiQuery queries multiple Azure resources and returns them as a single result set
+// MultiQuery queries multiple Azure resources and returns them as a single result set
 // It makes one HTTP request per resource and parallelizes the requests
-func AzureMultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resources expr.AzureResources, agtype string, interval, sdur, edur string) (r *expr.Results, err error) {
+func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resources expr.AzureResources, agtype string, interval, sdur, edur string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	if resources.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use resources from client "%v" on a query with client "%v"`, resources.Prefix, prefix)
@@ -331,7 +331,7 @@ func AzureMultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, re
 	// a worker makes a time series request for a resource
 	worker := func() {
 		for resource := range reqCh {
-			res, err := azureQuery(prefix, e, metric, tagKeysCSV, resource.ResourceGroup, resource.Name, resource.ID, agtype, interval, sdur, edur)
+			res, err := query(prefix, e, metric, tagKeysCSV, resource.ResourceGroup, resource.Name, resource.ID, agtype, interval, sdur, edur)
 			resCh <- res
 			errCh <- err
 		}
@@ -377,9 +377,9 @@ func AzureMultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, re
 	return
 }
 
-// azureListResources fetches all resources for the tenant/subscription and caches them for
+// listResources fetches all resources for the tenant/subscription and caches them for
 // up to one minute.
-func azureListResources(prefix string, e *expr.State) (expr.AzureResources, error) {
+func listResources(prefix string, e *expr.State) (expr.AzureResources, error) {
 	// Cache will only last for one minute. In practice this will only apply for web sessions since a
 	// new cache is created for each check cycle in the cache
 	key := fmt.Sprintf("AzureResourceCache:%s:%s", prefix, time.Now().Truncate(time.Minute*1)) // https://github.com/golang/groupcache/issues/92
@@ -430,12 +430,12 @@ func azureListResources(prefix string, e *expr.State) (expr.AzureResources, erro
 	return val.(expr.AzureResources), nil
 }
 
-// AzureResourcesByType returns all resources of the specified type
-// It fetches the complete list resources and then filters them relying on a Cache of that resource list
-func AzureResourcesByType(prefix string, e *expr.State, tp string) (r *expr.Results, err error) {
+// ResourcesByType returns all resources of the specified type.
+// It fetches the complete list resources and then filters them relying on a Cache of that resource list.
+func ResourcesByType(prefix string, e *expr.State, tp string) (r *expr.Results, err error) {
 	resources := expr.AzureResources{Prefix: prefix}
 	r = new(expr.Results)
-	allResources, err := azureListResources(prefix, e)
+	allResources, err := listResources(prefix, e)
 	if err != nil {
 		return
 	}
@@ -448,9 +448,9 @@ func AzureResourcesByType(prefix string, e *expr.State, tp string) (r *expr.Resu
 	return
 }
 
-// AzureFilterResources filters a list of resources based on the value of the name, resource group
-// or tags associated with that resource
-func AzureFilterResources(e *expr.State, resources expr.AzureResources, filter string) (r *expr.Results, err error) {
+// FilterResources filters a list of resources based on the value of the name, resource group
+// or tags associated with that resource.
+func FilterResources(e *expr.State, resources expr.AzureResources, filter string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Parse the filter once and then apply it to each item in the loop
 	bqf, err := boolq.Parse(filter)
@@ -471,8 +471,8 @@ func AzureFilterResources(e *expr.State, resources expr.AzureResources, filter s
 	return
 }
 
-// AzureAIFilterApps filters a list of applications based on the name of the app, or the Azure tags associated with the application resource
-func AzureAIFilterApps(prefix string, e *expr.State, apps expr.AzureApplicationInsightsApps, filter string) (r *expr.Results, err error) {
+// FilterApps filters a list of applications based on the name of the app, or the Azure tags associated with the application resource
+func FilterApps(prefix string, e *expr.State, apps expr.AzureApplicationInsightsApps, filter string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Parse the filter once and then apply it to each item in the loop
 	bqf, err := boolq.Parse(filter)
@@ -493,9 +493,9 @@ func AzureAIFilterApps(prefix string, e *expr.State, apps expr.AzureApplicationI
 	return
 }
 
-// AzureExtractMetricValue is a helper for fetching the value of the requested
-// aggregation for the metric
-func azureExtractMetricValue(mv *insights.MetricValue, field string) (v *float64) {
+// extractMetricValue is a helper for fetching the value of the requested
+// aggregation for the metric.
+func extractMetricValue(mv *insights.MetricValue, field string) (v *float64) {
 	switch field {
 	case string(insights.Average), "":
 		v = mv.Average
@@ -509,9 +509,9 @@ func azureExtractMetricValue(mv *insights.MetricValue, field string) (v *float64
 	return
 }
 
-// azureShortAggToLong coverts bosun style names for aggregations (like the reduction functions)
+// shortAggToLong coverts bosun style names for aggregations (like the reduction functions)
 // to the string that is expected for Azure queries
-func azureShortAggToLong(agtype string) (string, error) {
+func shortAggToLong(agtype string) (string, error) {
 	switch agtype {
 	case "avg", "":
 		return string(insights.Average), nil
@@ -527,9 +527,9 @@ func azureShortAggToLong(agtype string) (string, error) {
 	return "", fmt.Errorf("unrecognized aggregation type %s, must be avg, min, max, or total", agtype)
 }
 
-// azureIntervalToTimegrain adds a PT prefix and upper cases the argument to
+// intervalToTimegrain adds a PT prefix and upper cases the argument to
 // make the string in the format of Azure Timegrain
-func azureIntervalToTimegrain(s string) *string {
+func intervalToTimegrain(s string) *string {
 	tg := fmt.Sprintf("PT%v", strings.ToUpper(s))
 	return &tg
 }
