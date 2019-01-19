@@ -16,7 +16,7 @@ func (c *Context) esQuery5(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, sdur
 		c.addError(err)
 		return nil
 	}
-	results, err := esExpr.Query5(req, c.runHistory.Backends.ElasticHosts)
+	results, err := esExpr.Query5(req, c.runHistory.TSDBs.Elastic)
 	if err != nil {
 		c.addError(err)
 		return nil
@@ -39,7 +39,7 @@ func (c *Context) esQueryAll5(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, s
 		c.addError(err)
 		return nil
 	}
-	results, err := esExpr.Query5(req, c.runHistory.Backends.ElasticHosts)
+	results, err := esExpr.Query5(req, c.runHistory.TSDBs.Elastic)
 	if err != nil {
 		c.addError(err)
 		return nil

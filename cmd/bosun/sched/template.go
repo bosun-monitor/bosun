@@ -328,7 +328,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 		History:   c.schedule,
 	}
 	origin := fmt.Sprintf("Template: Alert Key: %v", c.AlertKey)
-	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, origin)
+	res, _, err := e.Execute(c.runHistory.TSDBs, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, origin)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}
@@ -668,7 +668,7 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 }
 
 func (c *Context) ESQuery(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, sduration, eduration string, size int) interface{} {
-	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
+	cfg, ok := c.runHistory.TSDBs.Elastic.Hosts[c.ElasticHost]
 	if !ok {
 		return nil
 	}
@@ -686,7 +686,7 @@ func (c *Context) ESQuery(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, sdura
 }
 
 func (c *Context) ESQueryAll(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, sduration, eduration string, size int) interface{} {
-	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
+	cfg, ok := c.runHistory.TSDBs.Elastic.Hosts[c.ElasticHost]
 	if !ok {
 		return nil
 	}

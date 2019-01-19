@@ -27,8 +27,12 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 )
 
+// State contains various flags, properties, and providers that change how
+// the embedded Expression will execute.
 type State struct {
 	*Expr
+	// now a specified time to represent current time for the expression.
+	// Relative times in the expression language use now to calculate start and end times.
 	now                time.Time
 	enableComputations bool
 	unjoinedOk         bool
@@ -38,9 +42,9 @@ type State struct {
 	// Origin allows the source of the expression to be identified for logging and debugging
 	Origin string
 
-	Timer miniprofiler.Timer
+	Timer miniprofiler.Timer // a profiler for capturing the performance of various functions in the expression
 
-	*Backends
+	*TSDBs
 
 	// Bosun Internal
 	*BosunProviders
@@ -52,35 +56,46 @@ type State struct {
 	OpenTSDBQueries []opentsdb.Request
 }
 
-type Backends struct {
-	TSDBContext     opentsdb.Context
-	GraphiteContext graphite.Context
-	ElasticHosts    tsdbs.ElasticHosts
-	InfluxConfig    client.HTTPConfig
-	AzureMonitor    tsdbs.AzureMonitorClients
-	PromConfig      tsdbs.PromClients
+// TSDBs contains the information needed by tsdb packages to be able to query their respective databases.
+type TSDBs struct {
+	OpenTSDB     opentsdb.Context
+	Graphite     graphite.Context
+	Elastic      tsdbs.ElasticHosts
+	Influx       client.HTTPConfig
+	AzureMonitor tsdbs.AzureMonitorClients
+	PromConfig   tsdbs.PromClients
 }
 
+// BosunProviders is a collection of various Providers that are availble to
+// for Expressions
 type BosunProviders struct {
+	// a function that can be used to identify tags that have squelched in Bosun's rule configuration
 	Squelched func(tags opentsdb.TagSet) bool
-	Search    *search.Search
-	History   AlertStatusProvider
-	Cache     *cache.Cache
-	Annotate  backend.Backend
+	// a provider for Bosun's relation information about metrics and tags
+	Search *search.Search
+	// a provider for the alert() expression function
+	History AlertStatusProvider
+	// a provider for caching query results
+	Cache *cache.Cache
+	// a provider for Bosun annotations
+	Annotate backend.Backend
 }
 
-// Alert Status Provider is used to provide information about alert results.
+// AlertStatusProvider is used to provide information about alert results.
 // This facilitates alerts referencing other alerts, even when they go unknown or unevaluated.
 type AlertStatusProvider interface {
 	GetUnknownAndUnevaluatedAlertKeys(alertName string) (unknown, unevaluated []models.AlertKey)
 }
 
+// ErrUnknownOp is the error message for an unknown operation type
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
 
+// Expr embeds an expr/parse.Tree so methods can be attached to it
 type Expr struct {
 	*parse.Tree
 }
 
+// MarshalJSON allows the string representation of the expression to be rendered into JSON
 func (e *Expr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
 }
@@ -100,7 +115,7 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, origin string) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(tsdbs *TSDBs, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, origin string) (r *Results, queries []opentsdb.Request, err error) {
 	if providers.Squelched == nil {
 		providers.Squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -112,7 +127,7 @@ func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprof
 		autods:         autods,
 		unjoinedOk:     unjoinedOk,
 		Origin:         origin,
-		Backends:       backends,
+		TSDBs:          tsdbs,
 		BosunProviders: providers,
 		Timer:          T,
 	}

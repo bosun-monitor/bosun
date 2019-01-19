@@ -56,8 +56,8 @@ func TestInfluxQueryDuration(t *testing.T) {
 
 func TestInfluxQuery(t *testing.T) {
 	e := expr.State{
-		Backends: &expr.Backends{
-			InfluxConfig: client.HTTPConfig{},
+		TSDBs: &expr.TSDBs{
+			Influx: client.HTTPConfig{},
 		},
 		BosunProviders: &expr.BosunProviders{
 			Squelched: func(tags opentsdb.TagSet) bool {

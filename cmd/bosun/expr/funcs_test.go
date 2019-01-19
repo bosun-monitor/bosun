@@ -28,11 +28,11 @@ func testExpression(eio exprInOut, t *testing.T) error {
 	if err != nil {
 		return err
 	}
-	backends := &Backends{
-		InfluxConfig: client.HTTPConfig{},
+	tsdbs := &TSDBs{
+		Influx: client.HTTPConfig{},
 	}
 	providers := &BosunProviders{}
-	r, _, err := e.Execute(backends, providers, nil, queryTime, 0, false, t.Name())
+	r, _, err := e.Execute(tsdbs, providers, nil, queryTime, 0, false, t.Name())
 	if err != nil {
 		return err
 	}
@@ -525,11 +525,11 @@ func TestAggrNaNHandling(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	backends := &Backends{
-		InfluxConfig: client.HTTPConfig{},
+	tsdbs := &TSDBs{
+		Influx: client.HTTPConfig{},
 	}
 	providers := &BosunProviders{}
-	_, _, err = e.Execute(backends, providers, nil, queryTime, 0, false, t.Name())
+	_, _, err = e.Execute(tsdbs, providers, nil, queryTime, 0, false, t.Name())
 	if err != nil {
 		t.Fatal(err.Error())
 	}

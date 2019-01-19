@@ -17,7 +17,7 @@ import (
 // InitClient sets up the elastic client. If the client has already been
 // initialized it is a noop
 func InitClient5(prefix string, e *expr.State) error {
-	esHosts := e.Backends.ElasticHosts.Hosts
+	esHosts := e.TSDBs.Elastic.Hosts
 	if _, ok := esHosts[prefix]; !ok {
 		prefixes := make([]string, len(esHosts))
 		i := 0
@@ -127,7 +127,7 @@ func timeESRequest5(e *expr.State, req *ElasticRequest5) (resp *elastic.SearchRe
 	}
 	e.Timer.StepCustomTiming("elastic", "query", fmt.Sprintf("%s:%v\n%s", req.HostKey, req.Indices, b), func() {
 		getFn := func() (interface{}, error) {
-			return Query5(req, e.Backends.ElasticHosts)
+			return Query5(req, e.TSDBs.Elastic)
 		}
 		var val interface{}
 		var hit bool

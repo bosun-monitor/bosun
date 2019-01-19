@@ -59,11 +59,11 @@ func TestExprSimple(t *testing.T) {
 			t.Error(err)
 			break
 		}
-		backends := &Backends{
-			InfluxConfig: client.HTTPConfig{},
+		tsdbs := &TSDBs{
+			Influx: client.HTTPConfig{},
 		}
 		providers := &BosunProviders{}
-		r, _, err := e.Execute(backends, providers, nil, time.Now(), 0, false, t.Name())
+		r, _, err := e.Execute(tsdbs, providers, nil, time.Now(), 0, false, t.Name())
 		if err != nil {
 			t.Error(err)
 			break

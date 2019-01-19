@@ -411,7 +411,7 @@ func ESMonthly(e *expr.State, timeField, indexRoot, layout string) (*expr.Result
 }
 
 func ESCount(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter tsdbs.ESQuery, interval, sduration, eduration string) (r *expr.Results, err error) {
-	switch ver := ESVersion(e.Backends.ElasticHosts.Hosts[prefix].Version); ver {
+	switch ver := ESVersion(e.TSDBs.Elastic.Hosts[prefix].Version); ver {
 	case ESV2:
 		return ESDateHistogram2(prefix, e, indexer, keystring, filter.Query(string(ver)).(elastic2.Query), interval, sduration, eduration, "", "", 0)
 	case ESV5:
@@ -424,7 +424,7 @@ func ESCount(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring st
 
 // ESStat returns a bucketed statistical reduction for the specified field.
 func ESStat(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter tsdbs.ESQuery, field, rstat, interval, sduration, eduration string) (r *expr.Results, err error) {
-	switch ver := ESVersion(e.ElasticHosts.Hosts[prefix].Version); ver {
+	switch ver := ESVersion(e.Elastic.Hosts[prefix].Version); ver {
 	case ESV2:
 		return ESDateHistogram2(prefix, e, indexer, keystring, filter.Query(string(ver)).(elastic2.Query), interval, sduration, eduration, field, rstat, 0)
 	case ESV5:

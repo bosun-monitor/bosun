@@ -193,7 +193,7 @@ func timeRequest(e *expr.State, db, query, startDuration, endDuration, groupByIn
 	if err != nil {
 		return nil, err
 	}
-	conn, err := client.NewHTTPClient(e.InfluxConfig)
+	conn, err := client.NewHTTPClient(e.Influx)
 	if err != nil {
 		return nil, err
 	}

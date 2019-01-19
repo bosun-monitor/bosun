@@ -179,12 +179,12 @@ func TestQueryExpr(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		backends := &expr.Backends{
-			TSDBContext:  &opentsdb.LimitContext{Host: u.Host, Limit: 1e10, TSDBVersion: opentsdb.Version2_1},
-			InfluxConfig: client.HTTPConfig{},
+		tsdbs := &expr.TSDBs{
+			OpenTSDB: &opentsdb.LimitContext{Host: u.Host, Limit: 1e10, TSDBVersion: opentsdb.Version2_1},
+			Influx:   client.HTTPConfig{},
 		}
 		providers := &expr.BosunProviders{}
-		results, _, err := e.Execute(backends, providers, nil, queryTime, 0, false, t.Name())
+		results, _, err := e.Execute(tsdbs, providers, nil, queryTime, 0, false, t.Name())
 		if err != nil {
 			t.Fatal(err)
 		}

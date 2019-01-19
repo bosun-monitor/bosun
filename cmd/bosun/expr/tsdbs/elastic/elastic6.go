@@ -129,7 +129,7 @@ func timeESRequest6(e *expr.State, req *ElasticRequest6) (resp *elastic.SearchRe
 	}
 	e.Timer.StepCustomTiming("elastic", "query", fmt.Sprintf("%s:%v\n%s", req.HostKey, req.Indices, b), func() {
 		getFn := func() (interface{}, error) {
-			return Query6(req, e.Backends.ElasticHosts)
+			return Query6(req, e.TSDBs.Elastic)
 		}
 		var val interface{}
 		var hit bool

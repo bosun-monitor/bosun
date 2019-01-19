@@ -239,13 +239,13 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
-	backends := &expr.Backends{
-		TSDBContext:     schedule.SystemConf.GetTSDBContext(),
-		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
-		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
-		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
-		AzureMonitor:    schedule.SystemConf.GetAzureMonitorContext(),
-		PromConfig:      schedule.SystemConf.GetPromContext(),
+	tsdbs := &expr.TSDBs{
+		OpenTSDB:     schedule.SystemConf.GetTSDBContext(),
+		Graphite:     schedule.SystemConf.GetGraphiteContext(),
+		Influx:       schedule.SystemConf.GetInfluxContext(),
+		Elastic:      schedule.SystemConf.GetElasticContext(),
+		AzureMonitor: schedule.SystemConf.GetAzureMonitorContext(),
+		PromConfig:   schedule.SystemConf.GetPromContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,
@@ -254,7 +254,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		Squelched: nil,
 		History:   nil,
 	}
-	res, _, err := e.Execute(backends, providers, t, now, autods, false, "Web: chart creation")
+	res, _, err := e.Execute(tsdbs, providers, t, now, autods, false, "Web: chart creation")
 	if err != nil {
 		return nil, err
 	}

@@ -218,7 +218,7 @@ func timeRequest(e *expr.State, req *graphite.Request) (resp graphite.Response, 
 	e.Timer.StepCustomTiming("graphite", "query", string(b), func() {
 		key := req.CacheKey()
 		getFn := func() (interface{}, error) {
-			return e.GraphiteContext.Query(req)
+			return e.Graphite.Query(req)
 		}
 		var val interface{}
 		var hit bool

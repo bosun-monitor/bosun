@@ -112,7 +112,7 @@ func timeRequest(e *expr.State, req *opentsdb.Request) (s opentsdb.ResponseSet, 
 	for {
 		e.Timer.StepCustomTiming("tsdb", "query", string(b), func() {
 			getFn := func() (interface{}, error) {
-				return e.TSDBContext.Query(req)
+				return e.OpenTSDB.Query(req)
 			}
 			var val interface{}
 			var hit bool
@@ -153,11 +153,11 @@ func bandTSDB(e *expr.State, query, duration, period, eduration string, num floa
 			err = fmt.Errorf("num out of bounds")
 		}
 		var q *opentsdb.Query
-		q, err = opentsdb.ParseQuery(query, e.TSDBContext.Version())
+		q, err = opentsdb.ParseQuery(query, e.OpenTSDB.Version())
 		if err != nil {
 			return
 		}
-		if !e.TSDBContext.Version().FilterSupport() {
+		if !e.OpenTSDB.Version().FilterSupport() {
 			if err = e.Search.Expand(q); err != nil {
 				return
 			}
@@ -392,11 +392,11 @@ func Over(e *expr.State, query, duration, period string, num float64) (r *expr.R
 // Query maps to the "q" function in the expression language.
 func Query(e *expr.State, query, sduration, eduration string) (r *expr.Results, err error) {
 	r = new(expr.Results)
-	q, err := opentsdb.ParseQuery(query, e.TSDBContext.Version())
+	q, err := opentsdb.ParseQuery(query, e.OpenTSDB.Version())
 	if q == nil && err != nil {
 		return
 	}
-	if !e.TSDBContext.Version().FilterSupport() {
+	if !e.OpenTSDB.Version().FilterSupport() {
 		if err = e.Search.Expand(q); err != nil {
 			return
 		}

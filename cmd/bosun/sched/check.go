@@ -50,7 +50,7 @@ func NewIncident(ak models.AlertKey) *models.IncidentState {
 type RunHistory struct {
 	Cache    *cache.Cache
 	Start    time.Time
-	Backends *expr.Backends
+	TSDBs    *expr.TSDBs
 	Events   map[models.AlertKey]*models.Event
 	schedule *Schedule
 }
@@ -69,13 +69,13 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 		Start:    start,
 		Events:   make(map[models.AlertKey]*models.Event),
 		schedule: s,
-		Backends: &expr.Backends{
-			TSDBContext:     s.SystemConf.GetTSDBContext(),
-			GraphiteContext: s.SystemConf.GetGraphiteContext(),
-			InfluxConfig:    s.SystemConf.GetInfluxContext(),
-			ElasticHosts:    s.SystemConf.GetElasticContext(),
-			AzureMonitor:    s.SystemConf.GetAzureMonitorContext(),
-			PromConfig:      s.SystemConf.GetPromContext(),
+		TSDBs: &expr.TSDBs{
+			OpenTSDB:     s.SystemConf.GetTSDBContext(),
+			Graphite:     s.SystemConf.GetGraphiteContext(),
+			Influx:       s.SystemConf.GetInfluxContext(),
+			Elastic:      s.SystemConf.GetElasticContext(),
+			AzureMonitor: s.SystemConf.GetAzureMonitorContext(),
+			PromConfig:   s.SystemConf.GetPromContext(),
 		},
 	}
 	return r
@@ -670,7 +670,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 		Annotate:  s.annotate,
 	}
 	origin := fmt.Sprintf("Schedule: Alert Name: %s", a.Name)
-	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK, origin)
+	results, _, err := e.Execute(rh.TSDBs, providers, T, rh.Start, 0, a.UnjoinedOK, origin)
 	return results, err
 }
 
