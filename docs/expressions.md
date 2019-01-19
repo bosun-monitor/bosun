@@ -594,7 +594,7 @@ promratem (Prometheus Rate Multiple) is like the `promm` function is to the `pro
 ### promras(promql, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
 
-Instead of building a promql query like the `prom` and `promrate` functions, promras (Prometheus Aggregate Raw Series) allows you to query Prometheus using promql with some restrictions:
+Instead of building a promql query like the `prom` and `promrate` functions, promras (Prometheus Raw Aggregate Series) allows you to query Prometheus using promql with some restrictions:
 
  1. The query must return a time series (a Prometheus matrix)
  2. The top level function in promql must be an [Prometheus Aggregation Operator](https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators) with a `by` clause.
@@ -608,7 +608,7 @@ promras(''' sum(rate(container_fs_reads_total[1m]) + rate(container_fs_writes_to
 ### prommras(promql, stepDuration, startDuration, endDuration string) seriestSet
 {: .exprFunc}
 
-prommras (Prometheus Raw Aggregate Raw Multiple) is like the `promras` function excepts that it queries multiple prometheus instances and adds the "bosun_prefix" tag to the results like the `promm` and `prommrate` functions.
+prommras (Prometheus Multiple Raw Aggregate Series) is like the `promras` function excepts that it queries multiple prometheus instances and adds the "bosun_prefix" tag to the results like the `promm` and `prommrate` functions.
 
 Example:
 
