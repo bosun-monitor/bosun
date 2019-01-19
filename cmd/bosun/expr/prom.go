@@ -130,7 +130,7 @@ var Prom = map[string]parse.Func{
 }
 
 // promMultiKey is the value for the tag key that is added to multibackend queries.
-var promMultiKey = "bosun_prefix"
+const promMultiKey = "bosun_prefix"
 
 // promGroupTags parses the csv tags argument of the prom based functions
 func promGroupTags(args []parse.Node) (parse.Tags, error) {
