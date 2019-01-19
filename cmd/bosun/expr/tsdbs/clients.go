@@ -27,3 +27,20 @@ type AzureMonitorClients map[string]AzureMonitorClientCollection
 
 // PromClients is a collection of Prometheus API v1 client APIs (connections)
 type PromClients map[string]promv1.API
+
+// ElasticHosts is an array of Logstash hosts and exists as a type for something to attach
+// methods to.  The elasticsearch library will use the listed to hosts to discover all
+// of the hosts in the config
+// type ElasticHosts []string
+type ElasticHosts struct {
+	Hosts map[string]ElasticConfig
+}
+
+type ElasticConfig struct {
+	Hosts             []string
+	Version           string
+	SimpleClient      bool
+	ClientOptionFuncs interface{}
+}
+
+// See the elastic#.go files for ESQuery

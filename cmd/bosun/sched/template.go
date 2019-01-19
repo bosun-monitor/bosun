@@ -20,6 +20,7 @@ import (
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/tsdbs"
+	esExpr "bosun.org/cmd/bosun/expr/tsdbs/elastic"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -666,36 +667,36 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 	return string(body)
 }
 
-func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
+func (c *Context) ESQuery(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, sduration, eduration string, size int) interface{} {
 	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
 	if !ok {
 		return nil
 	}
 
-	switch cfg.Version {
-	case expr.ESV2:
+	switch esExpr.ESVersion(cfg.Version) {
+	case esExpr.ESV2:
 		return c.esQuery2(indexRoot, filter, sduration, eduration, size)
-	case expr.ESV5:
+	case esExpr.ESV5:
 		return c.esQuery5(indexRoot, filter, sduration, eduration, size)
-	case expr.ESV6:
+	case esExpr.ESV6:
 		return c.esQuery6(indexRoot, filter, sduration, eduration, size)
 	}
 
 	return nil
 }
 
-func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
+func (c *Context) ESQueryAll(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, sduration, eduration string, size int) interface{} {
 	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
 	if !ok {
 		return nil
 	}
 
-	switch cfg.Version {
-	case expr.ESV2:
+	switch esExpr.ESVersion(cfg.Version) {
+	case esExpr.ESV2:
 		return c.esQueryAll2(indexRoot, filter, sduration, eduration, size)
-	case expr.ESV5:
+	case esExpr.ESV5:
 		return c.esQueryAll5(indexRoot, filter, sduration, eduration, size)
-	case expr.ESV6:
+	case esExpr.ESV6:
 		return c.esQueryAll6(indexRoot, filter, sduration, eduration, size)
 	}
 

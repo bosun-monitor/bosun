@@ -3,18 +3,20 @@ package sched
 import (
 	"encoding/json"
 
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/expr/tsdbs"
+	esExpr "bosun.org/cmd/bosun/expr/tsdbs/elastic"
+
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-func (c *Context) esQuery5(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
-	newFilter := expr.ScopeES5(c.Group(), filter.Query(expr.ESV5).(elastic.Query))
-	req, err := expr.ESBaseQuery5(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size, c.ElasticHost)
+func (c *Context) esQuery5(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, sduration, eduration string, size int) interface{} {
+	newFilter := esExpr.ScopeES5(c.Group(), filter.Query(string(esExpr.ESV2)).(elastic.Query))
+	req, err := esExpr.ESBaseQuery5(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size, c.ElasticHost)
 	if err != nil {
 		c.addError(err)
 		return nil
 	}
-	results, err := c.runHistory.Backends.ElasticHosts.Query5(req)
+	results, err := esExpr.Query5(req, c.runHistory.Backends.ElasticHosts)
 	if err != nil {
 		c.addError(err)
 		return nil
@@ -31,13 +33,13 @@ func (c *Context) esQuery5(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurat
 	return r
 }
 
-func (c *Context) esQueryAll5(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
-	req, err := expr.ESBaseQuery5(c.runHistory.Start, indexRoot, filter.Query(expr.ESV5).(elastic.Query), sduration, eduration, size, c.ElasticHost)
+func (c *Context) esQueryAll5(indexRoot tsdbs.ESIndexer, filter tsdbs.ESQuery, sduration, eduration string, size int) interface{} {
+	req, err := esExpr.ESBaseQuery5(c.runHistory.Start, indexRoot, filter.Query(string(esExpr.ESV2)).(elastic.Query), sduration, eduration, size, c.ElasticHost)
 	if err != nil {
 		c.addError(err)
 		return nil
 	}
-	results, err := c.runHistory.Backends.ElasticHosts.Query5(req)
+	results, err := esExpr.Query5(req, c.runHistory.Backends.ElasticHosts)
 	if err != nil {
 		c.addError(err)
 		return nil

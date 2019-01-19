@@ -1,4 +1,4 @@
-package expr
+package elastic
 
 import (
 	"context"
@@ -7,37 +7,37 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/cmd/bosun/expr/tsdbs"
+
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/opentsdb"
-	elastic "github.com/olivere/elastic"
+	elastic "gopkg.in/olivere/elastic.v5"
 )
 
 // InitClient sets up the elastic client. If the client has already been
 // initialized it is a noop
-func (e ElasticHosts) InitClient6(prefix string) error {
-	if _, ok := e.Hosts[prefix]; !ok {
-		prefixes := make([]string, len(e.Hosts))
+func InitClient5(prefix string, e *expr.State) error {
+	esHosts := e.Backends.ElasticHosts.Hosts
+	if _, ok := esHosts[prefix]; !ok {
+		prefixes := make([]string, len(esHosts))
 		i := 0
-		for k := range e.Hosts {
+		for k := range esHosts {
 			prefixes[i] = k
 			i++
 		}
 		return fmt.Errorf("prefix %v not defined, available prefixes are: %v", prefix, prefixes)
 	}
-	if c := esClients.m[prefix]; c != nil {
-		// client already initialized
-		return nil
-	}
 	// esClients.Lock()
 	var err error
-	if e.Hosts[prefix].SimpleClient {
+	if esHosts[prefix].SimpleClient {
 		// simple client enabled
-		esClients.m[prefix], err = elastic.NewSimpleClient(elastic.SetURL(e.Hosts[prefix].Hosts...), elastic.SetMaxRetries(10))
-	} else if len(e.Hosts[prefix].Hosts) == 0 {
+		esClients.m[prefix], err = elastic.NewSimpleClient(elastic.SetURL(esHosts[prefix].Hosts...), elastic.SetMaxRetries(10))
+	} else if len(esHosts[prefix].Hosts) == 0 {
 		// client option enabled
-		esClients.m[prefix], err = elastic.NewClient(e.Hosts[prefix].ClientOptionFuncs.([]elastic.ClientOptionFunc)...)
+		esClients.m[prefix], err = elastic.NewClient(esHosts[prefix].ClientOptionFuncs.([]elastic.ClientOptionFunc)...)
 	} else {
 		// default behavior
-		esClients.m[prefix], err = elastic.NewClient(elastic.SetURL(e.Hosts[prefix].Hosts...), elastic.SetMaxRetries(10))
+		esClients.m[prefix], err = elastic.NewClient(elastic.SetURL(esHosts[prefix].Hosts...), elastic.SetMaxRetries(10))
 	}
 	// esClients.Unlock()
 	if err != nil {
@@ -47,11 +47,11 @@ func (e ElasticHosts) InitClient6(prefix string) error {
 }
 
 // getService returns an elasticsearch service based on the global client
-func (e *ElasticHosts) getService6(prefix string) (*elastic.SearchService, error) {
+func getService5(prefix string, esHosts tsdbs.ElasticHosts) (*elastic.SearchService, error) {
 	esClients.Lock()
 	defer esClients.Unlock()
 
-	err := e.InitClient(prefix)
+	err := InitClient(prefix, esHosts)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +60,8 @@ func (e *ElasticHosts) getService6(prefix string) (*elastic.SearchService, error
 
 // Query takes a Logstash request, applies it a search service, and then queries
 // elasticsearch.
-func (e ElasticHosts) Query6(r *ElasticRequest6) (*elastic.SearchResult, error) {
-	s, err := e.getService6(r.HostKey)
+func Query5(r *ElasticRequest5, esHosts tsdbs.ElasticHosts) (*elastic.SearchResult, error) {
+	s, err := getService5(r.HostKey, esHosts)
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +84,9 @@ func (e ElasticHosts) Query6(r *ElasticRequest6) (*elastic.SearchResult, error) 
 	return res, nil
 }
 
-// ElasticRequest6 is a container for the information needed to query elasticsearch or a date
+// ElasticRequest5 is a container for the information needed to query elasticsearch or a date
 // histogram.
-type ElasticRequest6 struct {
+type ElasticRequest5 struct {
 	Indices []string
 	HostKey string
 	Start   *time.Time
@@ -96,7 +96,7 @@ type ElasticRequest6 struct {
 
 // CacheKey returns the text of the elastic query. That text is the indentifer for
 // the query in the cache. It is a combination of the host key, indices queries and the json query content
-func (r *ElasticRequest6) CacheKey() (string, error) {
+func (r *ElasticRequest5) CacheKey() (string, error) {
 	s, err := r.Source.Source()
 	if err != nil {
 		return "", err
@@ -111,7 +111,7 @@ func (r *ElasticRequest6) CacheKey() (string, error) {
 
 // timeESRequest execute the elasticsearch query (which may set or hit cache) and returns
 // the search results.
-func timeESRequest6(e *State, req *ElasticRequest6) (resp *elastic.SearchResult, err error) {
+func timeESRequest5(e *expr.State, req *ElasticRequest5) (resp *elastic.SearchResult, err error) {
 	var source interface{}
 	source, err = req.Source.Source()
 	if err != nil {
@@ -127,20 +127,20 @@ func timeESRequest6(e *State, req *ElasticRequest6) (resp *elastic.SearchResult,
 	}
 	e.Timer.StepCustomTiming("elastic", "query", fmt.Sprintf("%s:%v\n%s", req.HostKey, req.Indices, b), func() {
 		getFn := func() (interface{}, error) {
-			return e.ElasticHosts.Query6(req)
+			return Query5(req, e.Backends.ElasticHosts)
 		}
 		var val interface{}
 		var hit bool
 		val, err, hit = e.Cache.Get(key, getFn)
-		CollectCacheHit(e.Cache, "elastic", hit)
+		expr.CollectCacheHit(e.Cache, "elastic", hit)
 		resp = val.(*elastic.SearchResult)
 	})
 	return
 }
 
-func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
-	r = new(Results)
-	req, err := ESBaseQuery6(e.now, indexer, filter, sduration, eduration, size, prefix)
+func ESDateHistogram5(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *expr.Results, err error) {
+	r = new(expr.Results)
+	req, err := ESBaseQuery5(e.Now(), indexer, filter, sduration, eduration, size, prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring stri
 	}
 	if keystring == "" {
 		req.Source = req.Source.Aggregation("ts", ts)
-		result, err := timeESRequest6(e, req)
+		result, err := timeESRequest5(e, req)
 		if err != nil {
 			return nil, err
 		}
@@ -164,9 +164,9 @@ func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring stri
 		if !found {
 			return nil, fmt.Errorf("expected time series not found in elastic reply")
 		}
-		series := make(Series)
+		series := make(expr.Series)
 		for _, v := range ts.Buckets {
-			val := processESBucketItem6(v, rstat)
+			val := processESBucketItem5(v, rstat)
 			if val != nil {
 				series[time.Unix(int64(v.Key)/1000, 0).UTC()] = *val
 			}
@@ -174,7 +174,7 @@ func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring stri
 		if len(series) == 0 {
 			return r, nil
 		}
-		r.Results = append(r.Results, &Result{
+		r.Results = append(r.Results, &expr.Result{
 			Value: series,
 			Group: make(opentsdb.TagSet),
 		})
@@ -187,7 +187,7 @@ func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring stri
 		aggregation = elastic.NewTermsAggregation().Field(keys[i]).SubAggregation("g_"+keys[i+1], aggregation)
 	}
 	req.Source = req.Source.Aggregation("g_"+keys[0], aggregation)
-	result, err := timeESRequest6(e, req)
+	result, err := timeESRequest5(e, req)
 	if err != nil {
 		return nil, err
 	}
@@ -201,9 +201,9 @@ func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring stri
 			if e.Squelched(tags) {
 				return nil
 			}
-			series := make(Series)
+			series := make(expr.Series)
 			for _, v := range ts.Buckets {
-				val := processESBucketItem6(v, rstat)
+				val := processESBucketItem5(v, rstat)
 				if val != nil {
 					series[time.Unix(int64(v.Key)/1000, 0).UTC()] = *val
 				}
@@ -211,7 +211,7 @@ func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring stri
 			if len(series) == 0 {
 				return nil
 			}
-			r.Results = append(r.Results, &Result{
+			r.Results = append(r.Results, &expr.Result{
 				Value: series,
 				Group: tags.Copy(),
 			})
@@ -242,7 +242,7 @@ func ESDateHistogram6(prefix string, e *State, indexer ESIndexer, keystring stri
 }
 
 // ESBaseQuery builds the base query that both ESCount and ESStat share
-func ESBaseQuery6(now time.Time, indexer ESIndexer, filter elastic.Query, sduration, eduration string, size int, prefix string) (*ElasticRequest6, error) {
+func ESBaseQuery5(now time.Time, indexer tsdbs.ESIndexer, filter elastic.Query, sduration, eduration string, size int, prefix string) (*ElasticRequest5, error) {
 	start, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return nil, err
@@ -257,7 +257,7 @@ func ESBaseQuery6(now time.Time, indexer ESIndexer, filter elastic.Query, sdurat
 	st := now.Add(time.Duration(-start))
 	en := now.Add(time.Duration(-end))
 	indices := indexer.Generate(&st, &en)
-	r := ElasticRequest6{
+	r := ElasticRequest5{
 		Indices: indices,
 		HostKey: prefix,
 		Start:   &st,
@@ -270,7 +270,7 @@ func ESBaseQuery6(now time.Time, indexer ESIndexer, filter elastic.Query, sdurat
 	return &r, nil
 }
 
-func ScopeES6(ts opentsdb.TagSet, q elastic.Query) elastic.Query {
+func ScopeES5(ts opentsdb.TagSet, q elastic.Query) elastic.Query {
 	var filters []elastic.Query
 	for tagKey, tagValue := range ts {
 		filters = append(filters, elastic.NewTermQuery(tagKey, tagValue))
@@ -280,7 +280,7 @@ func ScopeES6(ts opentsdb.TagSet, q elastic.Query) elastic.Query {
 	return b
 }
 
-func processESBucketItem6(b *elastic.AggregationBucketHistogramItem, rstat string) *float64 {
+func processESBucketItem5(b *elastic.AggregationBucketHistogramItem, rstat string) *float64 {
 	if stats, found := b.ExtendedStats("stats"); found {
 		var val *float64
 		switch rstat {

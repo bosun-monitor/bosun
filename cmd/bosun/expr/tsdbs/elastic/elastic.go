@@ -1,4 +1,4 @@
-package expr
+package elastic
 
 import (
 	"strings"
@@ -16,9 +16,9 @@ func elasticTagQuery(args []parse.Node) (parse.TagKeys, error) {
 	return t, nil
 }
 
-// ElasticFuncs are specific functions that query an elasticsearch instance.
+// ExprFuncs are specific functions that query an elasticsearch instance.
 // They are only loaded when the elastic hosts are set in the config file
-var Elastic = map[string]parse.Func{
+var ExprFuncs = map[string]parse.Func{
 	// Funcs for querying elastic
 	"escount": {
 		Args:          []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString},

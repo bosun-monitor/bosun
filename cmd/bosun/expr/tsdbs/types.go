@@ -1,9 +1,11 @@
 package tsdbs
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"bosun.org/models"
 )
@@ -135,4 +137,30 @@ func (app AzureApplicationInsightsApp) Ask(filter string) (bool, error) {
 
 	}
 	return false, nil
+}
+
+type ESQuery struct {
+	Query func(ver string) interface{}
+}
+
+func (e ESQuery) Type() models.FuncType { return models.TypeESQuery }
+func (e ESQuery) Value() interface{}    { return e }
+func (e ESQuery) MarshalJSON() ([]byte, error) {
+	// source, err := e.Query(esV2).Source()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return json.Marshal(source)
+	return json.Marshal("ESQuery")
+}
+
+type ESIndexer struct {
+	TimeField string
+	Generate  func(startDuration, endDuration *time.Time) []string
+}
+
+func (e ESIndexer) Type() models.FuncType { return models.TypeESIndexer }
+func (e ESIndexer) Value() interface{}    { return e }
+func (e ESIndexer) MarshalJSON() ([]byte, error) {
+	return json.Marshal("ESGenerator")
 }

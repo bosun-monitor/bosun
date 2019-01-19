@@ -11,7 +11,6 @@ import (
 
 	"bosun.org/slog"
 
-	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/tsdbs"
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
@@ -583,7 +582,7 @@ func (sc *SystemConf) GetTSDBHost() string {
 
 // GetAnnotateElasticHosts returns the Elastic hosts that should be used for annotations.
 // Annotations are not enabled if this has no hosts
-func (sc *SystemConf) GetAnnotateElasticHosts() expr.ElasticConfig {
+func (sc *SystemConf) GetAnnotateElasticHosts() tsdbs.ElasticConfig {
 	return parseESAnnoteConfig(sc)
 }
 
@@ -659,7 +658,7 @@ func (sc *SystemConf) GetPromContext() tsdbs.PromClients {
 
 // GetElasticContext returns an Elastic context which contains all the information
 // needed to run Elastic queries.
-func (sc *SystemConf) GetElasticContext() expr.ElasticHosts {
+func (sc *SystemConf) GetElasticContext() tsdbs.ElasticHosts {
 	return parseESConfig(sc)
 }
 

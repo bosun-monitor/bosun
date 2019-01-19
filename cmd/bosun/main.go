@@ -16,13 +16,13 @@ import (
 	"syscall"
 	"time"
 
-	"bosun.org/_version"
+	version "bosun.org/_version"
 
 	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
-	"bosun.org/cmd/bosun/expr"
+	esExpr "bosun.org/cmd/bosun/expr/tsdbs/elastic"
 	"bosun.org/cmd/bosun/ping"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
@@ -33,8 +33,9 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
+
 	elastic6 "github.com/olivere/elastic"
-	"gopkg.in/fsnotify.v1"
+	fsnotify "gopkg.in/fsnotify.v1"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
 )
@@ -162,12 +163,12 @@ func main() {
 			index = "annotate"
 		}
 		config := sysProvider.GetAnnotateElasticHosts()
-		switch config.Version {
-		case expr.ESV2:
+		switch esExpr.ESVersion(config.Version) {
+		case esExpr.ESV2:
 			annotateBackend = backend.NewElastic2([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic2.ClientOptionFunc))
-		case expr.ESV5:
+		case esExpr.ESV5:
 			annotateBackend = backend.NewElastic5([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic5.ClientOptionFunc))
-		case expr.ESV6:
+		case esExpr.ESV6:
 			annotateBackend = backend.NewElastic6([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic6.ClientOptionFunc))
 		}
 		go func() {

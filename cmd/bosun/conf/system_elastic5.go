@@ -3,13 +3,13 @@ package conf
 import (
 	"time"
 
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/expr/tsdbs"
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-// ParseESConfig return expr.ElasticHost
-func parseESConfig5(value ElasticConf) expr.ElasticConfig {
-	var esConf expr.ElasticConfig
+// ParseESConfig return tsdbs.ElasticHost
+func parseESConfig5(value ElasticConf) tsdbs.ElasticConfig {
+	var esConf tsdbs.ElasticConfig
 	var options ESClientOptions
 	var opts []elastic.ClientOptionFunc
 

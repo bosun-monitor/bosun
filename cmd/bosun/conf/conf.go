@@ -67,7 +67,7 @@ type SystemConfProvider interface {
 	SetTSDBHost(tsdbHost string)
 	GetTSDBHost() string
 
-	GetAnnotateElasticHosts() expr.ElasticConfig
+	GetAnnotateElasticHosts() tsdbs.ElasticConfig
 	GetAnnotateIndex() string
 
 	GetAuthConf() *AuthConf
@@ -80,7 +80,7 @@ type SystemConfProvider interface {
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context
 	GetInfluxContext() client.HTTPConfig
-	GetElasticContext() expr.ElasticHosts
+	GetElasticContext() tsdbs.ElasticHosts
 	GetAzureMonitorContext() tsdbs.AzureMonitorClients
 	GetPromContext() tsdbs.PromClients
 	AnnotateEnabled() bool

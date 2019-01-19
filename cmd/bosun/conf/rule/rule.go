@@ -21,6 +21,7 @@ import (
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	annoExpr "bosun.org/cmd/bosun/expr/tsdbs/annotate"
 	exprAzure "bosun.org/cmd/bosun/expr/tsdbs/azure"
+	exprES "bosun.org/cmd/bosun/expr/tsdbs/elastic"
 	exprOpenTSDB "bosun.org/cmd/bosun/expr/tsdbs/opentsdb"
 	exprProm "bosun.org/cmd/bosun/expr/tsdbs/prom"
 	"bosun.org/opentsdb"
@@ -657,7 +658,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		merge(expr.Graphite)
 	}
 	if backends.Elastic {
-		merge(expr.Elastic)
+		merge(exprES.ExprFuncs)
 	}
 	if backends.Influx {
 		merge(expr.Influx)
