@@ -3,19 +3,18 @@ package expr
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/opentsdb"
 	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
-	"github.com/kylebrandt/boolq"
 )
 
 // AzureAIQuery queries the Azure Application Insights API for metrics data and transforms the response into a series set
-func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, apps AzureApplicationInsightsApps, agtype, interval, sdur, edur string) (r *Results, err error) {
-	r = new(Results)
+func AzureAIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, apps expr.AzureApplicationInsightsApps, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	if apps.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use apps from client "%v" on a query with client "%v"`, apps.Prefix, prefix)
 	}
@@ -54,7 +53,7 @@ func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, ap
 
 	// Since the response is effectively grouped by time, and our series set is grouped by tags, this stores
 	// TagKey -> to series map
-	seriesMap := make(map[string]Series)
+	seriesMap := make(map[string]expr.Series)
 
 	// Main Loop - With segments/dimensions values will be nested, otherwise values are in the root
 	for _, app := range apps.Applications {
@@ -84,7 +83,7 @@ func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, ap
 		if err != nil {
 			return r, err
 		}
-		CollectCacheHit(e.Cache, "azureai_ts", hit)
+		expr.CollectCacheHit(e.Cache, "azureai_ts", hit)
 		res := val.(ainsights.MetricsResult)
 
 		basetags := opentsdb.TagSet{"app": appName}
@@ -122,7 +121,7 @@ func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, ap
 					return err
 				}
 				if _, ok := seriesMap[tags.Tags()]; !ok {
-					seriesMap[tags.Tags()] = make(Series)
+					seriesMap[tags.Tags()] = make(expr.Series)
 				}
 				if v, ok := metVal.(float64); ok && seg.Start != nil {
 					seriesMap[tags.Tags()][seg.Start.Time] = v
@@ -185,7 +184,7 @@ func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, ap
 		if err != nil {
 			return r, err
 		}
-		r.Results = append(r.Results, &Result{
+		r.Results = append(r.Results, &expr.Result{
 			Value: series,
 			Group: tags,
 		})
@@ -193,78 +192,9 @@ func AzureAIQuery(prefix string, e *State, metric, segmentCSV, filter string, ap
 	return r, nil
 }
 
-// AzureApplicationInsightsApp in collection of properties for each Azure Application Insights Resource
-type AzureApplicationInsightsApp struct {
-	ApplicationName string
-	AppId           string
-	Tags            map[string]string
-}
-
-// AzureApplicationInsightsApps is a container for a list of AzureApplicationInsightsApp objects
-// It is a bosun type since it passed to Azure Insights query functions
-type AzureApplicationInsightsApps struct {
-	Applications []AzureApplicationInsightsApp
-	Prefix       string
-}
-
-// AzureAIFilterApps filters a list of applications based on the name of the app, or the Azure tags associated with the application resource
-func AzureAIFilterApps(prefix string, e *State, apps AzureApplicationInsightsApps, filter string) (r *Results, err error) {
-	r = new(Results)
-	// Parse the filter once and then apply it to each item in the loop
-	bqf, err := boolq.Parse(filter)
-	if err != nil {
-		return r, err
-	}
-	filteredApps := AzureApplicationInsightsApps{Prefix: apps.Prefix}
-	for _, app := range apps.Applications {
-		match, err := boolq.AskParsedExpr(bqf, app)
-		if err != nil {
-			return r, err
-		}
-		if match {
-			filteredApps.Applications = append(filteredApps.Applications, app)
-		}
-	}
-	r.Results = append(r.Results, &Result{Value: filteredApps})
-	return
-}
-
-// Ask makes an AzureApplicationInsightsApp a github.com/kylebrandt/boolq Asker, which allows it to
-// to take boolean expressions to create true/false conditions for filtering
-func (app AzureApplicationInsightsApp) Ask(filter string) (bool, error) {
-	sp := strings.SplitN(filter, ":", 2)
-	if len(sp) != 2 {
-		return false, fmt.Errorf("bad filter, filter must be in k:v format, got %v", filter)
-	}
-	key := strings.ToLower(sp[0]) // Make key case insensitive
-	value := sp[1]
-	switch key {
-	case azureTagName:
-		re, err := regexp.Compile(value)
-		if err != nil {
-			return false, err
-		}
-		if re.MatchString(app.ApplicationName) {
-			return true, nil
-		}
-	default:
-		if tagV, ok := app.Tags[key]; ok {
-			re, err := regexp.Compile(value)
-			if err != nil {
-				return false, err
-			}
-			if re.MatchString(tagV) {
-				return true, nil
-			}
-		}
-
-	}
-	return false, nil
-}
-
 // AzureAIListApps get a list of all applications on the subscription and returns those apps in a AzureApplicationInsightsApps within the result
-func AzureAIListApps(prefix string, e *State) (r *Results, err error) {
-	r = new(Results)
+func AzureAIListApps(prefix string, e *expr.State) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	key := fmt.Sprintf("AzureAIAppCache:%s:%s", prefix, time.Now().Truncate(time.Minute*1)) // https://github.com/golang/groupcache/issues/92
 
@@ -274,7 +204,7 @@ func AzureAIListApps(prefix string, e *State) (r *Results, err error) {
 			return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
 		}
 		c := cc.AIComponentsClient
-		applist := AzureApplicationInsightsApps{Prefix: prefix}
+		applist := expr.AzureApplicationInsightsApps{Prefix: prefix}
 		for rList, err := c.ListComplete(context.Background()); rList.NotDone(); err = rList.Next() {
 			if err != nil {
 				return r, err
@@ -291,28 +221,28 @@ func AzureAIListApps(prefix string, e *State) (r *Results, err error) {
 				}
 			}
 			if comp.ID != nil && comp.ApplicationInsightsComponentProperties != nil && comp.ApplicationInsightsComponentProperties.AppID != nil {
-				applist.Applications = append(applist.Applications, AzureApplicationInsightsApp{
+				applist.Applications = append(applist.Applications, expr.AzureApplicationInsightsApp{
 					ApplicationName: *comp.Name,
 					AppId:           *comp.ApplicationInsightsComponentProperties.AppID,
 					Tags:            azTags,
 				})
 			}
 		}
-		r.Results = append(r.Results, &Result{Value: applist})
+		r.Results = append(r.Results, &expr.Result{Value: applist})
 		return r, nil
 	}
 	val, err, hit := e.Cache.Get(key, getFn)
-	CollectCacheHit(e.Cache, "azure_aiapplist", hit)
+	expr.CollectCacheHit(e.Cache, "azure_aiapplist", hit)
 	if err != nil {
 		return r, err
 	}
-	return val.(*Results), nil
+	return val.(*expr.Results), nil
 }
 
 // AzureAIMetricMD returns metric metadata for the listed AzureApplicationInsightsApps. This is not meant
 // as core expression function, but rather one for interactive inspection through the expression UI.
-func AzureAIMetricMD(prefix string, e *State, apps AzureApplicationInsightsApps) (r *Results, err error) {
-	r = new(Results)
+func AzureAIMetricMD(prefix string, e *expr.State, apps expr.AzureApplicationInsightsApps) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	if apps.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use apps from client "%v" on a query with client "%v"`, apps.Prefix, prefix)
 	}
@@ -326,8 +256,8 @@ func AzureAIMetricMD(prefix string, e *State, apps AzureApplicationInsightsApps)
 		if err != nil {
 			return r, err
 		}
-		r.Results = append(r.Results, &Result{
-			Value: Info{md.Value},
+		r.Results = append(r.Results, &expr.Result{
+			Value: expr.Info{md.Value},
 			Group: opentsdb.TagSet{"app": app.ApplicationName},
 		})
 	}

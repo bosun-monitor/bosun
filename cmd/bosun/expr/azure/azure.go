@@ -3,7 +3,6 @@ package expr
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,18 +14,16 @@ import (
 
 	"bosun.org/slog"
 
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	ainsightsmgmt "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
-	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
 	"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	"github.com/kylebrandt/boolq"
 )
 
-// AzureMonitor is the collection of functions for the Azure monitor datasource
-var AzureMonitor = map[string]parse.Func{
+// ExprFuncs is the collection of functions for the Azure monitor datasource.
+var ExprFuncs = map[string]parse.Func{
 	"az": {
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet,
@@ -44,7 +41,7 @@ var AzureMonitor = map[string]parse.Func{
 	"azmd": { // TODO Finish and document this func
 		Args:          []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:        models.TypeSeriesSet, // TODO return type
-		TagKeys:       tagFirst,             //TODO: Appropriate tags func
+		TagKeys:       expr.TagFirst,        //TODO: Appropriate tags func
 		F:             AzureMetricDefinitions,
 		PrefixEnabled: true,
 	},
@@ -99,7 +96,7 @@ func azMultiTags(args []parse.Node) (parse.TagKeys, error) {
 
 // azureTags adds tags for the csv argument along with the "name" and "rsg" tags
 func azureTags(arg parse.Node) (parse.TagKeys, error) {
-	tags := parse.TagKeys{azureTagName: struct{}{}, azureTagRSG: struct{}{}}
+	tags := parse.TagKeys{expr.AzureTagName: struct{}{}, expr.AzureTagRSG: struct{}{}}
 	csvTags := strings.Split(arg.(*parse.StringNode).Text, ",")
 	for _, k := range csvTags {
 		tags[k] = struct{}{}
@@ -123,8 +120,8 @@ func azResourceURI(subscription, resourceGrp, Namespace, Resource string) string
 
 // AzureMetricDefinitions fetches metric information for a specific resource and metric tuple
 // TODO make this return and not fmt.Printf
-func AzureMetricDefinitions(prefix string, e *State, namespace, metric, rsg, resource string) (r *Results, err error) {
-	r = new(Results)
+func AzureMetricDefinitions(prefix string, e *expr.State, namespace, metric, rsg, resource string) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
 	if !clientFound {
 		return r, fmt.Errorf("azure client with name %v not defined", prefix)
@@ -153,7 +150,7 @@ func AzureMetricDefinitions(prefix string, e *State, namespace, metric, rsg, res
 	return
 }
 
-func azureTimeSpan(e *State, sdur, edur string) (span string, err error) {
+func azureTimeSpan(e *expr.State, sdur, edur string) (span string, err error) {
 	sd, err := opentsdb.ParseDuration(sdur)
 	if err != nil {
 		return
@@ -165,21 +162,21 @@ func azureTimeSpan(e *State, sdur, edur string) (span string, err error) {
 			return
 		}
 	}
-	st := e.now.Add(time.Duration(-sd)).Format(azTimeFmt)
-	en := e.now.Add(time.Duration(-ed)).Format(azTimeFmt)
+	st := e.Now().Add(time.Duration(-sd)).Format(azTimeFmt)
+	en := e.Now().Add(time.Duration(-ed)).Format(azTimeFmt)
 	return fmt.Sprintf("%s/%s", st, en), nil
 }
 
 // azureQuery queries Azure metrics for time series data based on the resourceUri
-func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resourceUri, agtype, interval, sdur, edur string) (r *Results, err error) {
-	r = new(Results)
+func azureQuery(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resourceUri, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
 	if !clientFound {
 		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
 	}
 	c := cc.MetricsClient
-	r = new(Results)
+	r = new(expr.Results)
 	// Parse Relative Time to absolute time
 	timespan, err := azureTimeSpan(e, sdur, edur)
 	if err != nil {
@@ -241,7 +238,7 @@ func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resou
 	if err != nil {
 		return r, err
 	}
-	CollectCacheHit(e.Cache, "azure_ts", hit)
+	expr.CollectCacheHit(e.Cache, "azure_ts", hit)
 	resp := val.(insights.Response)
 	rawReadsRemaining := resp.Header.Get("X-Ms-Ratelimit-Remaining-Subscription-Reads")
 	readsRemaining, err := strconv.ParseInt(rawReadsRemaining, 10, 64)
@@ -265,10 +262,10 @@ func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resou
 				if dataContainer.Data == nil {
 					continue // The timeseries has no data in it - then skip
 				}
-				series := make(Series)
+				series := make(expr.Series)
 				tags := make(opentsdb.TagSet)
-				tags[azureTagRSG] = rsg
-				tags[azureTagName] = resName
+				tags[expr.AzureTagRSG] = rsg
+				tags[expr.AzureTagName] = resName
 				// Get the Key/Values that make up the Azure dimension and turn them into tags
 				if dataContainer.Metadatavalues != nil {
 					for _, md := range *dataContainer.Metadatavalues {
@@ -287,7 +284,7 @@ func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resou
 				if len(series) == 0 {
 					continue // If we end up with an empty series then skip
 				}
-				r.Results = append(r.Results, &Result{
+				r.Results = append(r.Results, &expr.Result{
 					Value: series,
 					Group: tags,
 				})
@@ -299,8 +296,8 @@ func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resou
 
 // AzureQuery queries an Azure monitor metric for the given resource and returns a series set tagged by
 // rsg (resource group), name (resource name), and any tag keys parsed from the tagKeysCSV argument
-func AzureQuery(prefix string, e *State, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *Results, err error) {
-	r = new(Results)
+func AzureQuery(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
 	if !clientFound {
@@ -313,8 +310,8 @@ func AzureQuery(prefix string, e *State, namespace, metric, tagKeysCSV, rsg, res
 
 // AzureMultiQuery queries multiple Azure resources and returns them as a single result set
 // It makes one HTTP request per resource and parallelizes the requests
-func AzureMultiQuery(prefix string, e *State, metric, tagKeysCSV string, resources AzureResources, agtype string, interval, sdur, edur string) (r *Results, err error) {
-	r = new(Results)
+func AzureMultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resources expr.AzureResources, agtype string, interval, sdur, edur string) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	if resources.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use resources from client "%v" on a query with client "%v"`, resources.Prefix, prefix)
 	}
@@ -322,12 +319,12 @@ func AzureMultiQuery(prefix string, e *State, metric, tagKeysCSV string, resourc
 	if nResources == 0 {
 		return r, nil
 	}
-	queryResults := []*Results{}
+	queryResults := []*expr.Results{}
 	var wg sync.WaitGroup
 	// reqCh (Request Channel) is populated with Azure resources, and resources are pulled from channel to make a time series request per resource
-	reqCh := make(chan AzureResource, nResources)
+	reqCh := make(chan expr.AzureResource, nResources)
 	// resCh (Result Channel) contains the timeseries responses for requests for resource
-	resCh := make(chan *Results, nResources)
+	resCh := make(chan *expr.Results, nResources)
 	// errCh (Error Channel) contains any request errors
 	errCh := make(chan error, nResources)
 	// a worker makes a time series request for a resource
@@ -375,19 +372,19 @@ func AzureMultiQuery(prefix string, e *State, metric, tagKeysCSV string, resourc
 		return queryResults[0], nil
 	}
 	// Merge the query results into a single seriesSet
-	r, err = Merge(e, queryResults...)
+	r, err = expr.Merge(e, queryResults...)
 	return
 }
 
 // azureListResources fetches all resources for the tenant/subscription and caches them for
 // up to one minute.
-func azureListResources(prefix string, e *State) (AzureResources, error) {
+func azureListResources(prefix string, e *expr.State) (expr.AzureResources, error) {
 	// Cache will only last for one minute. In practice this will only apply for web sessions since a
 	// new cache is created for each check cycle in the cache
 	key := fmt.Sprintf("AzureResourceCache:%s:%s", prefix, time.Now().Truncate(time.Minute*1)) // https://github.com/golang/groupcache/issues/92
 	// getFn is a cacheable function for listing Azure resources
 	getFn := func() (interface{}, error) {
-		r := AzureResources{Prefix: prefix}
+		r := expr.AzureResources{Prefix: prefix}
 		cc, clientFound := e.Backends.AzureMonitor[prefix]
 		if !clientFound {
 			return r, fmt.Errorf("Azure client with name %v not defined", prefix)
@@ -413,7 +410,7 @@ func azureListResources(prefix string, e *State) (AzureResources, error) {
 						azTags[k] = *v
 					}
 				}
-				r.Resources = append(r.Resources, AzureResource{
+				r.Resources = append(r.Resources, expr.AzureResource{
 					Name:          *val.Name,
 					Type:          *val.Type,
 					ResourceGroup: splitID[4],
@@ -425,18 +422,18 @@ func azureListResources(prefix string, e *State) (AzureResources, error) {
 		return r, nil
 	}
 	val, err, hit := e.Cache.Get(key, getFn)
-	CollectCacheHit(e.Cache, "azure_resource", hit)
+	expr.CollectCacheHit(e.Cache, "azure_resource", hit)
 	if err != nil {
-		return AzureResources{}, err
+		return expr.AzureResources{}, err
 	}
-	return val.(AzureResources), nil
+	return val.(expr.AzureResources), nil
 }
 
 // AzureResourcesByType returns all resources of the specified type
 // It fetches the complete list resources and then filters them relying on a Cache of that resource list
-func AzureResourcesByType(prefix string, e *State, tp string) (r *Results, err error) {
-	resources := AzureResources{Prefix: prefix}
-	r = new(Results)
+func AzureResourcesByType(prefix string, e *expr.State, tp string) (r *expr.Results, err error) {
+	resources := expr.AzureResources{Prefix: prefix}
+	r = new(expr.Results)
 	allResources, err := azureListResources(prefix, e)
 	if err != nil {
 		return
@@ -446,20 +443,20 @@ func AzureResourcesByType(prefix string, e *State, tp string) (r *Results, err e
 			resources.Resources = append(resources.Resources, res)
 		}
 	}
-	r.Results = append(r.Results, &Result{Value: resources})
+	r.Results = append(r.Results, &expr.Result{Value: resources})
 	return
 }
 
 // AzureFilterResources filters a list of resources based on the value of the name, resource group
 // or tags associated with that resource
-func AzureFilterResources(e *State, resources AzureResources, filter string) (r *Results, err error) {
-	r = new(Results)
+func AzureFilterResources(e *expr.State, resources expr.AzureResources, filter string) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	// Parse the filter once and then apply it to each item in the loop
 	bqf, err := boolq.Parse(filter)
 	if err != nil {
 		return r, err
 	}
-	filteredResources := AzureResources{Prefix: resources.Prefix}
+	filteredResources := expr.AzureResources{Prefix: resources.Prefix}
 	for _, res := range resources.Resources {
 		match, err := boolq.AskParsedExpr(bqf, res)
 		if err != nil {
@@ -469,97 +466,31 @@ func AzureFilterResources(e *State, resources AzureResources, filter string) (r 
 			filteredResources.Resources = append(filteredResources.Resources, res)
 		}
 	}
-	r.Results = append(r.Results, &Result{Value: filteredResources})
+	r.Results = append(r.Results, &expr.Result{Value: filteredResources})
 	return
 }
 
-// AzureResource is a container for Azure resource information that Bosun can interact with
-type AzureResource struct {
-	Name          string
-	Type          string
-	ResourceGroup string
-	Tags          map[string]string
-	ID            string
-}
-
-// AzureResources is a slice of AzureResource
-//type AzureResources []AzureResource
-type AzureResources struct {
-	Resources []AzureResource
-	Prefix    string
-}
-
-// Get Returns an AzureResource from AzureResources based on the resource type, group, and name
-// If no matching resource is found, an AzureResource object will be returned but found will be
-// false.
-func (resources AzureResources) Get(rType, rsg, name string) (az AzureResource, found bool) {
-	for _, res := range resources.Resources {
-		if res.Type == rType && res.ResourceGroup == rsg && res.Name == name {
-			return res, true
+// AzureAIFilterApps filters a list of applications based on the name of the app, or the Azure tags associated with the application resource
+func AzureAIFilterApps(prefix string, e *expr.State, apps expr.AzureApplicationInsightsApps, filter string) (r *expr.Results, err error) {
+	r = new(expr.Results)
+	// Parse the filter once and then apply it to each item in the loop
+	bqf, err := boolq.Parse(filter)
+	if err != nil {
+		return r, err
+	}
+	filteredApps := expr.AzureApplicationInsightsApps{Prefix: apps.Prefix}
+	for _, app := range apps.Applications {
+		match, err := boolq.AskParsedExpr(bqf, app)
+		if err != nil {
+			return r, err
+		}
+		if match {
+			filteredApps.Applications = append(filteredApps.Applications, app)
 		}
 	}
+	r.Results = append(r.Results, &expr.Result{Value: filteredApps})
 	return
 }
-
-// Ask makes an AzureResource a github.com/kylebrandt/boolq Asker, which allows it
-// to take boolean expressions to create true/false conditions for filtering
-func (ar AzureResource) Ask(filter string) (bool, error) {
-	sp := strings.SplitN(filter, ":", 2)
-	if len(sp) != 2 {
-		return false, fmt.Errorf("bad filter, filter must be in k:v format, got %v", filter)
-	}
-	key := strings.ToLower(sp[0]) // Make key case insensitive
-	value := sp[1]
-	switch key {
-	case azureTagName:
-		re, err := regexp.Compile(value)
-		if err != nil {
-			return false, err
-		}
-		if re.MatchString(ar.Name) {
-			return true, nil
-		}
-	case azureTagRSG:
-		re, err := regexp.Compile(value)
-		if err != nil {
-			return false, err
-		}
-		if re.MatchString(ar.ResourceGroup) {
-			return true, nil
-		}
-	default:
-		// Does not support tags that have a tag key of rsg, resourcegroup, or name. If it is a problem at some point
-		// we can do something like "\name" to mean the tag "name" if such thing is even allowed
-		if tagV, ok := ar.Tags[key]; ok {
-			re, err := regexp.Compile(value)
-			if err != nil {
-				return false, err
-			}
-			if re.MatchString(tagV) {
-				return true, nil
-			}
-		}
-
-	}
-	return false, nil
-}
-
-// AzureMonitorClientCollection is a collection of Azure SDK clients since
-// the SDK provides different clients to access different sorts of resources
-type AzureMonitorClientCollection struct {
-	MetricsClient           insights.MetricsClient
-	MetricDefinitionsClient insights.MetricDefinitionsClient
-	ResourcesClient         resources.Client
-	AIComponentsClient      ainsightsmgmt.ComponentsClient
-	AIMetricsClient         ainsights.MetricsClient
-	Concurrency             int
-	TenantId                string
-}
-
-// AzureMonitorClients is map of all the AzureMonitorClientCollections that
-// have been configured. This is so multiple subscription/tenant/clients
-// can be queries from the same Bosun instance using the prefix syntax
-type AzureMonitorClients map[string]AzureMonitorClientCollection
 
 // AzureExtractMetricValue is a helper for fetching the value of the requested
 // aggregation for the metric
@@ -606,9 +537,3 @@ func init() {
 	metadata.AddMetricMeta("bosun.azure.remaining_reads", metadata.Gauge, metadata.Operation,
 		"A sampling of the number of remaining reads to the Azure API before being ratelimited.")
 }
-
-const (
-	// constants for tag keys
-	azureTagName = "name"
-	azureTagRSG  = "rsg"
-)

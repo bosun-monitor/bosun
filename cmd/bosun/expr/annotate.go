@@ -20,13 +20,13 @@ var Annotate = map[string]parse.Func{
 	"ancounts": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       AnCounts,
 	},
 	"andurations": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       AnDurations,
 	},
 	"antable": {

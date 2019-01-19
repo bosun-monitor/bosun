@@ -17,11 +17,11 @@ import (
 	"github.com/jinzhu/now"
 )
 
-// tagFirst uses the Tags method on the first argument of a function. The first argument
+// TagFirst uses the Tags method on the first argument of a function. The first argument
 // should be an already parsed node in order to identify the tags for the first node.
 // This function is commonly used to extract the expects tags of functions where the tag
 // keys will be the same as the first argument's object.
-func tagFirst(args []parse.Node) (parse.TagKeys, error) {
+func TagFirst(args []parse.Node) (parse.TagKeys, error) {
 	return args[0].Tags()
 }
 
@@ -29,7 +29,7 @@ func tagFirst(args []parse.Node) (parse.TagKeys, error) {
 // It determines that tags by looking at the tags of the first node, and and removing the specified key of
 // the second argument from the tagset
 func tagRemove(args []parse.Node) (parse.TagKeys, error) {
-	tags, err := tagFirst(args)
+	tags, err := TagFirst(args)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func tagTranspose(args []parse.Node) (parse.TagKeys, error) {
 // it use the a specification of oldKey=New parsed from the second argument to discover
 // the newly named tag keys after processing the keys from the first's arguments Node.
 func tagRename(args []parse.Node) (parse.TagKeys, error) {
-	tags, err := tagFirst(args)
+	tags, err := TagFirst(args)
 	if err != nil {
 		return nil, err
 	}
@@ -137,97 +137,97 @@ var builtins = map[string]parse.Func{
 	"avg": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Avg,
 	},
 	"cCount": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       CCount,
 	},
 	"dev": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Dev,
 	},
 	"diff": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Diff,
 	},
 	"first": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       First,
 	},
 	"forecastlr": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Forecast_lr,
 	},
 	"linelr": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeString},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Line_lr,
 	},
 	"last": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Last,
 	},
 	"len": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Length,
 	},
 	"max": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Max,
 	},
 	"median": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Median,
 	},
 	"min": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Min,
 	},
 	"percentile": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Percentile,
 	},
 	"since": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Since,
 	},
 	"sum": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Sum,
 	},
 	"streak": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Streak,
 	},
 
@@ -276,13 +276,13 @@ var builtins = map[string]parse.Func{
 	"abs": {
 		Args:          []models.FuncType{models.TypeVariantSet},
 		VariantReturn: true,
-		TagKeys:       tagFirst,
+		TagKeys:       TagFirst,
 		F:             Abs,
 	},
 	"crop": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet, models.TypeNumberSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Crop,
 	},
 	"d": {
@@ -298,43 +298,43 @@ var builtins = map[string]parse.Func{
 	"des": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeScalar, models.TypeScalar},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Des,
 	},
 	"dropge": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       DropGe,
 	},
 	"dropg": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       DropG,
 	},
 	"drople": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       DropLe,
 	},
 	"dropl": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       DropL,
 	},
 	"dropna": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       DropNA,
 	},
 	"dropbool": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeSeriesSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       DropBool,
 	},
 	"epoch": {
@@ -345,25 +345,25 @@ var builtins = map[string]parse.Func{
 	"filter": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeNumberSet},
 		VariantReturn: true,
-		TagKeys:       tagFirst,
+		TagKeys:       TagFirst,
 		F:             Filter,
 	},
 	"limit": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeScalar},
 		VariantReturn: true,
-		TagKeys:       tagFirst,
+		TagKeys:       TagFirst,
 		F:             Limit,
 	},
 	"isnan": {
 		Args:    []models.FuncType{models.TypeNumberSet},
 		F:       IsNaN,
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 	},
 	"nv": {
 		Args:    []models.FuncType{models.TypeNumberSet, models.TypeScalar},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       NV,
 	},
 	"series": {
@@ -378,13 +378,13 @@ var builtins = map[string]parse.Func{
 	"sort": {
 		Args:    []models.FuncType{models.TypeNumberSet, models.TypeString},
 		Return:  models.TypeNumberSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Sort,
 	},
 	"shift": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeString},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Shift,
 	},
 	"leftjoin": {
@@ -399,7 +399,7 @@ var builtins = map[string]parse.Func{
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		VArgs:   true,
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Merge,
 	},
 	"month": {
@@ -410,19 +410,19 @@ var builtins = map[string]parse.Func{
 	"timedelta": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       TimeDelta,
 	},
 	"tail": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Tail,
 	},
 	"map": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberExpr},
 		Return:  models.TypeSeriesSet,
-		TagKeys: tagFirst,
+		TagKeys: TagFirst,
 		F:       Map,
 	},
 	"v": {
