@@ -182,20 +182,20 @@ func mAggRawTags(args []parse.Node) (parse.TagKeys, error) {
 }
 
 // RawAggSeriesQuery is wrapper for rawAggSeriesQuery setting the multi argument to false.
-func RawAggSeriesQuery(prefix string, e *expr.State, query, stepDuration, sdur, edur string) (*expr.Results, error) {
+func RawAggSeriesQuery(prefix string, e *expr.State, query, stepDuration, sdur, edur string) (*expr.ResultSet, error) {
 	return rawAggSeriesQuery(prefix, e, query, stepDuration, sdur, edur, false)
 }
 
 // MRawAggSeriesQuery is wrapper for rawAggSeriesQuery setting the multi argument to true.
-func MRawAggSeriesQuery(prefix string, e *expr.State, query, stepDuration, sdur, edur string) (*expr.Results, error) {
+func MRawAggSeriesQuery(prefix string, e *expr.State, query, stepDuration, sdur, edur string) (*expr.ResultSet, error) {
 	return rawAggSeriesQuery(prefix, e, query, stepDuration, sdur, edur, true)
 }
 
 // rawAggSeriesQuery takes a raw promql query that has a top level promql aggregation function
 // and returns a seriesSet. If multi is true then the promMultiKey is added to each series in the result
 // and multiple prometheus tsdbs are queried.
-func rawAggSeriesQuery(prefix string, e *expr.State, query, stepDuration, sdur, edur string, multi bool) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func rawAggSeriesQuery(prefix string, e *expr.State, query, stepDuration, sdur, edur string, multi bool) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	parsedPromExpr, err := promql.ParseExpr(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse invalid promql expression: %v", err)
@@ -274,30 +274,30 @@ func rawAggSeriesQuery(prefix string, e *expr.State, query, stepDuration, sdur, 
 
 // Query is a wrapper for buildAndQuery so there is a function signature that doesn't require the rate argument in the expr language.
 // It also sets buildAndQuery's addPrefixTag argument to false since this only queries one backend.
-func Query(prefix string, e *expr.State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *expr.Results, err error) {
+func Query(prefix string, e *expr.State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *expr.ResultSet, err error) {
 	return buildAndQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur, false)
 }
 
 // Rate is a wrapper for buildAndQuery like PromQuery except that it has a rateDuration argument for the step of the rate calculation.
 // This enables rate calculation for counters.
-func Rate(prefix string, e *expr.State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *expr.Results, err error) {
+func Rate(prefix string, e *expr.State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *expr.ResultSet, err error) {
 	return buildAndQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, false)
 }
 
 // MQuery is a wrapper from mQuery.
-func MQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *expr.Results, err error) {
+func MQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, stepDuration, sdur, edur string) (r *expr.ResultSet, err error) {
 	return mQuery(prefix, e, metric, groupBy, filter, agType, "", stepDuration, sdur, edur)
 }
 
 // MRate is a wrapper from mQuery. It has a stepDuration argument for rate calculation.
-func MRate(prefix string, e *expr.State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *expr.Results, err error) {
+func MRate(prefix string, e *expr.State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *expr.ResultSet, err error) {
 	return mQuery(prefix, e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur)
 }
 
 // mQuery makes call to multiple prometheus TSDBs and combines the results into a single series set.
 // It adds the multiKey tag key with the value of prefix label to the results. Queries are executed in parallel.
-func mQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func mQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	prefixes := strings.Split(prefix, ",")
 	if len(prefixes) == 1 && prefixes[0] == "" {
 		return buildAndQuery("default", e, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur, true)
@@ -305,7 +305,7 @@ func mQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, rateD
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(prefixes))
-	resCh := make(chan *expr.Results, len(prefixes))
+	resCh := make(chan *expr.ResultSet, len(prefixes))
 	errCh := make(chan error, len(prefixes))
 
 	for _, prefix := range prefixes {
@@ -331,7 +331,7 @@ func mQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, rateD
 	if len(errors) > 0 {
 		return r, fmt.Errorf(strings.Join(errors, " :: "))
 	}
-	resultCollection := []*expr.Results{}
+	resultCollection := []*expr.ResultSet{}
 	for res := range resCh {
 		resultCollection = append(resultCollection, res)
 	}
@@ -345,8 +345,8 @@ func mQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, rateD
 
 // buildAndQuery uses the information passed to it to generate an PromQL query using the queryTemplate.
 // It then calls timeRequest to execute the query and process that results in to a Bosun Results object.
-func buildAndQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, addPrefixTag bool) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func buildAndQuery(prefix string, e *expr.State, metric, groupBy, filter, agType, rateDuration, stepDuration, sdur, edur string, addPrefixTag bool) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	start, end, err := expr.ParseDurationPair(e, sdur, edur)
 	if err != nil {
 		return
@@ -450,7 +450,7 @@ func timeRequest(e *expr.State, prefix, query string, start, end time.Time, step
 
 // matrixToResults takes the Value result of a prometheus response and
 // updates the Results property of the passed expr.Results object
-func matrixToResults(prefix string, e *expr.State, res promModels.Value, expectedTagLen int, addPrefix bool, r *expr.Results) (err error) {
+func matrixToResults(prefix string, e *expr.State, res promModels.Value, expectedTagLen int, addPrefix bool, r *expr.ResultSet) (err error) {
 	matrix, ok := res.(promModels.Matrix)
 	if !ok {
 		return fmt.Errorf("result not of type matrix")
@@ -484,8 +484,8 @@ func matrixToResults(prefix string, e *expr.State, res promModels.Value, expecte
 
 // MetricList returns a list of available metrics for the prometheus backend
 // by using querying the Prometheus Label Values API for "__name__"
-func MetricList(prefix string, e *expr.State) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func MetricList(prefix string, e *expr.State) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	client, found := e.Prometheus[prefix]
 	if !found {
 		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
@@ -512,8 +512,8 @@ func MetricList(prefix string, e *expr.State) (r *expr.Results, err error) {
 
 // TagInfo does a range query for the given metric and returns info about the
 // tags and labels for the metric based on the data from the queried timeframe
-func TagInfo(prefix string, e *expr.State, metric, sdur, edur string) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func TagInfo(prefix string, e *expr.State, metric, sdur, edur string) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	client, found := e.Prometheus[prefix]
 	if !found {
 		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)

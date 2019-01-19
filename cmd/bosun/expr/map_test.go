@@ -10,7 +10,7 @@ import (
 func TestMap(t *testing.T) {
 	err := testExpression(exprInOut{
 		`map(series("test=test", 0, 1, 1, 3), expr(v()+1))`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
@@ -29,7 +29,7 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`avg(map(series("test=test", 0, 1, 1, 3), expr(v()+1)))`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Number(3),
@@ -45,7 +45,7 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`1 + avg(map(series("test=test", 0, 1, 1, 3), expr(v()+1))) + 1`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Number(5),
@@ -61,7 +61,7 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`max(map(series("test=test", 0, 1, 1, 3), expr(v()+v())))`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Number(6),
@@ -77,7 +77,7 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`map(series("test=test", 0, -2, 1, 3), expr(1+1))`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
@@ -96,7 +96,7 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`map(series("test=test", 0, -2, 1, 3), expr(abs(v())))`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
@@ -115,7 +115,7 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`map(series("test=test", 0, -2, 1, 3), expr(series("test=test", 0, v())))`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{},
@@ -131,7 +131,7 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`v()`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{},
@@ -147,7 +147,7 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`map(series("test=test", 0, -2, 1, 0), expr(!v()))`,
-		Results{
+		ResultSet{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{

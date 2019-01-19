@@ -437,8 +437,8 @@ var builtins = map[string]parse.Func{
 // Available aggregator functions include: avg, min, max, sum, and pN, where N is a float between
 // 0 and 1 inclusive, e.g. p.50 represents the 50th percentile. p0 and p1 are equal to min and max,
 // respectively, but min and max are preferred for readability.
-func Aggr(e *State, series *Results, groups string, aggregator string) (*Results, error) {
-	results := Results{}
+func Aggr(e *State, series *ResultSet, groups string, aggregator string) (*ResultSet, error) {
+	results := ResultSet{}
 
 	grps := splitGroups(groups)
 	if len(grps) == 0 {
@@ -454,7 +454,7 @@ func Aggr(e *State, series *Results, groups string, aggregator string) (*Results
 
 	// at least one group specified, so we work out what
 	// the new group values will be
-	newGroups := map[string]*Results{}
+	newGroups := map[string]*ResultSet{}
 	for _, result := range series.Results {
 		var vals []string
 		for _, grp := range grps {
@@ -466,7 +466,7 @@ func Aggr(e *State, series *Results, groups string, aggregator string) (*Results
 		}
 		groupName := strings.Join(vals, ",")
 		if _, ok := newGroups[groupName]; !ok {
-			newGroups[groupName] = &Results{}
+			newGroups[groupName] = &ResultSet{}
 		}
 		newGroups[groupName].Results = append(newGroups[groupName].Results, result)
 	}
@@ -500,7 +500,7 @@ func splitGroups(groups string) []string {
 	return grps
 }
 
-func aggr(e *State, series *Results, aggfunc string) (*Result, error) {
+func aggr(e *State, series *ResultSet, aggfunc string) (*Result, error) {
 	res := Result{}
 	newSeries := make(Series)
 	var isPerc bool
@@ -610,11 +610,11 @@ func aggrCheck(t *parse.Tree, f *parse.FuncNode) error {
 	return fmt.Errorf("aggr: unrecognized aggregation function %s", name)
 }
 
-func V(e *State) (*Results, error) {
+func V(e *State) (*ResultSet, error) {
 	return FromScalar(e.vValue), nil
 }
 
-func Map(e *State, series *Results, expr *Results) (*Results, error) {
+func Map(e *State, series *ResultSet, expr *ResultSet) (*ResultSet, error) {
 	newExpr := Expr{expr.Results[0].Value.Value().(NumberExpr).Tree}
 	for _, result := range series.Results {
 		newSeries := make(Series)
@@ -642,7 +642,7 @@ func Map(e *State, series *Results, expr *Results) (*Results, error) {
 	return series, nil
 }
 
-func SeriesFunc(e *State, tags string, pairs ...float64) (*Results, error) {
+func SeriesFunc(e *State, tags string, pairs ...float64) (*ResultSet, error) {
 	if len(pairs)%2 != 0 {
 		return nil, fmt.Errorf("uneven number of time stamps and values")
 	}
@@ -659,7 +659,7 @@ func SeriesFunc(e *State, tags string, pairs ...float64) (*Results, error) {
 	for i := 0; i < len(pairs); i += 2 {
 		series[time.Unix(int64(pairs[i]), 0)] = pairs[i+1]
 	}
-	return &Results{
+	return &ResultSet{
 		Results: []*Result{
 			{
 				Value: series,
@@ -669,8 +669,8 @@ func SeriesFunc(e *State, tags string, pairs ...float64) (*Results, error) {
 	}, nil
 }
 
-func Crop(e *State, sSet *Results, startSet *Results, endSet *Results) (*Results, error) {
-	results := Results{}
+func Crop(e *State, sSet *ResultSet, startSet *ResultSet, endSet *ResultSet) (*ResultSet, error) {
+	results := ResultSet{}
 INNER:
 	for _, seriesResult := range sSet.Results {
 		for _, startResult := range startSet.Results {
@@ -704,8 +704,8 @@ func crop(e *State, seriesResult *Result, startResult *Result, endResult *Result
 	return seriesResult
 }
 
-func DropBool(e *State, target *Results, filter *Results) (*Results, error) {
-	res := Results{}
+func DropBool(e *State, target *ResultSet, filter *ResultSet) (*ResultSet, error) {
+	res := ResultSet{}
 	unions := e.union(target, filter, "dropbool union")
 	for _, union := range unions {
 		aSeries := union.A.Value().(Series)
@@ -725,15 +725,15 @@ func DropBool(e *State, target *Results, filter *Results) (*Results, error) {
 	return &res, nil
 }
 
-func Epoch(e *State) (*Results, error) {
-	return &Results{
+func Epoch(e *State) (*ResultSet, error) {
+	return &ResultSet{
 		Results: []*Result{
 			{Value: Scalar(float64(e.now.Unix()))},
 		},
 	}, nil
 }
 
-func IsNaN(e *State, nSet *Results) (*Results, error) {
+func IsNaN(e *State, nSet *ResultSet) (*ResultSet, error) {
 	for _, res := range nSet.Results {
 		if math.IsNaN(float64(res.Value.Value().(Number))) {
 			res.Value = Number(1)
@@ -744,7 +744,7 @@ func IsNaN(e *State, nSet *Results) (*Results, error) {
 	return nSet, nil
 }
 
-func Month(e *State, offset float64, startEnd string) (*Results, error) {
+func Month(e *State, offset float64, startEnd string) (*ResultSet, error) {
 	if startEnd != "start" && startEnd != "end" {
 		return nil, fmt.Errorf("last parameter for mtod must be 'start' or 'end'")
 	}
@@ -757,14 +757,14 @@ func Month(e *State, offset float64, startEnd string) (*Results, error) {
 	} else {
 		mtod = float64(now.New(timeZoned).EndOfMonth().Unix())
 	}
-	return &Results{
+	return &ResultSet{
 		Results: []*Result{
 			{Value: Scalar(float64(mtod))},
 		},
 	}, nil
 }
 
-func NV(e *State, series *Results, v float64) (results *Results, err error) {
+func NV(e *State, series *ResultSet, v float64) (results *ResultSet, err error) {
 	// If there are no results in the set, promote it to a number with the empty group ({})
 	if len(series.Results) == 0 {
 		series.Results = append(series.Results, &Result{Value: Number(v), Group: make(opentsdb.TagSet)})
@@ -774,7 +774,7 @@ func NV(e *State, series *Results, v float64) (results *Results, err error) {
 	return series, nil
 }
 
-func Sort(e *State, series *Results, order string) (*Results, error) {
+func Sort(e *State, series *ResultSet, order string) (*ResultSet, error) {
 	// Sort by groupname first to make the search deterministic
 	sort.Sort(ResultSliceByGroup(series.Results))
 	switch order {
@@ -788,7 +788,7 @@ func Sort(e *State, series *Results, order string) (*Results, error) {
 	return series, nil
 }
 
-func Limit(e *State, set *Results, v float64) (*Results, error) {
+func Limit(e *State, set *ResultSet, v float64) (*ResultSet, error) {
 	if v < 0 {
 		return nil, errors.New(fmt.Sprintf("Limit can't be negative value. We have received value %f as limit", v))
 	}
@@ -799,7 +799,7 @@ func Limit(e *State, set *Results, v float64) (*Results, error) {
 	return set, nil
 }
 
-func Filter(e *State, set *Results, numberSet *Results) (*Results, error) {
+func Filter(e *State, set *ResultSet, numberSet *ResultSet) (*ResultSet, error) {
 	var ns ResultSlice
 	for _, sr := range set.Results {
 		for _, nr := range numberSet.Results {
@@ -814,8 +814,8 @@ func Filter(e *State, set *Results, numberSet *Results) (*Results, error) {
 	return set, nil
 }
 
-func Tail(e *State, series *Results, number *Results) (*Results, error) {
-	f := func(res *Results, s *Result, floats []float64) error {
+func Tail(e *State, series *ResultSet, number *ResultSet) (*ResultSet, error) {
+	f := func(res *ResultSet, s *Result, floats []float64) error {
 		tailLength := int(floats[0])
 
 		// if there are fewer points than the requested tail
@@ -851,8 +851,8 @@ func Tail(e *State, series *Results, number *Results) (*Results, error) {
 	return match(f, series, number)
 }
 
-func Merge(e *State, series ...*Results) (*Results, error) {
-	res := &Results{}
+func Merge(e *State, series ...*ResultSet) (*ResultSet, error) {
+	res := &ResultSet{}
 	if len(series) == 0 {
 		return res, fmt.Errorf("merge requires at least one result")
 	}
@@ -872,7 +872,7 @@ func Merge(e *State, series ...*Results) (*Results, error) {
 	return res, nil
 }
 
-func Remove(e *State, set *Results, tagKey string) (*Results, error) {
+func Remove(e *State, set *ResultSet, tagKey string) (*ResultSet, error) {
 	seen := make(map[string]bool)
 	for _, r := range set.Results {
 		if _, ok := r.Group[tagKey]; ok {
@@ -888,8 +888,8 @@ func Remove(e *State, set *Results, tagKey string) (*Results, error) {
 	return set, nil
 }
 
-func LeftJoin(e *State, keysCSV, columnsCSV string, rowData ...*Results) (*Results, error) {
-	res := &Results{}
+func LeftJoin(e *State, keysCSV, columnsCSV string, rowData ...*ResultSet) (*ResultSet, error) {
+	res := &ResultSet{}
 	dataWidth := len(rowData)
 	if dataWidth == 0 {
 		return res, fmt.Errorf("leftjoin requires at least one item to populate rows")
@@ -931,14 +931,14 @@ func LeftJoin(e *State, keysCSV, columnsCSV string, rowData ...*Results) (*Resul
 			}
 		}
 	}
-	return &Results{
+	return &ResultSet{
 		Results: []*Result{
 			{Value: t},
 		},
 	}, nil
 }
 
-func Shift(e *State, series *Results, d string) (*Results, error) {
+func Shift(e *State, series *ResultSet, d string) (*ResultSet, error) {
 	dur, err := opentsdb.ParseDuration(d)
 	if err != nil {
 		return series, err
@@ -954,29 +954,29 @@ func Shift(e *State, series *Results, d string) (*Results, error) {
 	return series, nil
 }
 
-func Duration(e *State, d string) (*Results, error) {
+func Duration(e *State, d string) (*ResultSet, error) {
 	duration, err := opentsdb.ParseDuration(d)
 	if err != nil {
 		return nil, err
 	}
-	return &Results{
+	return &ResultSet{
 		Results: []*Result{
 			{Value: Scalar(duration.Seconds())},
 		},
 	}, nil
 }
 
-func ToDuration(e *State, sec float64) (*Results, error) {
+func ToDuration(e *State, sec float64) (*ResultSet, error) {
 	d := opentsdb.Duration(time.Duration(int64(sec)) * time.Second)
-	return &Results{
+	return &ResultSet{
 		Results: []*Result{
 			{Value: String(d.HumanString())},
 		},
 	}, nil
 }
 
-func DropValues(e *State, series *Results, threshold *Results, dropFunction func(float64, float64) bool) (*Results, error) {
-	f := func(res *Results, s *Result, floats []float64) error {
+func DropValues(e *State, series *ResultSet, threshold *ResultSet, dropFunction func(float64, float64) bool) (*ResultSet, error) {
+	f := func(res *ResultSet, s *Result, floats []float64) error {
 		nv := make(Series)
 		for k, v := range s.Value.Value().(Series) {
 			if !dropFunction(float64(v), floats[0]) {
@@ -994,35 +994,35 @@ func DropValues(e *State, series *Results, threshold *Results, dropFunction func
 	return match(f, series, threshold)
 }
 
-func DropGe(e *State, series *Results, threshold *Results) (*Results, error) {
+func DropGe(e *State, series *ResultSet, threshold *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value >= threshold }
 	return DropValues(e, series, threshold, dropFunction)
 }
 
-func DropG(e *State, series *Results, threshold *Results) (*Results, error) {
+func DropG(e *State, series *ResultSet, threshold *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value > threshold }
 	return DropValues(e, series, threshold, dropFunction)
 }
 
-func DropLe(e *State, series *Results, threshold *Results) (*Results, error) {
+func DropLe(e *State, series *ResultSet, threshold *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value <= threshold }
 	return DropValues(e, series, threshold, dropFunction)
 }
 
-func DropL(e *State, series *Results, threshold *Results) (*Results, error) {
+func DropL(e *State, series *ResultSet, threshold *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value < threshold }
 	return DropValues(e, series, threshold, dropFunction)
 }
 
-func DropNA(e *State, series *Results) (*Results, error) {
+func DropNA(e *State, series *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool {
 		return math.IsNaN(float64(value)) || math.IsInf(float64(value), 0)
 	}
 	return DropValues(e, series, FromScalar(0), dropFunction)
 }
 
-func FromScalar(f float64) *Results {
-	return &Results{
+func FromScalar(f float64) *ResultSet {
+	return &ResultSet{
 		Results: ResultSlice{
 			&Result{
 				Value: Number(f),
@@ -1031,7 +1031,7 @@ func FromScalar(f float64) *Results {
 	}
 }
 
-func match(f func(res *Results, series *Result, floats []float64) error, series *Results, numberSets ...*Results) (*Results, error) {
+func match(f func(res *ResultSet, series *Result, floats []float64) error, series *ResultSet, numberSets ...*ResultSet) (*ResultSet, error) {
 	res := *series
 	res.Results = nil
 	for _, s := range series.Results {
@@ -1057,8 +1057,8 @@ func match(f func(res *Results, series *Result, floats []float64) error, series 
 	return &res, nil
 }
 
-func ReduceSeriesSet(e *State, series *Results, F func(Series, ...float64) float64, args ...*Results) (*Results, error) {
-	f := func(res *Results, s *Result, floats []float64) error {
+func ReduceSeriesSet(e *State, series *ResultSet, F func(Series, ...float64) float64, args ...*ResultSet) (*ResultSet, error) {
+	f := func(res *ResultSet, s *Result, floats []float64) error {
 		switch tp := s.Value.(type) {
 		case Series:
 			t := s.Value.(Series)
@@ -1082,7 +1082,7 @@ func ReduceSeriesSet(e *State, series *Results, F func(Series, ...float64) float
 	return match(f, series, args...)
 }
 
-func Abs(e *State, set *Results) *Results {
+func Abs(e *State, set *ResultSet) *ResultSet {
 	for _, s := range set.Results {
 		switch s.Type() {
 		case models.TypeNumberSet:
@@ -1096,7 +1096,7 @@ func Abs(e *State, set *Results) *Results {
 	return set
 }
 
-func Diff(e *State, seriesSet *Results) (r *Results, err error) {
+func Diff(e *State, seriesSet *ResultSet) (r *ResultSet, err error) {
 	return ReduceSeriesSet(e, seriesSet, diff)
 }
 
@@ -1104,7 +1104,7 @@ func diff(dps Series, args ...float64) float64 {
 	return last(dps) - first(dps)
 }
 
-func Avg(e *State, seriesSet *Results) (*Results, error) {
+func Avg(e *State, seriesSet *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, seriesSet, SeriesAvg)
 }
 
@@ -1117,7 +1117,7 @@ func SeriesAvg(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func CCount(e *State, series *Results) (*Results, error) {
+func CCount(e *State, series *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, series, cCount)
 }
 
@@ -1137,7 +1137,7 @@ func cCount(dps Series, args ...float64) (a float64) {
 	return float64(count)
 }
 
-func TimeDelta(e *State, series *Results) (*Results, error) {
+func TimeDelta(e *State, series *ResultSet) (*ResultSet, error) {
 	for _, res := range series.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
 		newSeries := make(Series)
@@ -1158,7 +1158,7 @@ func TimeDelta(e *State, series *Results) (*Results, error) {
 	return series, nil
 }
 
-func Sum(e *State, series *Results) (*Results, error) {
+func Sum(e *State, series *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, series, sum)
 }
 
@@ -1169,7 +1169,7 @@ func sum(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func Des(e *State, series *Results, alpha float64, beta float64) *Results {
+func Des(e *State, series *ResultSet, alpha float64, beta float64) *ResultSet {
 	for _, res := range series.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
 		if len(sorted) < 2 {
@@ -1189,7 +1189,7 @@ func Des(e *State, series *Results, alpha float64, beta float64) *Results {
 	return series
 }
 
-func Streak(e *State, series *Results) (*Results, error) {
+func Streak(e *State, series *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, series, streak)
 }
 
@@ -1217,7 +1217,7 @@ func streak(dps Series, args ...float64) (a float64) {
 	return float64(longest)
 }
 
-func Dev(e *State, series *Results) (*Results, error) {
+func Dev(e *State, series *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, series, dev)
 }
 
@@ -1234,7 +1234,7 @@ func dev(dps Series, args ...float64) (d float64) {
 	return math.Sqrt(d)
 }
 
-func Length(e *State, series *Results) (*Results, error) {
+func Length(e *State, series *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, series, length)
 }
 
@@ -1242,7 +1242,7 @@ func length(dps Series, args ...float64) (a float64) {
 	return float64(len(dps))
 }
 
-func Last(e *State, series *Results) (*Results, error) {
+func Last(e *State, series *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, series, last)
 }
 
@@ -1257,7 +1257,7 @@ func last(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func First(e *State, series *Results) (*Results, error) {
+func First(e *State, series *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, series, first)
 }
 
@@ -1272,7 +1272,7 @@ func first(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func Since(e *State, series *Results) (*Results, error) {
+func Since(e *State, series *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, series, e.since)
 }
 
@@ -1288,7 +1288,7 @@ func (e *State) since(dps Series, args ...float64) (a float64) {
 	return s.Seconds()
 }
 
-func Forecast_lr(e *State, series *Results, y *Results) (r *Results, err error) {
+func Forecast_lr(e *State, series *ResultSet, y *ResultSet) (r *ResultSet, err error) {
 	return ReduceSeriesSet(e, series, e.forecast_lr, y)
 }
 
@@ -1325,7 +1325,7 @@ func (e *State) forecast_lr(dps Series, args ...float64) float64 {
 	return s.Seconds()
 }
 
-func Line_lr(e *State, series *Results, d string) (*Results, error) {
+func Line_lr(e *State, series *ResultSet, d string) (*ResultSet, error) {
 	dur, err := opentsdb.ParseDuration(d)
 	if err != nil {
 		return series, err
@@ -1361,19 +1361,19 @@ func line_lr(dps Series, d time.Duration) Series {
 	return s
 }
 
-func Percentile(e *State, seriesSet *Results, p *Results) (r *Results, err error) {
+func Percentile(e *State, seriesSet *ResultSet, p *ResultSet) (r *ResultSet, err error) {
 	return ReduceSeriesSet(e, seriesSet, percentile, p)
 }
 
-func Min(e *State, seriesSet *Results) (r *Results, err error) {
+func Min(e *State, seriesSet *ResultSet) (r *ResultSet, err error) {
 	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(0))
 }
 
-func Median(e *State, seriesSet *Results) (r *Results, err error) {
+func Median(e *State, seriesSet *ResultSet) (r *ResultSet, err error) {
 	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(.5))
 }
 
-func Max(e *State, seriesSet *Results) (r *Results, err error) {
+func Max(e *State, seriesSet *ResultSet) (r *ResultSet, err error) {
 	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(1))
 }
 
@@ -1397,7 +1397,7 @@ func percentile(dps Series, args ...float64) (a float64) {
 	return x[int(i)]
 }
 
-func Rename(e *State, set *Results, s string) (*Results, error) {
+func Rename(e *State, set *ResultSet, s string) (*ResultSet, error) {
 	for _, section := range strings.Split(s, ",") {
 		kv := strings.Split(section, "=")
 		if len(kv) != 2 {
@@ -1420,7 +1420,7 @@ func Rename(e *State, set *Results, s string) (*Results, error) {
 	return set, nil
 }
 
-func AddTags(e *State, set *Results, s string) (*Results, error) {
+func AddTags(e *State, set *ResultSet, s string) (*ResultSet, error) {
 	if s == "" {
 		return set, nil
 	}
@@ -1442,11 +1442,11 @@ func AddTags(e *State, set *Results, s string) (*Results, error) {
 	return set, nil
 }
 
-func Ungroup(e *State, d *Results) (*Results, error) {
+func Ungroup(e *State, d *ResultSet) (*ResultSet, error) {
 	if len(d.Results) != 1 {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
-	return &Results{
+	return &ResultSet{
 		Results: ResultSlice{
 			&Result{
 				Value: Scalar(d.Results[0].Value.Value().(Number)),
@@ -1455,7 +1455,7 @@ func Ungroup(e *State, d *Results) (*Results, error) {
 	}, nil
 }
 
-func Transpose(e *State, d *Results, gp string) (*Results, error) {
+func Transpose(e *State, d *ResultSet, gp string) (*ResultSet, error) {
 	gps := strings.Split(gp, ",")
 	m := make(map[string]*Result)
 	for _, v := range d.Results {
@@ -1483,7 +1483,7 @@ func Transpose(e *State, d *Results, gp string) (*Results, error) {
 			panic(fmt.Errorf("expr: expected a number"))
 		}
 	}
-	var r Results
+	var r ResultSet
 	for _, res := range m {
 		r.Results = append(r.Results, res)
 	}

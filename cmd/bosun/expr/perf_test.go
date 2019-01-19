@@ -17,9 +17,9 @@ func TestSlowUnion(t *testing.T) {
 	}
 }
 
-func buildFakeResults() (ra, rb *Results) {
-	ra = &Results{}
-	rb = &Results{}
+func buildFakeResults() (ra, rb *ResultSet) {
+	ra = &ResultSet{}
+	rb = &ResultSet{}
 	for i := 0; i < 50000; i++ {
 		tags := opentsdb.TagSet{}
 		tags["disk"] = fmt.Sprint("a", i)

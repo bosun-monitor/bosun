@@ -122,8 +122,8 @@ func azResourceURI(subscription, resourceGrp, Namespace, Resource string) string
 
 // MetricDefinitions fetches metric information for a specific resource and metric tuple
 // TODO make this return and not fmt.Printf
-func MetricDefinitions(prefix string, e *expr.State, namespace, metric, rsg, resource string) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func MetricDefinitions(prefix string, e *expr.State, namespace, metric, rsg, resource string) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	cc, clientFound := e.TSDBs.Azure[prefix]
 	if !clientFound {
 		return r, fmt.Errorf("azure client with name %v not defined", prefix)
@@ -170,15 +170,15 @@ func timeSpan(e *expr.State, sdur, edur string) (span string, err error) {
 }
 
 // query queries Azure metrics for time series data based on the resourceURI
-func query(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func query(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur string) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.TSDBs.Azure[prefix]
 	if !clientFound {
 		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
 	}
 	c := cc.MetricsClient
-	r = new(expr.Results)
+	r = new(expr.ResultSet)
 	// Parse Relative Time to absolute time
 	timespan, err := timeSpan(e, sdur, edur)
 	if err != nil {
@@ -298,8 +298,8 @@ func query(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resou
 
 // Query queries an Azure monitor metric for the given resource and returns a series set tagged by
 // rsg (resource group), name (resource name), and any tag keys parsed from the tagKeysCSV argument
-func Query(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func Query(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.TSDBs.Azure[prefix]
 	if !clientFound {
@@ -312,8 +312,8 @@ func Query(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg, res
 
 // MultiQuery queries multiple Azure resources and returns them as a single result set
 // It makes one HTTP request per resource and parallelizes the requests
-func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resources tsdbs.AzureResources, agtype string, interval, sdur, edur string) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resources tsdbs.AzureResources, agtype string, interval, sdur, edur string) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	if resources.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use resources from client "%v" on a query with client "%v"`, resources.Prefix, prefix)
 	}
@@ -321,12 +321,12 @@ func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resourc
 	if nResources == 0 {
 		return r, nil
 	}
-	queryResults := []*expr.Results{}
+	queryResults := []*expr.ResultSet{}
 	var wg sync.WaitGroup
 	// reqCh (Request Channel) is populated with Azure resources, and resources are pulled from channel to make a time series request per resource
 	reqCh := make(chan tsdbs.AzureResource, nResources)
 	// resCh (Result Channel) contains the timeseries responses for requests for resource
-	resCh := make(chan *expr.Results, nResources)
+	resCh := make(chan *expr.ResultSet, nResources)
 	// errCh (Error Channel) contains any request errors
 	errCh := make(chan error, nResources)
 	// a worker makes a time series request for a resource
@@ -433,9 +433,9 @@ func listResources(prefix string, e *expr.State) (tsdbs.AzureResources, error) {
 
 // ResourcesByType returns all resources of the specified type.
 // It fetches the complete list resources and then filters them relying on a Cache of that resource list.
-func ResourcesByType(prefix string, e *expr.State, tp string) (r *expr.Results, err error) {
+func ResourcesByType(prefix string, e *expr.State, tp string) (r *expr.ResultSet, err error) {
 	resources := tsdbs.AzureResources{Prefix: prefix}
-	r = new(expr.Results)
+	r = new(expr.ResultSet)
 	allResources, err := listResources(prefix, e)
 	if err != nil {
 		return
@@ -451,8 +451,8 @@ func ResourcesByType(prefix string, e *expr.State, tp string) (r *expr.Results, 
 
 // FilterResources filters a list of resources based on the value of the name, resource group
 // or tags associated with that resource.
-func FilterResources(e *expr.State, resources tsdbs.AzureResources, filter string) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func FilterResources(e *expr.State, resources tsdbs.AzureResources, filter string) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	// Parse the filter once and then apply it to each item in the loop
 	bqf, err := boolq.Parse(filter)
 	if err != nil {
@@ -473,8 +473,8 @@ func FilterResources(e *expr.State, resources tsdbs.AzureResources, filter strin
 }
 
 // FilterApps filters a list of applications based on the name of the app, or the Azure tags associated with the application resource
-func FilterApps(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsightsApps, filter string) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func FilterApps(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsightsApps, filter string) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	// Parse the filter once and then apply it to each item in the loop
 	bqf, err := boolq.Parse(filter)
 	if err != nil {

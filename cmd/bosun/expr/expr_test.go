@@ -121,7 +121,7 @@ func TestSetVariant(t *testing.T) {
 	tests := []exprInOut{
 		{
 			fmt.Sprintf(`addtags(addtags(%v, "key3=a"), "key4=b") + 1`, series),
-			Results{
+			ResultSet{
 				Results: ResultSlice{
 					&Result{
 						Value: Series{
@@ -136,7 +136,7 @@ func TestSetVariant(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(`addtags(addtags(avg(%v + 1), "key3=a"), "key4=b") + 1`, series),
-			Results{
+			ResultSet{
 				Results: ResultSlice{
 					&Result{
 						Value: Number(4),
@@ -148,13 +148,13 @@ func TestSetVariant(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(`avg(addtags(addtags(avg(%v + 1), "key3=a"), "key4=b")) + 1`, series),
-			Results{},
+			ResultSet{},
 			true,
 		},
 
 		{
 			fmt.Sprintf(`1 + abs(%v)`, seriesAbs),
-			Results{
+			ResultSet{
 				Results: ResultSlice{
 					&Result{
 						Value: Series{
@@ -169,7 +169,7 @@ func TestSetVariant(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(`1 + abs(avg(%v))`, seriesAbs),
-			Results{
+			ResultSet{
 				Results: ResultSlice{
 					&Result{
 						Value: Number(2),
@@ -196,7 +196,7 @@ func TestSeriesOperations(t *testing.T) {
 	tests := []exprInOut{
 		{
 			fmt.Sprintf(template, seriesA, "+", seriesB),
-			Results{
+			ResultSet{
 				Results: ResultSlice{
 					&Result{
 						Value: Series{
@@ -212,7 +212,7 @@ func TestSeriesOperations(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(template, seriesA, "+", seriesC),
-			Results{
+			ResultSet{
 				Results: ResultSlice{
 					&Result{
 						Value: Series{
@@ -226,7 +226,7 @@ func TestSeriesOperations(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(template, seriesA, "/", seriesB),
-			Results{
+			ResultSet{
 				Results: ResultSlice{
 					&Result{
 						Value: Series{

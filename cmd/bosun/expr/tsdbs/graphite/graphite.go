@@ -95,8 +95,8 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 }
 
 // Band maps to the "graphiteBand" function in Bosun's expression language.
-func Band(e *expr.State, query, duration, period, format string, num float64) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func Band(e *expr.State, query, duration, period, format string, num float64) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	r.IgnoreOtherUnjoined = true
 	r.IgnoreUnjoined = true
 	e.Timer.Step("graphiteBand", func(T miniprofiler.Timer) {
@@ -167,7 +167,7 @@ func Band(e *expr.State, query, duration, period, format string, num float64) (r
 }
 
 // Query maps to the "graphite" function in Bosun's expression language.
-func Query(e *expr.State, query string, sduration, eduration, format string) (r *expr.Results, err error) {
+func Query(e *expr.State, query string, sduration, eduration, format string) (r *expr.ResultSet, err error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
@@ -191,7 +191,7 @@ func Query(e *expr.State, query string, sduration, eduration, format string) (r 
 		return nil, err
 	}
 	formatTags := strings.Split(format, ".")
-	r = new(expr.Results)
+	r = new(expr.ResultSet)
 	results, err := parseGraphiteResponse(req, &s, formatTags)
 	if err != nil {
 		return nil, err

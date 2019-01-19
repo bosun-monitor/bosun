@@ -46,12 +46,12 @@ func influxTag(args []parse.Node) (parse.TagKeys, error) {
 }
 
 // Query maps to the "influx" function in Bosun's expression language.
-func Query(e *expr.State, db, query, startDuration, endDuration, groupByInterval string) (*expr.Results, error) {
+func Query(e *expr.State, db, query, startDuration, endDuration, groupByInterval string) (*expr.ResultSet, error) {
 	qres, err := timeRequest(e, db, query, startDuration, endDuration, groupByInterval)
 	if err != nil {
 		return nil, err
 	}
-	r := new(expr.Results)
+	r := new(expr.ResultSet)
 	for _, row := range qres {
 		tags := opentsdb.TagSet(row.Tags)
 		if e.Squelched(tags) {

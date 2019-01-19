@@ -513,8 +513,8 @@ func (c *Conf) NewExpr(s string) *expr.Expr {
 }
 
 func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
-	lookup := func(e *expr.State, lookup, key string) (results *expr.Results, err error) {
-		results = new(expr.Results)
+	lookup := func(e *expr.State, lookup, key string) (results *expr.ResultSet, err error) {
+		results = new(expr.ResultSet)
 		results.IgnoreUnjoined = true
 		l := c.Lookups[lookup]
 		if l == nil {
@@ -561,8 +561,8 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		}
 		return results, nil
 	}
-	lookupSeries := func(e *expr.State, series *expr.Results, lookup, key string) (results *expr.Results, err error) {
-		results = new(expr.Results)
+	lookupSeries := func(e *expr.State, series *expr.ResultSet, lookup, key string) (results *expr.ResultSet, err error) {
+		results = new(expr.ResultSet)
 		results.IgnoreUnjoined = true
 		l := c.Lookups[lookup]
 		if l == nil {
@@ -697,7 +697,7 @@ func (c *Conf) getAlertExpr(name, key string) (*conf.Alert, *expr.Expr, error) {
 	return a, e, nil
 }
 
-func (c *Conf) alert(s *expr.State, name, key string) (results *expr.Results, err error) {
+func (c *Conf) alert(s *expr.State, name, key string) (results *expr.ResultSet, err error) {
 	_, e, err := c.getAlertExpr(name, key)
 	if err != nil {
 		return nil, err

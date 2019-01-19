@@ -140,8 +140,8 @@ func timeESRequest2(e *expr.State, req *ElasticRequest2) (resp *elastic.SearchRe
 	return
 }
 
-func ESDateHistogram2(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *expr.Results, err error) {
-	r = new(expr.Results)
+func ESDateHistogram2(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *expr.ResultSet, err error) {
+	r = new(expr.ResultSet)
 	req, err := ESBaseQuery2(e.Now(), indexer, filter, sduration, eduration, size, prefix)
 	if err != nil {
 		return nil, err

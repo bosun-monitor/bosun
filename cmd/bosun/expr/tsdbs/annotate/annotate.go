@@ -69,7 +69,7 @@ func getAndFilterAnnotations(e *expr.State, start, end time.Time, filter string)
 	return filteredAnnotations, nil
 }
 
-func AnDurations(e *expr.State, filter, startDuration, endDuration string) (r *expr.Results, err error) {
+func AnDurations(e *expr.State, filter, startDuration, endDuration string) (r *expr.ResultSet, err error) {
 	reqStart, reqEnd, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
@@ -106,14 +106,14 @@ func AnDurations(e *expr.State, filter, startDuration, endDuration string) (r *e
 	if len(series) == 0 {
 		series[time.Unix(0, 0).UTC()] = math.NaN()
 	}
-	return &expr.Results{
+	return &expr.ResultSet{
 		Results: []*expr.Result{
 			{Value: series},
 		},
 	}, nil
 }
 
-func AnCounts(e *expr.State, filter, startDuration, endDuration string) (r *expr.Results, err error) {
+func AnCounts(e *expr.State, filter, startDuration, endDuration string) (r *expr.ResultSet, err error) {
 	reqStart, reqEnd, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
@@ -150,7 +150,7 @@ func AnCounts(e *expr.State, filter, startDuration, endDuration string) (r *expr
 	if len(series) == 0 {
 		series[time.Unix(0, 0).UTC()] = math.NaN()
 	}
-	return &expr.Results{
+	return &expr.ResultSet{
 		Results: []*expr.Result{
 			{Value: series},
 		},
@@ -158,7 +158,7 @@ func AnCounts(e *expr.State, filter, startDuration, endDuration string) (r *expr
 }
 
 // AnTable returns a table response (meant for Grafana) of matching annotations based on the requested fields
-func AnTable(e *expr.State, filter, fieldsCSV, startDuration, endDuration string) (r *expr.Results, err error) {
+func AnTable(e *expr.State, filter, fieldsCSV, startDuration, endDuration string) (r *expr.ResultSet, err error) {
 	start, end, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func AnTable(e *expr.State, filter, fieldsCSV, startDuration, endDuration string
 		}
 		t.Rows = append(t.Rows, row)
 	}
-	return &expr.Results{
+	return &expr.ResultSet{
 		Results: []*expr.Result{
 			{Value: t},
 		},

@@ -115,7 +115,7 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(tsdbs *TSDBs, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, origin string) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(tsdbs *TSDBs, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, origin string) (r *ResultSet, queries []opentsdb.Request, err error) {
 	if providers.Squelched == nil {
 		providers.Squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -134,7 +134,8 @@ func (e *Expr) Execute(tsdbs *TSDBs, providers *BosunProviders, T miniprofiler.T
 	return e.ExecuteState(s)
 }
 
-func (e *Expr) ExecuteState(s *State) (r *Results, queries []opentsdb.Request, err error) {
+// ExecuteState execute the expression with the give State information and returns the results
+func (e *Expr) ExecuteState(s *State) (r *ResultSet, queries []opentsdb.Request, err error) {
 	defer errRecover(&err, s)
 	if s.Timer == nil {
 		s.Timer = new(miniprofiler.Profile)
@@ -177,11 +178,15 @@ func marshalFloat(n float64) ([]byte, error) {
 	return json.Marshal(n)
 }
 
+// Value is the interface that all valid types in the expression language must
+// fullfill
 type Value interface {
-	Type() models.FuncType
-	Value() interface{}
+	Type() models.FuncType // used to identify the type of the Value
+	Value() interface{}    // the actual value
 }
 
+// Number is the expression type that should be the value type for all numbers
+// in a
 type Number float64
 
 func (n Number) Type() models.FuncType        { return models.TypeNumberSet }
@@ -225,10 +230,13 @@ func (s Series) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+// Equal returns if series a is equal to series b.
 func (a Series) Equal(b Series) bool {
 	return reflect.DeepEqual(a, b)
 }
 
+// Table is a return type that lines up with Grafana Tables. It can be viewed in the expression
+// editor but is primarily meant for integration with Grafana. This type is not used for Alerting.
 type Table struct {
 	Columns []string
 	Rows    [][]interface{}
@@ -237,20 +245,22 @@ type Table struct {
 func (t Table) Type() models.FuncType { return models.TypeTable }
 func (t Table) Value() interface{}    { return t }
 
-type SortablePoint struct {
-	T time.Time
-	V float64
-}
-
 // SortableSeries is an alternative datastructure for timeseries data,
 // which stores points in a time-ordered fashion instead of a map.
 // see discussion at https://github.com/bosun-monitor/bosun/pull/699
 type SortableSeries []SortablePoint
 
+// SortablePoint in a member for Sortable Series.
+type SortablePoint struct {
+	T time.Time
+	V float64
+}
+
 func (s SortableSeries) Len() int           { return len(s) }
 func (s SortableSeries) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s SortableSeries) Less(i, j int) bool { return s[i].T.Before(s[j].T) }
 
+// NewSortedSeries takes a Series and returns it as a Sorted SortableSeries
 func NewSortedSeries(dps Series) SortableSeries {
 	series := make(SortableSeries, 0, len(dps))
 	for t, v := range dps {
@@ -260,26 +270,35 @@ func NewSortedSeries(dps Series) SortableSeries {
 	return series
 }
 
+// Result contains holds a single result and is generally contained within a Results Object.
 type Result struct {
+	// a list of sub computations for the expression. Collecting computations is not always enabled.
 	models.Computations
+	// The embedded Value which has a Value() method to get the actual Value, and Type() method to get the type
 	Value
+	// the tags for the result
 	Group opentsdb.TagSet
 }
 
-type Results struct {
+// ResultSet contains the results of an expression operation or a expression function.
+// It will also be the type returned from any completed evaluation of a complete expression.ResultSet.
+// In addition it contains properties about how those results should behave in with certain Union
+// operations.
+// Each Result in the Results property should be of the same type.
+type ResultSet struct {
 	Results ResultSlice
 	// If true, ungrouped joins from this set will be ignored.
 	IgnoreUnjoined bool
 	// If true, ungrouped joins from the other set will be ignored.
 	IgnoreOtherUnjoined bool
-	// If non nil, will set any NaN value to it.
+	// If non nil, will set any NaN value to it when the nv() function is used.
 	NaNValue *float64
 }
 
 // Equal inspects if two results have the same content
 // error will return why they are not equal if they
 // are not equal
-func (a *Results) Equal(b *Results) (bool, error) {
+func (a *ResultSet) Equal(b *ResultSet) (bool, error) {
 	if len(a.Results) != len(b.Results) {
 		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(a.Results), len(b.Results))
 	}
@@ -328,7 +347,7 @@ type ResultSliceByGroup ResultSlice
 
 type ResultSliceByValue ResultSlice
 
-func (r *Results) NaN() Number {
+func (r *ResultSet) NaN() Number {
 	if r.NaNValue != nil {
 		return Number(*r.NaNValue)
 	}
@@ -396,8 +415,8 @@ type Union struct {
 }
 
 // wrap creates a new Result with a nil group and given value.
-func wrap(v float64) *Results {
-	return &Results{
+func wrap(v float64) *ResultSet {
+	return &ResultSet{
 		Results: []*Result{
 			{
 				Value: Scalar(v),
@@ -412,7 +431,7 @@ func (u *Union) ExtendComputations(o *Result) {
 }
 
 // union returns the combination of a and b where one is a subset of the other.
-func (e *State) union(a, b *Results, expression string) []*Union {
+func (e *State) union(a, b *ResultSet, expression string) []*Union {
 	const unjoinedGroup = "unjoined group (%v)"
 	var us []*Union
 	if len(a.Results) == 0 || len(b.Results) == 0 {
@@ -485,8 +504,8 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 	return us
 }
 
-func (e *State) walk(node parse.Node) *Results {
-	var res *Results
+func (e *State) walk(node parse.Node) *ResultSet {
+	var res *ResultSet
 	switch node := node.(type) {
 	case *parse.NumberNode:
 		res = wrap(node.Float64)
@@ -506,8 +525,8 @@ func (e *State) walk(node parse.Node) *Results {
 	return res
 }
 
-func (e *State) walkExpr(node *parse.ExprNode) *Results {
-	return &Results{
+func (e *State) walkExpr(node *parse.ExprNode) *ResultSet {
+	return &ResultSet{
 		Results: ResultSlice{
 			&Result{
 				Value: NumberExpr{node.Tree},
@@ -516,10 +535,10 @@ func (e *State) walkExpr(node *parse.ExprNode) *Results {
 	}
 }
 
-func (e *State) walkBinary(node *parse.BinaryNode) *Results {
+func (e *State) walkBinary(node *parse.BinaryNode) *ResultSet {
 	ar := e.walk(node.Args[0])
 	br := e.walk(node.Args[1])
-	res := Results{
+	res := ResultSet{
 		IgnoreUnjoined:      ar.IgnoreUnjoined || br.IgnoreUnjoined,
 		IgnoreOtherUnjoined: ar.IgnoreOtherUnjoined || br.IgnoreOtherUnjoined,
 	}
@@ -682,7 +701,7 @@ func operate(op string, a, b float64) (r float64) {
 	return
 }
 
-func (e *State) walkUnary(node *parse.UnaryNode) *Results {
+func (e *State) walkUnary(node *parse.UnaryNode) *ResultSet {
 	a := e.walk(node.Arg)
 	e.Timer.Step("walkUnary: "+node.OpStr, func(T miniprofiler.Timer) {
 		for _, r := range a.Results {
@@ -725,7 +744,7 @@ func uoperate(op string, a float64) (r float64) {
 	return
 }
 
-func (e *State) walkPrefix(node *parse.PrefixNode) *Results {
+func (e *State) walkPrefix(node *parse.PrefixNode) *ResultSet {
 	key := strings.TrimPrefix(node.Text, "[")
 	key = strings.TrimSuffix(key, "]")
 	key, _ = strconv.Unquote(key)
@@ -741,8 +760,8 @@ func (e *State) walkPrefix(node *parse.PrefixNode) *Results {
 	}
 }
 
-func (e *State) walkFunc(node *parse.FuncNode) *Results {
-	var res *Results
+func (e *State) walkFunc(node *parse.FuncNode) *ResultSet {
+	var res *ResultSet
 	e.Timer.Step("func: "+node.Name, func(T miniprofiler.Timer) {
 		var in []reflect.Value
 		for i, a := range node.Args {
@@ -794,7 +813,7 @@ func (e *State) walkFunc(node *parse.FuncNode) *Results {
 			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e)}, in...))
 		}
 
-		res = fr[0].Interface().(*Results)
+		res = fr[0].Interface().(*ResultSet)
 		if len(fr) > 1 && !fr[1].IsNil() {
 			err := fr[1].Interface().(error)
 			if err != nil {
@@ -811,7 +830,7 @@ func (e *State) walkFunc(node *parse.FuncNode) *Results {
 }
 
 // extract will return a float64 if res contains exactly one scalar or a ESQuery if that is the type
-func extract(res *Results) interface{} {
+func extract(res *ResultSet) interface{} {
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeScalar {
 		return float64(res.Results[0].Value.Value().(Scalar))
 	}
