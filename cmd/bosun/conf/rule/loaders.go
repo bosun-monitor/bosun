@@ -242,7 +242,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	if a.Crit == nil && a.Warn == nil {
 		c.errorf("neither crit or warn specified")
 	}
-	var tags eparse.Tags
+	var tags eparse.TagKeys
 	var ret models.FuncType
 	if a.Crit != nil {
 		ctags, err := a.Crit.Root.Tags()

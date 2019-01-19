@@ -24,7 +24,7 @@ var Influx = map[string]parse.Func{
 	},
 }
 
-func influxTag(args []parse.Node) (parse.Tags, error) {
+func influxTag(args []parse.Node) (parse.TagKeys, error) {
 	st, err := influxql.ParseStatement(args[1].(*parse.StringNode).Text)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func influxTag(args []parse.Node) (parse.Tags, error) {
 		return nil, fmt.Errorf("influx: expected select statement")
 	}
 
-	t := make(parse.Tags, len(s.Dimensions))
+	t := make(parse.TagKeys, len(s.Dimensions))
 	for _, d := range s.Dimensions {
 		if _, ok := d.Expr.(*influxql.Call); ok {
 			continue

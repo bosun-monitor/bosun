@@ -88,18 +88,18 @@ var AzureMonitor = map[string]parse.Func{
 }
 
 // azTags is the tag function for the "az" expression function
-func azTags(args []parse.Node) (parse.Tags, error) {
+func azTags(args []parse.Node) (parse.TagKeys, error) {
 	return azureTags(args[2])
 }
 
 // azMultiTag function for the "azmulti" expression function
-func azMultiTags(args []parse.Node) (parse.Tags, error) {
+func azMultiTags(args []parse.Node) (parse.TagKeys, error) {
 	return azureTags(args[1])
 }
 
 // azureTags adds tags for the csv argument along with the "name" and "rsg" tags
-func azureTags(arg parse.Node) (parse.Tags, error) {
-	tags := parse.Tags{azureTagName: struct{}{}, azureTagRSG: struct{}{}}
+func azureTags(arg parse.Node) (parse.TagKeys, error) {
+	tags := parse.TagKeys{azureTagName: struct{}{}, azureTagRSG: struct{}{}}
 	csvTags := strings.Split(arg.(*parse.StringNode).Text, ",")
 	for _, k := range csvTags {
 		tags[k] = struct{}{}

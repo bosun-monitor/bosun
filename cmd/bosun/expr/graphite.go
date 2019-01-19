@@ -198,8 +198,8 @@ func GraphiteQuery(e *State, query string, sduration, eduration, format string) 
 	return
 }
 
-func graphiteTagQuery(args []parse.Node) (parse.Tags, error) {
-	t := make(parse.Tags)
+func graphiteTagQuery(args []parse.Node) (parse.TagKeys, error) {
+	t := make(parse.TagKeys)
 	n := args[3].(*parse.StringNode)
 	for _, s := range strings.Split(n.Text, ".") {
 		if s != "" {

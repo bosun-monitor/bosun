@@ -335,8 +335,8 @@ func AzureAIMetricMD(prefix string, e *State, apps AzureApplicationInsightsApps)
 }
 
 // azAITags is the tag function for the "az" expression function
-func azAITags(args []parse.Node) (parse.Tags, error) {
-	tags := parse.Tags{"app": struct{}{}}
+func azAITags(args []parse.Node) (parse.TagKeys, error) {
+	tags := parse.TagKeys{"app": struct{}{}}
 	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
 	if len(csvTags) == 1 && csvTags[0] == "" {
 		return tags, nil

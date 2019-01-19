@@ -7,9 +7,9 @@ import (
 	"bosun.org/models"
 )
 
-func elasticTagQuery(args []parse.Node) (parse.Tags, error) {
+func elasticTagQuery(args []parse.Node) (parse.TagKeys, error) {
 	n := args[1].(*parse.StringNode)
-	t := make(parse.Tags)
+	t := make(parse.TagKeys)
 	for _, s := range strings.Split(n.Text, ",") {
 		t[s] = struct{}{}
 	}

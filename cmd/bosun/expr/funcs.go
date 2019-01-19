@@ -21,14 +21,14 @@ import (
 // should be an already parsed node in order to identify the tags for the first node.
 // This function is commonly used to extract the expects tags of functions where the tag
 // keys will be the same as the first argument's object.
-func tagFirst(args []parse.Node) (parse.Tags, error) {
+func tagFirst(args []parse.Node) (parse.TagKeys, error) {
 	return args[0].Tags()
 }
 
 // tagRemove extracts the expected resulting tags keys from a call to the Remove function.
 // It determines that tags by looking at the tags of the first node, and and removing the specified key of
 // the second argument from the tagset
-func tagRemove(args []parse.Node) (parse.Tags, error) {
+func tagRemove(args []parse.Node) (parse.TagKeys, error) {
 	tags, err := tagFirst(args)
 	if err != nil {
 		return nil, err
@@ -40,13 +40,13 @@ func tagRemove(args []parse.Node) (parse.Tags, error) {
 
 // seriesFuncTag extracts the expected resulting tags keys from a call to the SeriesFunc.
 // it extracts the keys from the opentsdb style tags/value pairs of the first argument.
-func seriesFuncTags(args []parse.Node) (parse.Tags, error) {
+func seriesFuncTags(args []parse.Node) (parse.TagKeys, error) {
 	s := args[0].(*parse.StringNode).Text
 	return tagsFromString(s)
 }
 
 // aggrFuncTags extracts the expected resulting tags keys from a call to the Aggr func
-func aggrFuncTags(args []parse.Node) (parse.Tags, error) {
+func aggrFuncTags(args []parse.Node) (parse.TagKeys, error) {
 	if len(args) < 3 {
 		return nil, errors.New("aggr: expect 3 arguments")
 	}
@@ -66,8 +66,8 @@ func aggrFuncTags(args []parse.Node) (parse.Tags, error) {
 
 // tagsFromString parse opentsdb style tags from the text and returns
 // the tag keys.
-func tagsFromString(text string) (parse.Tags, error) {
-	t := make(parse.Tags)
+func tagsFromString(text string) (parse.TagKeys, error) {
+	t := make(parse.TagKeys)
 	if text == "" {
 		return t, nil
 	}
@@ -86,8 +86,8 @@ func tagsFromString(text string) (parse.Tags, error) {
 // It parses the tags from the second CSV string argument and ensures that they are
 // a subset of the first arguments expected tags. The returned tags will be based on the
 // second argument.
-func tagTranspose(args []parse.Node) (parse.Tags, error) {
-	tags := make(parse.Tags)
+func tagTranspose(args []parse.Node) (parse.TagKeys, error) {
+	tags := make(parse.TagKeys)
 	sp := strings.Split(args[1].(*parse.StringNode).Text, ",")
 	if sp[0] != "" {
 		for _, t := range sp {
@@ -105,7 +105,7 @@ func tagTranspose(args []parse.Node) (parse.Tags, error) {
 // tagRename extracts the expected resulting tags keys from a call to the Rename function.
 // it use the a specification of oldKey=New parsed from the second argument to discover
 // the newly named tag keys after processing the keys from the first's arguments Node.
-func tagRename(args []parse.Node) (parse.Tags, error) {
+func tagRename(args []parse.Node) (parse.TagKeys, error) {
 	tags, err := tagFirst(args)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 
 // builtins is a map of the function name in the expression language to the Func specifications
 // for all functions available to Bosun even when no datasource is enabled.
-
+// See the documentation for parse.Func to understand the purpose of the various fields.
 var builtins = map[string]parse.Func{
 	// Reduction functions
 

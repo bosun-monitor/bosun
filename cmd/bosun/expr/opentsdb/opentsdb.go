@@ -77,7 +77,7 @@ var ExprFuncs = map[string]parse.Func{
 const tsdbMaxTries = 3
 
 // oTag Functions are for extracting expected tag keys from the arguments to the function
-func tagQuery(args []parse.Node) (parse.Tags, error) {
+func tagQuery(args []parse.Node) (parse.TagKeys, error) {
 	n := args[0].(*parse.StringNode)
 	// Since all 2.1 queries are valid 2.2 queries, at this time
 	// we can just use 2.2 to parse to identify group by tags
@@ -85,7 +85,7 @@ func tagQuery(args []parse.Node) (parse.Tags, error) {
 	if q == nil && err != nil {
 		return nil, err
 	}
-	t := make(parse.Tags)
+	t := make(parse.TagKeys)
 	for k := range q.GroupByTags {
 		t[k] = struct{}{}
 	}

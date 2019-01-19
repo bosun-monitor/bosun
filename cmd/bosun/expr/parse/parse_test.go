@@ -146,7 +146,7 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func tagNil(args []Node) (Tags, error) {
+func tagNil(args []Node) (TagKeys, error) {
 	return nil, nil
 }
 

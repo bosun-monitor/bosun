@@ -133,8 +133,8 @@ var Prom = map[string]parse.Func{
 const promMultiKey = "bosun_prefix"
 
 // promGroupTags parses the csv tags argument of the prom based functions
-func promGroupTags(args []parse.Node) (parse.Tags, error) {
-	tags := make(parse.Tags)
+func promGroupTags(args []parse.Node) (parse.TagKeys, error) {
+	tags := make(parse.TagKeys)
 	csvTags := strings.Split(args[1].(*parse.StringNode).Text, ",")
 	for _, k := range csvTags {
 		tags[k] = struct{}{}
@@ -144,7 +144,7 @@ func promGroupTags(args []parse.Node) (parse.Tags, error) {
 
 // promMGroupTags parses the csv tags argument of the prom based functions
 // and also adds the promMultiKey tag
-func promMGroupTags(args []parse.Node) (parse.Tags, error) {
+func promMGroupTags(args []parse.Node) (parse.TagKeys, error) {
 	tags, err := promGroupTags(args)
 	if err != nil {
 		return nil, err
@@ -155,8 +155,8 @@ func promMGroupTags(args []parse.Node) (parse.Tags, error) {
 
 // promAggRawTags parses the promql argument to get the expected
 // grouping tags from an aggregated series
-func promAggRawTags(args []parse.Node) (parse.Tags, error) {
-	tags := make(parse.Tags)
+func promAggRawTags(args []parse.Node) (parse.TagKeys, error) {
+	tags := make(parse.TagKeys)
 	pq := args[0].(*parse.StringNode).Text
 	parsedPromExpr, err := promql.ParseExpr(pq)
 	if err != nil {
@@ -173,7 +173,7 @@ func promAggRawTags(args []parse.Node) (parse.Tags, error) {
 }
 
 // promMAggRawTags is a wrapper for promAggRawTags but adds the promMultiKey tag.
-func promMAggRawTags(args []parse.Node) (parse.Tags, error) {
+func promMAggRawTags(args []parse.Node) (parse.TagKeys, error) {
 	tags, err := promAggRawTags(args)
 	if err != nil {
 		return nil, err

@@ -33,7 +33,7 @@ type Tree struct {
 
 // returnTagsFunc is the type for functions that return the expected tag keys
 // for an expression function
-type returnTagsFunc func([]Node) (Tags, error)
+type returnTagsFunc func([]Node) (TagKeys, error)
 
 // Func is used to represent an Function within Bosun's expression language and has
 // the properties of the function needed to check validity of the expression.
@@ -63,9 +63,11 @@ type Func struct {
 	Check func(*Tree, *FuncNode) error
 }
 
-type Tags map[string]struct{}
+// Tag Keys is a set of keys
+type TagKeys map[string]struct{}
 
-func (t Tags) String() string {
+// String represents the set of tag keys as a CSV
+func (t TagKeys) String() string {
 	var keys []string
 	for k := range t {
 		keys = append(keys, k)
@@ -74,7 +76,8 @@ func (t Tags) String() string {
 	return strings.Join(keys, ",")
 }
 
-func (t Tags) Equal(o Tags) bool {
+// Equal returns if o is has equal tag keys
+func (t TagKeys) Equal(o TagKeys) bool {
 	if len(t) != len(o) {
 		return false
 	}
@@ -87,7 +90,7 @@ func (t Tags) Equal(o Tags) bool {
 }
 
 // Subset returns true if o is a subset of t.
-func (t Tags) Subset(o Tags) bool {
+func (t TagKeys) Subset(o TagKeys) bool {
 	for k := range t {
 		if _, ok := o[k]; !ok {
 			return false
@@ -97,8 +100,8 @@ func (t Tags) Subset(o Tags) bool {
 }
 
 // Intersection returns Tags common to both tagsets.
-func (t Tags) Intersection(o Tags) Tags {
-	result := Tags{}
+func (t TagKeys) Intersection(o TagKeys) TagKeys {
+	result := TagKeys{}
 	for k := range t {
 		if _, ok := o[k]; ok {
 			result[k] = struct{}{}
@@ -386,6 +389,7 @@ func (t *Tree) v() Node {
 	return nil
 }
 
+// Func parses a FuncNode
 func (t *Tree) Func() (f *FuncNode) {
 	token := t.next()
 	funcv, ok := t.GetFunction(token.val)
@@ -457,6 +461,7 @@ func (t *Tree) Func() (f *FuncNode) {
 	}
 }
 
+// GetFunction returns the Func specification for given function name
 func (t *Tree) GetFunction(name string) (v Func, ok bool) {
 	for _, funcMap := range t.funcs {
 		if funcMap == nil {
@@ -467,20 +472,6 @@ func (t *Tree) GetFunction(name string) (v Func, ok bool) {
 		}
 	}
 	return
-}
-
-func (t *Tree) SetFunction(name string, F interface{}) error {
-	for i, funcMap := range t.funcs {
-		if funcMap == nil {
-			continue
-		}
-		if v, ok := funcMap[name]; ok {
-			v.F = F
-			t.funcs[i][name] = v
-			return nil
-		}
-	}
-	return fmt.Errorf("can not set function, function %v not found", name)
 }
 
 func (t *Tree) String() string {

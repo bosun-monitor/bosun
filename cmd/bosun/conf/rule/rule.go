@@ -584,32 +584,32 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		}
 		return results, nil
 	}
-	lookupTags := func(args []eparse.Node) (eparse.Tags, error) {
+	lookupTags := func(args []eparse.Node) (eparse.TagKeys, error) {
 		name := args[0].(*eparse.StringNode).Text
 		lookup := c.Lookups[name]
 		if lookup == nil {
 			return nil, fmt.Errorf("bad lookup table %v", name)
 		}
-		t := make(eparse.Tags)
+		t := make(eparse.TagKeys)
 		for _, v := range lookup.Tags {
 			t[v] = struct{}{}
 		}
 		return t, nil
 	}
-	lookupSeriesTags := func(args []eparse.Node) (eparse.Tags, error) {
+	lookupSeriesTags := func(args []eparse.Node) (eparse.TagKeys, error) {
 		name := args[1].(*eparse.StringNode).Text
 		lookup := c.Lookups[name]
 		if lookup == nil {
 			return nil, fmt.Errorf("bad lookup table %v", name)
 		}
-		t := make(eparse.Tags)
+		t := make(eparse.TagKeys)
 		for _, v := range lookup.Tags {
 			t[v] = struct{}{}
 		}
 		return t, nil
 	}
 
-	tagAlert := func(args []eparse.Node) (eparse.Tags, error) {
+	tagAlert := func(args []eparse.Node) (eparse.TagKeys, error) {
 		name := args[0].(*eparse.StringNode).Text
 		key := args[1].(*eparse.StringNode).Text
 		a, e, err := c.getAlertExpr(name, key)
