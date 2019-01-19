@@ -42,5 +42,3 @@ type ElasticConfig struct {
 	SimpleClient      bool
 	ClientOptionFuncs interface{}
 }
-
-// See the elastic#.go files for ESQuery

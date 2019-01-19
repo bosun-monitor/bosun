@@ -214,8 +214,6 @@ func (a Series) Equal(b Series) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-
-
 type Table struct {
 	Columns []string
 	Rows    [][]interface{}
@@ -363,8 +361,17 @@ func (e *State) AutoDS() int {
 	return e.autods
 }
 
+// Now returns State's absolute time that represents the current time from the perspective
+// of the expression State.
 func (e *State) Now() time.Time {
 	return e.now
+}
+
+// SetNow sets the Expression state's representation of now. This should not be
+// used within expression functions.
+func (e *State) SetNow(t time.Time) {
+	e.now = t
+	return
 }
 
 type Union struct {
@@ -814,8 +821,8 @@ func extract(res *Results) interface{} {
 	return res
 }
 
-// collectCache is a helper function for collecting metrics on
-// the expression cache
+// CollectCacheHit is a helper function for collecting bosun metrics
+// about the expression cache.
 func CollectCacheHit(c *cache.Cache, qType string, hit bool) {
 	if c == nil {
 		return // if no cache

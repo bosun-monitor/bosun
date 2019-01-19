@@ -1,4 +1,4 @@
-package expr
+package influx
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
@@ -14,13 +15,13 @@ import (
 	"github.com/influxdata/influxql"
 )
 
-// Influx is a map of functions to query InfluxDB.
-var Influx = map[string]parse.Func{
+// ExprFuncs is a map of functions to query InfluxDB.
+var ExprFuncs = map[string]parse.Func{
 	"influx": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:  models.TypeSeriesSet,
 		TagKeys: influxTag,
-		F:       InfluxQuery,
+		F:       Query,
 	},
 }
 
@@ -44,12 +45,13 @@ func influxTag(args []parse.Node) (parse.TagKeys, error) {
 	return t, nil
 }
 
-func InfluxQuery(e *State, db, query, startDuration, endDuration, groupByInterval string) (*Results, error) {
-	qres, err := timeInfluxRequest(e, db, query, startDuration, endDuration, groupByInterval)
+// Query maps to the "influx" function in Bosun's expression language.
+func Query(e *expr.State, db, query, startDuration, endDuration, groupByInterval string) (*expr.Results, error) {
+	qres, err := timeRequest(e, db, query, startDuration, endDuration, groupByInterval)
 	if err != nil {
 		return nil, err
 	}
-	r := new(Results)
+	r := new(expr.Results)
 	for _, row := range qres {
 		tags := opentsdb.TagSet(row.Tags)
 		if e.Squelched(tags) {
@@ -58,7 +60,7 @@ func InfluxQuery(e *State, db, query, startDuration, endDuration, groupByInterva
 		if len(row.Columns) != 2 {
 			return nil, fmt.Errorf("influx: expected exactly one result column")
 		}
-		values := make(Series, len(row.Values))
+		values := make(expr.Series, len(row.Values))
 		for _, v := range row.Values {
 			if len(v) != 2 {
 				return nil, fmt.Errorf("influx: expected exactly one result column")
@@ -81,7 +83,7 @@ func InfluxQuery(e *State, db, query, startDuration, endDuration, groupByInterva
 			}
 			values[t] = f
 		}
-		r.Results = append(r.Results, &Result{
+		r.Results = append(r.Results, &expr.Result{
 			Value: values,
 			Group: tags,
 		})
@@ -90,8 +92,8 @@ func InfluxQuery(e *State, db, query, startDuration, endDuration, groupByInterva
 	return r, nil
 }
 
-// influxQueryDuration adds time WHERE clauses to query for the given start and end durations.
-func influxQueryDuration(now time.Time, query, start, end, groupByInterval string) (string, error) {
+// queryDuration adds time WHERE clauses to query for the given start and end durations.
+func queryDuration(now time.Time, query, start, end, groupByInterval string) (string, error) {
 	sd, err := opentsdb.ParseDuration(start)
 	if err != nil {
 		return "", err
@@ -186,8 +188,8 @@ func influxQueryDuration(now time.Time, query, start, end, groupByInterval strin
 	return s.String(), nil
 }
 
-func timeInfluxRequest(e *State, db, query, startDuration, endDuration, groupByInterval string) (s []influxModels.Row, err error) {
-	q, err := influxQueryDuration(e.now, query, startDuration, endDuration, groupByInterval)
+func timeRequest(e *expr.State, db, query, startDuration, endDuration, groupByInterval string) (s []influxModels.Row, err error) {
+	q, err := queryDuration(e.Now(), query, startDuration, endDuration, groupByInterval)
 	if err != nil {
 		return nil, err
 	}
@@ -196,8 +198,8 @@ func timeInfluxRequest(e *State, db, query, startDuration, endDuration, groupByI
 		return nil, err
 	}
 	defer conn.Close()
-	q_key := fmt.Sprintf("%s: %s", db, q)
-	e.Timer.StepCustomTiming("influx", "query", q_key, func() {
+	qKey := fmt.Sprintf("%s: %s", db, q)
+	e.Timer.StepCustomTiming("influx", "query", qKey, func() {
 		getFn := func() (interface{}, error) {
 			res, err := conn.Query(client.Query{
 				Command:  q,
@@ -223,8 +225,8 @@ func timeInfluxRequest(e *State, db, query, startDuration, endDuration, groupByI
 		var val interface{}
 		var ok bool
 		var hit bool
-		val, err, hit = e.Cache.Get(q_key, getFn)
-		CollectCacheHit(e.Cache, "influx", hit)
+		val, err, hit = e.Cache.Get(qKey, getFn)
+		expr.CollectCacheHit(e.Cache, "influx", hit)
 		if s, ok = val.([]influxModels.Row); !ok {
 			err = fmt.Errorf("influx: did not get a valid result from InfluxDB")
 		}

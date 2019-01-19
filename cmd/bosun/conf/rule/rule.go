@@ -22,6 +22,7 @@ import (
 	annoExpr "bosun.org/cmd/bosun/expr/tsdbs/annotate"
 	exprAzure "bosun.org/cmd/bosun/expr/tsdbs/azure"
 	exprES "bosun.org/cmd/bosun/expr/tsdbs/elastic"
+	exprInflux "bosun.org/cmd/bosun/expr/tsdbs/influx"
 	exprOpenTSDB "bosun.org/cmd/bosun/expr/tsdbs/opentsdb"
 	exprProm "bosun.org/cmd/bosun/expr/tsdbs/prom"
 	"bosun.org/opentsdb"
@@ -661,7 +662,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		merge(exprES.ExprFuncs)
 	}
 	if backends.Influx {
-		merge(expr.Influx)
+		merge(exprInflux.ExprFuncs)
 	}
 	if backends.Annotate {
 		merge(annoExpr.ExprFuncs)

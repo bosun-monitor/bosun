@@ -1,10 +1,11 @@
-package expr
+package influx
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/opentsdb"
 	"github.com/influxdata/influxdb/client/v2"
 )
@@ -44,7 +45,7 @@ func TestInfluxQueryDuration(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		q, err := influxQueryDuration(date, test.query, dur.String(), "", test.gbi)
+		q, err := queryDuration(date, test.query, dur.String(), "", test.gbi)
 		if err != nil && test.expect != "" {
 			t.Errorf("%v: unexpected error: %v", test.query, err)
 		} else if q != test.expect {
@@ -54,18 +55,18 @@ func TestInfluxQueryDuration(t *testing.T) {
 }
 
 func TestInfluxQuery(t *testing.T) {
-	e := State{
-		now: time.Date(2015, time.February, 25, 0, 0, 0, 0, time.UTC),
-		Backends: &Backends{
+	e := expr.State{
+		Backends: &expr.Backends{
 			InfluxConfig: client.HTTPConfig{},
 		},
-		BosunProviders: &BosunProviders{
+		BosunProviders: &expr.BosunProviders{
 			Squelched: func(tags opentsdb.TagSet) bool {
 				return false
 			},
 		},
 	}
-	_, err := InfluxQuery(&e, "db", "select * from alh limit 10", "1n", "", "")
+	e.SetNow(time.Date(2015, time.February, 25, 0, 0, 0, 0, time.UTC))
+	_, err := Query(&e, "db", "select * from alh limit 10", "1n", "", "")
 	if err == nil {
 		t.Fatal("Should have received an error from InfluxQuery")
 	}
