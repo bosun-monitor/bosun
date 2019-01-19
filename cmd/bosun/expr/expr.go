@@ -46,7 +46,7 @@ type State struct {
 	*BosunProviders
 
 	// Graphite
-	graphiteQueries []graphite.Request
+	GraphiteQueries []graphite.Request
 
 	// OpenTSDB
 	OpenTSDBQueries []opentsdb.Request

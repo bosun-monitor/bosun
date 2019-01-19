@@ -1,4 +1,4 @@
-package expr
+package graphite
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
 	"bosun.org/models"
@@ -13,29 +14,29 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 )
 
-// Graphite defines functions for use with a Graphite backend.
-var Graphite = map[string]parse.Func{
+// ExprFuncs defines functions for use with a Graphite backend.
+var ExprFuncs = map[string]parse.Func{
 	"graphiteBand": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
 		Return:  models.TypeSeriesSet,
 		TagKeys: graphiteTagQuery,
-		F:       GraphiteBand,
+		F:       Band,
 	},
 	"graphite": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return:  models.TypeSeriesSet,
 		TagKeys: graphiteTagQuery,
-		F:       GraphiteQuery,
+		F:       Query,
 	},
 }
 
-func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*Result, error) {
+func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*expr.Result, error) {
 	const parseErrFmt = "graphite ParseError (%s): %s"
 	if len(*s) == 0 {
 		return nil, fmt.Errorf(parseErrFmt, req.URL, "empty response")
 	}
 	seen := make(map[string]bool)
-	results := make([]*Result, 0)
+	results := make([]*expr.Result, 0)
 	for _, res := range *s {
 		// build tag set
 		tags := make(opentsdb.TagSet)
@@ -63,7 +64,7 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 			return nil, fmt.Errorf(parseErrFmt, req.URL, fmt.Sprintf("More than 1 series identified by tagset '%v'", ts))
 		}
 		// build data
-		dps := make(Series)
+		dps := make(expr.Series)
 		for _, dp := range res.Datapoints {
 			if len(dp) != 2 {
 				return nil, fmt.Errorf(parseErrFmt, req.URL, fmt.Sprintf("Datapoint has != 2 fields: %v", dp))
@@ -85,7 +86,7 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 			t := time.Unix(unixTS, 0)
 			dps[t] = val
 		}
-		results = append(results, &Result{
+		results = append(results, &expr.Result{
 			Value: dps,
 			Group: tags,
 		})
@@ -93,8 +94,9 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 	return results, nil
 }
 
-func GraphiteBand(e *State, query, duration, period, format string, num float64) (r *Results, err error) {
-	r = new(Results)
+// Band maps to the "graphiteBand" function in Bosun's expression language.
+func Band(e *expr.State, query, duration, period, format string, num float64) (r *expr.Results, err error) {
+	r = new(expr.Results)
 	r.IgnoreOtherUnjoined = true
 	r.IgnoreUnjoined = true
 	e.Timer.Step("graphiteBand", func(T miniprofiler.Timer) {
@@ -113,9 +115,9 @@ func GraphiteBand(e *State, query, duration, period, format string, num float64)
 		req := &graphite.Request{
 			Targets: []string{query},
 		}
-		now := e.now
+		now := e.Now()
 		req.End = &now
-		st := e.now.Add(-time.Duration(d))
+		st := now.Add(-time.Duration(d))
 		req.Start = &st
 		for i := 0; i < int(num); i++ {
 			now = now.Add(time.Duration(-p))
@@ -123,12 +125,12 @@ func GraphiteBand(e *State, query, duration, period, format string, num float64)
 			st := now.Add(time.Duration(-d))
 			req.Start = &st
 			var s graphite.Response
-			s, err = timeGraphiteRequest(e, req)
+			s, err = timeRequest(e, req)
 			if err != nil {
 				return
 			}
 			formatTags := strings.Split(format, ".")
-			var results []*Result
+			var results []*expr.Result
 			results, err = parseGraphiteResponse(req, &s, formatTags)
 			if err != nil {
 				return
@@ -151,8 +153,8 @@ func GraphiteBand(e *State, query, duration, period, format string, num float64)
 						r.Results = append(r.Results, result)
 						updateKey = len(r.Results) - 1
 					}
-					for k, v := range result.Value.(Series) {
-						r.Results[updateKey].Value.(Series)[k] = v
+					for k, v := range result.Value.(expr.Series) {
+						r.Results[updateKey].Value.(expr.Series)[k] = v
 					}
 				}
 			}
@@ -164,7 +166,8 @@ func GraphiteBand(e *State, query, duration, period, format string, num float64)
 	return
 }
 
-func GraphiteQuery(e *State, query string, sduration, eduration, format string) (r *Results, err error) {
+// Query maps to the "graphite" function in Bosun's expression language.
+func Query(e *expr.State, query string, sduration, eduration, format string) (r *expr.Results, err error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
@@ -176,19 +179,19 @@ func GraphiteQuery(e *State, query string, sduration, eduration, format string) 
 			return
 		}
 	}
-	st := e.now.Add(-time.Duration(sd))
-	et := e.now.Add(-time.Duration(ed))
+	st := e.Now().Add(-time.Duration(sd))
+	et := e.Now().Add(-time.Duration(ed))
 	req := &graphite.Request{
 		Targets: []string{query},
 		Start:   &st,
 		End:     &et,
 	}
-	s, err := timeGraphiteRequest(e, req)
+	s, err := timeRequest(e, req)
 	if err != nil {
 		return nil, err
 	}
 	formatTags := strings.Split(format, ".")
-	r = new(Results)
+	r = new(expr.Results)
 	results, err := parseGraphiteResponse(req, &s, formatTags)
 	if err != nil {
 		return nil, err
@@ -209,8 +212,8 @@ func graphiteTagQuery(args []parse.Node) (parse.TagKeys, error) {
 	return t, nil
 }
 
-func timeGraphiteRequest(e *State, req *graphite.Request) (resp graphite.Response, err error) {
-	e.graphiteQueries = append(e.graphiteQueries, *req)
+func timeRequest(e *expr.State, req *graphite.Request) (resp graphite.Response, err error) {
+	e.GraphiteQueries = append(e.GraphiteQueries, *req)
 	b, _ := json.MarshalIndent(req, "", "  ")
 	e.Timer.StepCustomTiming("graphite", "query", string(b), func() {
 		key := req.CacheKey()
@@ -220,7 +223,7 @@ func timeGraphiteRequest(e *State, req *graphite.Request) (resp graphite.Respons
 		var val interface{}
 		var hit bool
 		val, err, hit = e.Cache.Get(key, getFn)
-		CollectCacheHit(e.Cache, "graphite", hit)
+		expr.CollectCacheHit(e.Cache, "graphite", hit)
 		resp = val.(graphite.Response)
 	})
 	return
