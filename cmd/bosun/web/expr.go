@@ -82,12 +82,12 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
 	tsdbs := &expr.TSDBs{
-		OpenTSDB:     schedule.SystemConf.GetTSDBContext(),
-		Graphite:     schedule.SystemConf.GetGraphiteContext(),
-		Influx:       schedule.SystemConf.GetInfluxContext(),
-		Elastic:      schedule.SystemConf.GetElasticContext(),
-		AzureMonitor: schedule.SystemConf.GetAzureMonitorContext(),
-		PromConfig:   schedule.SystemConf.GetPromContext(),
+		OpenTSDB:   schedule.SystemConf.GetTSDBContext(),
+		Graphite:   schedule.SystemConf.GetGraphiteContext(),
+		Influx:     schedule.SystemConf.GetInfluxContext(),
+		Elastic:    schedule.SystemConf.GetElasticContext(),
+		Azure:      schedule.SystemConf.GetAzureMonitorContext(),
+		Prometheus: schedule.SystemConf.GetPromContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,

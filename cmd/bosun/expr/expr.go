@@ -58,12 +58,12 @@ type State struct {
 
 // TSDBs contains the information needed by tsdb packages to be able to query their respective databases.
 type TSDBs struct {
-	OpenTSDB     opentsdb.Context
-	Graphite     graphite.Context
-	Elastic      tsdbs.ElasticHosts
-	Influx       client.HTTPConfig
-	AzureMonitor tsdbs.AzureMonitorClients
-	PromConfig   tsdbs.PromClients
+	Azure      tsdbs.AzureMonitorClients
+	Elastic    tsdbs.ElasticHosts
+	Graphite   graphite.Context
+	Influx     client.HTTPConfig
+	OpenTSDB   opentsdb.Context
+	Prometheus tsdbs.PromClients
 }
 
 // BosunProviders is a collection of various Providers that are availble to

@@ -19,7 +19,7 @@ func AIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, ap
 	if apps.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use apps from client "%v" on a query with client "%v"`, apps.Prefix, prefix)
 	}
-	cc, clientFound := e.TSDBs.AzureMonitor[prefix]
+	cc, clientFound := e.TSDBs.Azure[prefix]
 	if !clientFound {
 		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
 	}
@@ -200,7 +200,7 @@ func AIListApps(prefix string, e *expr.State) (r *expr.Results, err error) {
 	key := fmt.Sprintf("AzureAIAppCache:%s:%s", prefix, time.Now().Truncate(time.Minute*1)) // https://github.com/golang/groupcache/issues/92
 
 	getFn := func() (interface{}, error) {
-		cc, clientFound := e.TSDBs.AzureMonitor[prefix]
+		cc, clientFound := e.TSDBs.Azure[prefix]
 		if !clientFound {
 			return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
 		}
@@ -247,7 +247,7 @@ func AIMetricMD(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsight
 	if apps.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use apps from client "%v" on a query with client "%v"`, apps.Prefix, prefix)
 	}
-	cc, clientFound := e.TSDBs.AzureMonitor[prefix]
+	cc, clientFound := e.TSDBs.Azure[prefix]
 	if !clientFound {
 		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
 	}

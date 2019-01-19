@@ -409,7 +409,7 @@ func (pq queryTemplateData) RenderString() (string, error) {
 // timeRequest takes a PromQL query string with the given time frame and step duration. The result
 // type of the PromQL query must be a Prometheus Matrix.
 func timeRequest(e *expr.State, prefix, query string, start, end time.Time, step time.Duration) (s promModels.Value, err error) {
-	client, found := e.PromConfig[prefix]
+	client, found := e.Prometheus[prefix]
 	if !found {
 		return s, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
 	}
@@ -486,7 +486,7 @@ func matrixToResults(prefix string, e *expr.State, res promModels.Value, expecte
 // by using querying the Prometheus Label Values API for "__name__"
 func MetricList(prefix string, e *expr.State) (r *expr.Results, err error) {
 	r = new(expr.Results)
-	client, found := e.PromConfig[prefix]
+	client, found := e.Prometheus[prefix]
 	if !found {
 		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
 	}
@@ -514,7 +514,7 @@ func MetricList(prefix string, e *expr.State) (r *expr.Results, err error) {
 // tags and labels for the metric based on the data from the queried timeframe
 func TagInfo(prefix string, e *expr.State, metric, sdur, edur string) (r *expr.Results, err error) {
 	r = new(expr.Results)
-	client, found := e.PromConfig[prefix]
+	client, found := e.Prometheus[prefix]
 	if !found {
 		return r, fmt.Errorf(`prometheus client with name "%v" not defined`, prefix)
 	}

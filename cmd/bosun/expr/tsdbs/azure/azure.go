@@ -124,7 +124,7 @@ func azResourceURI(subscription, resourceGrp, Namespace, Resource string) string
 // TODO make this return and not fmt.Printf
 func MetricDefinitions(prefix string, e *expr.State, namespace, metric, rsg, resource string) (r *expr.Results, err error) {
 	r = new(expr.Results)
-	cc, clientFound := e.TSDBs.AzureMonitor[prefix]
+	cc, clientFound := e.TSDBs.Azure[prefix]
 	if !clientFound {
 		return r, fmt.Errorf("azure client with name %v not defined", prefix)
 	}
@@ -173,7 +173,7 @@ func timeSpan(e *expr.State, sdur, edur string) (span string, err error) {
 func query(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
-	cc, clientFound := e.TSDBs.AzureMonitor[prefix]
+	cc, clientFound := e.TSDBs.Azure[prefix]
 	if !clientFound {
 		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
 	}
@@ -301,7 +301,7 @@ func query(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resou
 func Query(prefix string, e *expr.State, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
-	cc, clientFound := e.TSDBs.AzureMonitor[prefix]
+	cc, clientFound := e.TSDBs.Azure[prefix]
 	if !clientFound {
 		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
 	}
@@ -339,7 +339,7 @@ func MultiQuery(prefix string, e *expr.State, metric, tagKeysCSV string, resourc
 		defer wg.Done()
 	}
 	// Create N workers to parallelize multiple requests at once since he resource requires an HTTP request
-	for i := 0; i < e.AzureMonitor[prefix].Concurrency; i++ {
+	for i := 0; i < e.Azure[prefix].Concurrency; i++ {
 		wg.Add(1)
 		go worker()
 	}
@@ -387,7 +387,7 @@ func listResources(prefix string, e *expr.State) (tsdbs.AzureResources, error) {
 	// getFn is a cacheable function for listing Azure resources
 	getFn := func() (interface{}, error) {
 		r := tsdbs.AzureResources{Prefix: prefix}
-		cc, clientFound := e.TSDBs.AzureMonitor[prefix]
+		cc, clientFound := e.TSDBs.Azure[prefix]
 		if !clientFound {
 			return r, fmt.Errorf("Azure client with name %v not defined", prefix)
 		}
