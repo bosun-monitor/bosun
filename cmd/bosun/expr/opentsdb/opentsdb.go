@@ -16,7 +16,7 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 )
 
-// ExprFunc defines functions for use with an OpenTSDB backend.
+// ExprFuncs defines functions for use with an OpenTSDB backend.
 var ExprFuncs = map[string]parse.Func{
 	"band": {
 		Args:    []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
@@ -74,6 +74,8 @@ var ExprFuncs = map[string]parse.Func{
 	},
 }
 
+// tsdbMaxTries sets the number of times to retry an query if an error is
+// returned from querying OpenTSDB.
 const tsdbMaxTries = 3
 
 // oTag Functions are for extracting expected tag keys from the arguments to the function
@@ -92,6 +94,7 @@ func tagQuery(args []parse.Node) (parse.TagKeys, error) {
 	return t, nil
 }
 
+// timeRequest executes a request up to tsdbMaxTries and returns the ResponseSet.
 func timeRequest(e *expr.State, req *opentsdb.Request) (s opentsdb.ResponseSet, err error) {
 	e.OpenTSDBQueries = append(e.OpenTSDBQueries, *req)
 	if e.AutoDS() > 0 {
@@ -199,6 +202,7 @@ func bandTSDB(e *expr.State, query, duration, period, eduration string, num floa
 	return
 }
 
+// Window maps to the "window" function in the expression language.
 func Window(e *expr.State, query, duration, period string, num float64, rfunc string) (*expr.Results, error) {
 	var isPerc bool
 	var percValue float64
@@ -280,6 +284,8 @@ func Window(e *expr.State, query, duration, period string, num float64, rfunc st
 	return r, err
 }
 
+// windowCheck checks the validty of the "window" function in the expression language
+// for validity at parse time.
 func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 	name := f.Args[4].(*parse.StringNode).Text
 	var isPerc bool
@@ -305,6 +311,7 @@ func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 	return nil
 }
 
+// BandQuery maps to the "bandQuery" function in the expression language.
 func BandQuery(e *expr.State, query, duration, period, eduration string, num float64) (r *expr.Results, err error) {
 	r, err = bandTSDB(e, query, duration, period, eduration, num, func(r *expr.Results, res *opentsdb.Response, offset time.Duration) error {
 		newarr := true
@@ -343,6 +350,7 @@ func BandQuery(e *expr.State, query, duration, period, eduration string, num flo
 	return
 }
 
+// OverQuery maps to the "overQuery" function in the expression language.
 func OverQuery(e *expr.State, query, duration, period, eduration string, num float64) (r *expr.Results, err error) {
 	r, err = bandTSDB(e, query, duration, period, eduration, num, func(r *expr.Results, res *opentsdb.Response, offset time.Duration) error {
 		values := make(expr.Series)
@@ -364,19 +372,23 @@ func OverQuery(e *expr.State, query, duration, period, eduration string, num flo
 	return
 }
 
+// Band maps to the "band" function in the expression language.
 func Band(e *expr.State, query, duration, period string, num float64) (r *expr.Results, err error) {
-	// existing Band behaviour is to end 'period' ago, so pass period as eduration.
+	// existing Band behavior is to end 'period' ago, so pass period as eduration.
 	return BandQuery(e, query, duration, period, period, num)
 }
 
+// ShiftBand maps to the "shiftBand" function in the expression language.
 func ShiftBand(e *expr.State, query, duration, period string, num float64) (r *expr.Results, err error) {
 	return OverQuery(e, query, duration, period, period, num)
 }
 
+// Over maps to the "over" function in the expression language.
 func Over(e *expr.State, query, duration, period string, num float64) (r *expr.Results, err error) {
 	return OverQuery(e, query, duration, period, "", num)
 }
 
+// Query maps to the "q" function in the expression language.
 func Query(e *expr.State, query, sduration, eduration string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	q, err := opentsdb.ParseQuery(query, e.TSDBContext.Version())
@@ -432,6 +444,7 @@ func Query(e *expr.State, query, sduration, eduration string) (r *expr.Results, 
 	return
 }
 
+// Change maps to the "change" function in the expression language.
 func Change(e *expr.State, query, sduration, eduration string) (r *expr.Results, err error) {
 	r = new(expr.Results)
 	sd, err := opentsdb.ParseDuration(sduration)
@@ -453,10 +466,12 @@ func Change(e *expr.State, query, sduration, eduration string) (r *expr.Results,
 	return
 }
 
+// change is the per series reduction function.
 func change(dps expr.Series, args ...float64) float64 {
 	return expr.SeriesAvg(dps) * args[0]
 }
 
+// Count maps to the "count" function in the expression language.
 func Count(e *expr.State, query, sduration, eduration string) (r *expr.Results, err error) {
 	r, err = Query(e, query, sduration, eduration)
 	if err != nil {

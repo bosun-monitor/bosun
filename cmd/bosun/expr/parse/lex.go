@@ -336,9 +336,8 @@ func lexStringTripleBegin(l *lexer) stateFn {
 			//Check for triple quoted string
 			if l.next() == '\'' {
 				return lexStringTripleEnd
-			} else {
-				l.backup()
 			}
+			l.backup()
 			return l.errorf("invalid start of string, must use double qutoes or triple single quotes")
 		case eof:
 			return l.errorf("unterminated string")

@@ -51,7 +51,7 @@ type Func struct {
 	// on what type was passed to it.
 	VariantReturn bool
 
-	MapFunc bool // indiciates if the function is only valid within a map expression.
+	MapFunc bool // indicates if the function is only valid within a map expression.
 
 	// if this function supports "Prefix Notation", for example ["foo"]myFunc. When this is the
 	// case the first argument passed to the F function will be the string in the prefix.
@@ -63,10 +63,10 @@ type Func struct {
 	Check func(*Tree, *FuncNode) error
 }
 
-// Tag Keys is a set of keys
+// TagKeys is a set of tag keys.
 type TagKeys map[string]struct{}
 
-// String represents the set of tag keys as a CSV
+// String represents the set of tag keys as a CSV.
 func (t TagKeys) String() string {
 	var keys []string
 	for k := range t {
@@ -120,7 +120,9 @@ func Parse(text string, funcs ...map[string]Func) (t *Tree, err error) {
 	return
 }
 
-func ParseSub(text string, funcs ...map[string]Func) (t *Tree, err error) {
+// parseSub parses a sub expression which is used in the map function
+// of the expression language.
+func parseSub(text string, funcs ...map[string]Func) (t *Tree, err error) {
 	t = New()
 	t.mapExpr = true
 	t.Text = text
@@ -279,7 +281,6 @@ param -> number | "string" | subExpr | [query]
 optPrefix -> [ prefix ]
 */
 
-// expr:
 func (t *Tree) O() Node {
 	n := t.A()
 	for {
@@ -444,7 +445,7 @@ func (t *Tree) Func() (f *FuncNode) {
 			if err != nil {
 				t.error(err)
 			}
-			n.Tree, err = ParseSub(n.Text, t.funcs...)
+			n.Tree, err = parseSub(n.Text, t.funcs...)
 			if err != nil {
 				t.error(err)
 			}

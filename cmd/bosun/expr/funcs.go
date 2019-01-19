@@ -434,7 +434,7 @@ var builtins = map[string]parse.Func{
 
 // Aggr combines multiple series matching the specified groups using an aggregator function. If group
 // is empty, all given series are combined, regardless of existing groups.
-// Available aggregator functions include: SeriesAvg, min, max, sum, and pN, where N is a float between
+// Available aggregator functions include: avg, min, max, sum, and pN, where N is a float between
 // 0 and 1 inclusive, e.g. p.50 represents the 50th percentile. p0 and p1 are equal to min and max,
 // respectively, but min and max are preferred for readability.
 func Aggr(e *State, series *Results, groups string, aggregator string) (*Results, error) {
