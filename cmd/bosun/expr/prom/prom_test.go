@@ -1,4 +1,4 @@
-package expr
+package prom
 
 import (
 	"strings"
@@ -7,16 +7,16 @@ import (
 	"github.com/prometheus/prometheus/promql"
 )
 
-type promQueryTemplateTest struct {
+type queryTemplateTest struct {
 	title string
-	promQueryTemplateData
+	queryTemplateData
 	expect string
 }
 
-var promQueryTemplateTests = []promQueryTemplateTest{
+var queryTemplateTests = []queryTemplateTest{
 	{
 		"minimal query",
-		promQueryTemplateData{
+		queryTemplateData{
 			Metric: "up",
 			AgFunc: "sum",
 		},
@@ -24,7 +24,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 	},
 	{
 		"query with tags",
-		promQueryTemplateData{
+		queryTemplateData{
 			Metric: "up",
 			AgFunc: "sum",
 			Tags:   "namespace,pod",
@@ -33,7 +33,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 	},
 	{
 		"query with tags and filter",
-		promQueryTemplateData{
+		queryTemplateData{
 			Metric: "up",
 			AgFunc: "sum",
 			Tags:   "namespace,pod",
@@ -43,7 +43,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 	},
 	{
 		"minimal rate query",
-		promQueryTemplateData{
+		queryTemplateData{
 			Metric:       "up",
 			AgFunc:       "sum",
 			RateDuration: "5m",
@@ -52,7 +52,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 	},
 	{
 		"rate query with tags and filter",
-		promQueryTemplateData{
+		queryTemplateData{
 			Metric:       "up",
 			AgFunc:       "sum",
 			Tags:         "namespace,pod",
@@ -64,7 +64,7 @@ var promQueryTemplateTests = []promQueryTemplateTest{
 }
 
 func TestPromQueryTemplate(t *testing.T) {
-	for _, qTest := range promQueryTemplateTests {
+	for _, qTest := range queryTemplateTests {
 		out, err := qTest.RenderString()
 		if err != nil {
 			t.Errorf("error rendering template for test query %v: %v", qTest.title, err)

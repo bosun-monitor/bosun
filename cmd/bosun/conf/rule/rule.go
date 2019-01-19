@@ -22,6 +22,7 @@ import (
 	exprAzure "bosun.org/cmd/bosun/expr/azure"
 	exprOpenTSDB "bosun.org/cmd/bosun/expr/opentsdb"
 	eparse "bosun.org/cmd/bosun/expr/parse"
+	exprProm "bosun.org/cmd/bosun/expr/prom"
 	"bosun.org/opentsdb"
 )
 
@@ -668,7 +669,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		merge(exprAzure.ExprFuncs)
 	}
 	if backends.Prom {
-		merge(expr.Prom)
+		merge(exprProm.ExprFuncs)
 	}
 	return funcs
 }
