@@ -16,9 +16,9 @@ import (
 type Result struct {
 	// a list of sub computations for the expression. Collecting computations is not always enabled.
 	models.Computations
-	// The embedded Value which has a Value() method to get the actual Value, and Type() method to get the type
+	// The embedded Value which has a Value() method to get the actual Value, and Type() method to get the type.
 	Value
-	// the tags for the result
+	// the tags for the result.
 	Group opentsdb.TagSet
 }
 
@@ -43,14 +43,14 @@ type ResultSet struct {
 type ResultSlice []*Result
 
 // Value is the interface that all valid types in the expression language must
-// fullfill
+// fullfill.
 type Value interface {
 	Type() models.FuncType // used to identify the type of the Value
 	Value() interface{}    // the actual value
 }
 
 // Number is the expression type that should be the value type for all numbers
-// in a ResultSet that is a numberSet
+// in a ResultSet that is a numberSet.
 type Number float64
 
 // Type returns the type representation so it fullfills the Value interface.
