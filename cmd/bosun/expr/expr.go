@@ -114,7 +114,7 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(tsdbs *TSDBs, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, origin string) (r *ResultSet, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(tsdbs *TSDBs, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, origin string) (r *ValueSet, queries []opentsdb.Request, err error) {
 	if providers.Squelched == nil {
 		providers.Squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -134,7 +134,7 @@ func (e *Expr) Execute(tsdbs *TSDBs, providers *BosunProviders, T miniprofiler.T
 }
 
 // ExecuteState execute the expression with the give State information and returns the results
-func (e *Expr) ExecuteState(s *State) (r *ResultSet, queries []opentsdb.Request, err error) {
+func (e *Expr) ExecuteState(s *State) (r *ValueSet, queries []opentsdb.Request, err error) {
 	defer errRecover(&err, s)
 	if s.Timer == nil {
 		s.Timer = new(miniprofiler.Profile)
@@ -171,7 +171,7 @@ func errRecover(errp *error, s *State) {
 // If the computation has OpenTSDB style tags each individual computation will correctly represent the specific
 // tag value for the computation. Otherwise it will be the raw text part of the expression that represents the
 // computation as inputted.
-func (e *State) AddComputation(r *Result, text string, value interface{}) {
+func (e *State) AddComputation(r *Element, text string, value interface{}) {
 	if !e.enableComputations {
 		return
 	}
@@ -204,9 +204,9 @@ type Union struct {
 }
 
 // wrap creates a new Result with a nil group and given value.
-func wrap(v float64) *ResultSet {
-	return &ResultSet{
-		Results: []*Result{
+func wrap(v float64) *ValueSet {
+	return &ValueSet{
+		Elements: []*Element{
 			{
 				Value: Scalar(v),
 				Group: nil,
@@ -215,14 +215,14 @@ func wrap(v float64) *ResultSet {
 	}
 }
 
-func (u *Union) ExtendComputations(o *Result) {
+func (u *Union) ExtendComputations(o *Element) {
 	u.Computations = append(u.Computations, o.Computations...)
 }
 
 // NaN returns the specified substitue value for NaN on the if one is present as a property on
 // the ResultSet, else "NaN" is returned.
 // The NaNValue property of the ResultSet is set when the nv() function is used in the expression language.
-func (r *ResultSet) NaN() Number {
+func (r *ValueSet) NaN() Number {
 	if r.NaNValue != nil {
 		return Number(*r.NaNValue)
 	}
@@ -230,23 +230,23 @@ func (r *ResultSet) NaN() Number {
 }
 
 // union returns the combination of a and b where one is a subset of the other.
-func (e *State) union(a, b *ResultSet, expression string) []*Union {
+func (e *State) union(a, b *ValueSet, expression string) []*Union {
 	const unjoinedGroup = "unjoined group (%v)"
 	var us []*Union
-	if len(a.Results) == 0 || len(b.Results) == 0 {
+	if len(a.Elements) == 0 || len(b.Elements) == 0 {
 		return us
 	}
-	am := make(map[*Result]bool, len(a.Results))
-	bm := make(map[*Result]bool, len(b.Results))
-	for _, ra := range a.Results {
+	am := make(map[*Element]bool, len(a.Elements))
+	bm := make(map[*Element]bool, len(b.Elements))
+	for _, ra := range a.Elements {
 		am[ra] = true
 	}
-	for _, rb := range b.Results {
+	for _, rb := range b.Elements {
 		bm[rb] = true
 	}
 	var group opentsdb.TagSet
-	for _, ra := range a.Results {
-		for _, rb := range b.Results {
+	for _, ra := range a.Elements {
+		for _, rb := range b.Elements {
 			if ra.Group.Equal(rb.Group) || len(ra.Group) == 0 || len(rb.Group) == 0 {
 				g := ra.Group
 				if len(ra.Group) == 0 {
@@ -303,8 +303,8 @@ func (e *State) union(a, b *ResultSet, expression string) []*Union {
 	return us
 }
 
-func (e *State) walk(node parse.Node) *ResultSet {
-	var res *ResultSet
+func (e *State) walk(node parse.Node) *ValueSet {
+	var res *ValueSet
 	switch node := node.(type) {
 	case *parse.NumberNode:
 		res = wrap(node.Float64)
@@ -324,20 +324,20 @@ func (e *State) walk(node parse.Node) *ResultSet {
 	return res
 }
 
-func (e *State) walkExpr(node *parse.ExprNode) *ResultSet {
-	return &ResultSet{
-		Results: ResultSlice{
-			&Result{
+func (e *State) walkExpr(node *parse.ExprNode) *ValueSet {
+	return &ValueSet{
+		Elements: ElementSlice{
+			&Element{
 				Value: NumberExpr{node.Tree},
 			},
 		},
 	}
 }
 
-func (e *State) walkBinary(node *parse.BinaryNode) *ResultSet {
+func (e *State) walkBinary(node *parse.BinaryNode) *ValueSet {
 	ar := e.walk(node.Args[0])
 	br := e.walk(node.Args[1])
-	res := ResultSet{
+	res := ValueSet{
 		IgnoreUnjoined:      ar.IgnoreUnjoined || br.IgnoreUnjoined,
 		IgnoreOtherUnjoined: ar.IgnoreOtherUnjoined || br.IgnoreOtherUnjoined,
 	}
@@ -345,7 +345,7 @@ func (e *State) walkBinary(node *parse.BinaryNode) *ResultSet {
 		u := e.union(ar, br, node.String())
 		for _, v := range u {
 			var value Value
-			r := &Result{
+			r := &Element{
 				Group:        v.Group,
 				Computations: v.Computations,
 			}
@@ -412,7 +412,7 @@ func (e *State) walkBinary(node *parse.BinaryNode) *ResultSet {
 				panic(ErrUnknownOp)
 			}
 			r.Value = value
-			res.Results = append(res.Results, r)
+			res.Elements = append(res.Elements, r)
 		}
 	})
 	return &res
@@ -500,10 +500,10 @@ func operate(op string, a, b float64) (r float64) {
 	return
 }
 
-func (e *State) walkUnary(node *parse.UnaryNode) *ResultSet {
+func (e *State) walkUnary(node *parse.UnaryNode) *ValueSet {
 	a := e.walk(node.Arg)
 	e.Timer.Step("walkUnary: "+node.OpStr, func(T miniprofiler.Timer) {
-		for _, r := range a.Results {
+		for _, r := range a.Elements {
 			if an, aok := r.Value.(Scalar); aok && math.IsNaN(float64(an)) {
 				r.Value = Scalar(math.NaN())
 				continue
@@ -543,7 +543,7 @@ func uoperate(op string, a float64) (r float64) {
 	return
 }
 
-func (e *State) walkPrefix(node *parse.PrefixNode) *ResultSet {
+func (e *State) walkPrefix(node *parse.PrefixNode) *ValueSet {
 	key := strings.TrimPrefix(node.Text, "[")
 	key = strings.TrimSuffix(key, "]")
 	key, _ = strconv.Unquote(key)
@@ -559,8 +559,8 @@ func (e *State) walkPrefix(node *parse.PrefixNode) *ResultSet {
 	}
 }
 
-func (e *State) walkFunc(node *parse.FuncNode) *ResultSet {
-	var res *ResultSet
+func (e *State) walkFunc(node *parse.FuncNode) *ValueSet {
+	var res *ValueSet
 	e.Timer.Step("func: "+node.Name, func(T miniprofiler.Timer) {
 		var in []reflect.Value
 		for i, a := range node.Args {
@@ -612,7 +612,7 @@ func (e *State) walkFunc(node *parse.FuncNode) *ResultSet {
 			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e)}, in...))
 		}
 
-		res = fr[0].Interface().(*ResultSet)
+		res = fr[0].Interface().(*ValueSet)
 		if len(fr) > 1 && !fr[1].IsNil() {
 			err := fr[1].Interface().(error)
 			if err != nil {
@@ -620,7 +620,7 @@ func (e *State) walkFunc(node *parse.FuncNode) *ResultSet {
 			}
 		}
 		if node.Return() == models.TypeNumberSet {
-			for _, r := range res.Results {
+			for _, r := range res.Elements {
 				e.AddComputation(r, node.String(), r.Value.(Number))
 			}
 		}
@@ -629,27 +629,27 @@ func (e *State) walkFunc(node *parse.FuncNode) *ResultSet {
 }
 
 // extract will return a float64 if res contains exactly one scalar or a ESQuery if that is the type
-func extract(res *ResultSet) interface{} {
-	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeScalar {
-		return float64(res.Results[0].Value.Value().(Scalar))
+func extract(res *ValueSet) interface{} {
+	if len(res.Elements) == 1 && res.Elements[0].Type() == models.TypeScalar {
+		return float64(res.Elements[0].Value.Value().(Scalar))
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESQuery {
-		return res.Results[0].Value.Value()
+	if len(res.Elements) == 1 && res.Elements[0].Type() == models.TypeESQuery {
+		return res.Elements[0].Value.Value()
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeAzureResourceList {
-		return res.Results[0].Value.Value()
+	if len(res.Elements) == 1 && res.Elements[0].Type() == models.TypeAzureResourceList {
+		return res.Elements[0].Value.Value()
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeAzureAIApps {
-		return res.Results[0].Value.Value()
+	if len(res.Elements) == 1 && res.Elements[0].Type() == models.TypeAzureAIApps {
+		return res.Elements[0].Value.Value()
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESIndexer {
-		return res.Results[0].Value.Value()
+	if len(res.Elements) == 1 && res.Elements[0].Type() == models.TypeESIndexer {
+		return res.Elements[0].Value.Value()
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeString {
-		return string(res.Results[0].Value.Value().(String))
+	if len(res.Elements) == 1 && res.Elements[0].Type() == models.TypeString {
+		return string(res.Elements[0].Value.Value().(String))
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeNumberExpr {
-		return res.Results[0].Value.Value()
+	if len(res.Elements) == 1 && res.Elements[0].Type() == models.TypeNumberExpr {
+		return res.Elements[0].Value.Value()
 	}
 	return res
 }

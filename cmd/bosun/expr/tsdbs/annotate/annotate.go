@@ -69,7 +69,7 @@ func getAndFilterAnnotations(e *expr.State, start, end time.Time, filter string)
 	return filteredAnnotations, nil
 }
 
-func AnDurations(e *expr.State, filter, startDuration, endDuration string) (r *expr.ResultSet, err error) {
+func AnDurations(e *expr.State, filter, startDuration, endDuration string) (r *expr.ValueSet, err error) {
 	reqStart, reqEnd, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
@@ -106,14 +106,14 @@ func AnDurations(e *expr.State, filter, startDuration, endDuration string) (r *e
 	if len(series) == 0 {
 		series[time.Unix(0, 0).UTC()] = math.NaN()
 	}
-	return &expr.ResultSet{
-		Results: []*expr.Result{
+	return &expr.ValueSet{
+		Elements: []*expr.Element{
 			{Value: series},
 		},
 	}, nil
 }
 
-func AnCounts(e *expr.State, filter, startDuration, endDuration string) (r *expr.ResultSet, err error) {
+func AnCounts(e *expr.State, filter, startDuration, endDuration string) (r *expr.ValueSet, err error) {
 	reqStart, reqEnd, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
@@ -150,15 +150,15 @@ func AnCounts(e *expr.State, filter, startDuration, endDuration string) (r *expr
 	if len(series) == 0 {
 		series[time.Unix(0, 0).UTC()] = math.NaN()
 	}
-	return &expr.ResultSet{
-		Results: []*expr.Result{
+	return &expr.ValueSet{
+		Elements: []*expr.Element{
 			{Value: series},
 		},
 	}, nil
 }
 
 // AnTable returns a table response (meant for Grafana) of matching annotations based on the requested fields
-func AnTable(e *expr.State, filter, fieldsCSV, startDuration, endDuration string) (r *expr.ResultSet, err error) {
+func AnTable(e *expr.State, filter, fieldsCSV, startDuration, endDuration string) (r *expr.ValueSet, err error) {
 	start, end, err := expr.ParseDurationPair(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
@@ -222,8 +222,8 @@ func AnTable(e *expr.State, filter, fieldsCSV, startDuration, endDuration string
 		}
 		t.Rows = append(t.Rows, row)
 	}
-	return &expr.ResultSet{
-		Results: []*expr.Result{
+	return &expr.ValueSet{
+		Elements: []*expr.Element{
 			{Value: t},
 		},
 	}, nil

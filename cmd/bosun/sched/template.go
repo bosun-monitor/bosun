@@ -310,7 +310,7 @@ func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Aler
 	return sub, buf.String(), nil
 }
 
-func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
+func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (expr.ElementSlice, string, error) {
 	var err error
 	if filter {
 		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.AlertKey.Group()), c.schedule.RuleConf.GetFuncs(c.schedule.SystemConf.EnabledBackends()))
@@ -332,14 +332,14 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}
-	return res.Results, e.String(), nil
+	return res.Elements, e.String(), nil
 }
 
 // eval takes an expression or string (which it turns into an expression), executes it and returns the result.
 // It can also takes a ResultSlice so callers can transparantly handle different inputs.
 // The filter argument constrains the result to matching tags in the current context.
 // The series argument asserts that the result is a time series.
-func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res expr.ResultSlice, title string, err error) {
+func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res expr.ElementSlice, title string, err error) {
 	switch v := v.(type) {
 	case string:
 		var e *expr.Expr
@@ -356,7 +356,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res
 		if err != nil {
 			return
 		}
-	case expr.ResultSlice:
+	case expr.ElementSlice:
 		res = v
 	default:
 		return nil, "", fmt.Errorf("expected string, expression or resultslice, got %T (%v)", v, v)
@@ -564,7 +564,7 @@ func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 	}
 	// temporarily store the results in a results[M][Ni] Result matrix:
 	// for M queries, tracks Ni results per each i'th query
-	results := make([][]*expr.Result, len(v))
+	results := make([][]*expr.Element, len(v))
 	for col, val := range v {
 		queryResults, _, err := c.eval(val, false, false, 0)
 		if err != nil {
@@ -576,9 +576,9 @@ func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 
 	// perform the joining by storing all results in a joined[N0][M] Result matrix:
 	// for N tagsets (based on first query results), tracks all M Results (results with matching group, from all other queries)
-	joined := make([][]*expr.Result, 0)
+	joined := make([][]*expr.Element, 0)
 	for row, firstQueryResult := range results[0] {
-		joined = append(joined, make([]*expr.Result, len(v)))
+		joined = append(joined, make([]*expr.Element, len(v)))
 		joined[row][0] = firstQueryResult
 		// join results of 2nd to M queries
 		for col, queryResults := range results[1:] {
@@ -588,7 +588,7 @@ func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 					break
 				}
 				// Fill emtpy cells with NaN Value, so calling .Value is not a nil pointer dereference
-				joined[row][col+1] = &expr.Result{Value: expr.Number(math.NaN())}
+				joined[row][col+1] = &expr.Element{Value: expr.Number(math.NaN())}
 			}
 		}
 	}

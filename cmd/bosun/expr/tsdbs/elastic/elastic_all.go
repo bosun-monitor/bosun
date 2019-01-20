@@ -39,8 +39,8 @@ func init() {
 	esClients.m = make(map[string]interface{})
 }
 
-func ESAll(e *expr.State) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESAll(e *expr.State) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -54,12 +54,12 @@ func ESAll(e *expr.State) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESAnd(e *expr.State, esqueries ...tsdbs.ESQuery) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESAnd(e *expr.State, esqueries ...tsdbs.ESQuery) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -85,12 +85,12 @@ func ESAnd(e *expr.State, esqueries ...tsdbs.ESQuery) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESNot(e *expr.State, query tsdbs.ESQuery) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESNot(e *expr.State, query tsdbs.ESQuery) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -104,12 +104,12 @@ func ESNot(e *expr.State, query tsdbs.ESQuery) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESOr(e *expr.State, esqueries ...tsdbs.ESQuery) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESOr(e *expr.State, esqueries ...tsdbs.ESQuery) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -135,12 +135,12 @@ func ESOr(e *expr.State, esqueries ...tsdbs.ESQuery) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESRegexp(e *expr.State, key string, regex string) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESRegexp(e *expr.State, key string, regex string) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -154,12 +154,12 @@ func ESRegexp(e *expr.State, key string, regex string) (*expr.ResultSet, error) 
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESQueryString(e *expr.State, key string, query string) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESQueryString(e *expr.State, key string, query string) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		// Query: qs
 		Query: func(ver string) interface{} {
@@ -186,12 +186,12 @@ func ESQueryString(e *expr.State, key string, query string) (*expr.ResultSet, er
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESExists(e *expr.State, field string) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESExists(e *expr.State, field string) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -205,12 +205,12 @@ func ESExists(e *expr.State, field string) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESGT(e *expr.State, key string, gt float64) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESGT(e *expr.State, key string, gt float64) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -224,12 +224,12 @@ func ESGT(e *expr.State, key string, gt float64) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESGTE(e *expr.State, key string, gte float64) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESGTE(e *expr.State, key string, gte float64) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -243,12 +243,12 @@ func ESGTE(e *expr.State, key string, gte float64) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESLT(e *expr.State, key string, lt float64) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESLT(e *expr.State, key string, lt float64) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -262,12 +262,12 @@ func ESLT(e *expr.State, key string, lt float64) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
-func ESLTE(e *expr.State, key string, lte float64) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESLTE(e *expr.State, key string, lte float64) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	q := tsdbs.ESQuery{
 		Query: func(ver string) interface{} {
 			switch ESVersion(ver) {
@@ -281,7 +281,7 @@ func ESLTE(e *expr.State, key string, lte float64) (*expr.ResultSet, error) {
 			return nil
 		},
 	}
-	r.Results = append(r.Results, &expr.Result{Value: q})
+	r.Elements = append(r.Elements, &expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -359,8 +359,8 @@ func createVersionedESClient(prefix string, cfg tsdbs.ElasticConfig) error {
 	return err
 }
 
-func ESIndicies(e *expr.State, timeField string, literalIndices ...string) *expr.ResultSet {
-	var r expr.ResultSet
+func ESIndicies(e *expr.State, timeField string, literalIndices ...string) *expr.ValueSet {
+	var r expr.ValueSet
 	indexer := tsdbs.ESIndexer{}
 	// Don't check for existing indexes in this case, just pass through and let elastic return
 	// an error at query time if the index does not exist
@@ -368,16 +368,16 @@ func ESIndicies(e *expr.State, timeField string, literalIndices ...string) *expr
 		return literalIndices
 	}
 	indexer.TimeField = timeField
-	r.Results = append(r.Results, &expr.Result{Value: indexer})
+	r.Elements = append(r.Elements, &expr.Element{Value: indexer})
 	return &r
 }
 
-func ESLS(e *expr.State, indexRoot string) (*expr.ResultSet, error) {
+func ESLS(e *expr.State, indexRoot string) (*expr.ValueSet, error) {
 	return ESDaily(e, "@timestamp", indexRoot+"-", "2006.01.02")
 }
 
-func ESDaily(e *expr.State, timeField, indexRoot, layout string) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESDaily(e *expr.State, timeField, indexRoot, layout string) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	indexer := tsdbs.ESIndexer{}
 	indexer.TimeField = timeField
 	indexer.Generate = func(start, end *time.Time) []string {
@@ -389,12 +389,12 @@ func ESDaily(e *expr.State, timeField, indexRoot, layout string) (*expr.ResultSe
 		}
 		return indices
 	}
-	r.Results = append(r.Results, &expr.Result{Value: indexer})
+	r.Elements = append(r.Elements, &expr.Element{Value: indexer})
 	return &r, nil
 }
 
-func ESMonthly(e *expr.State, timeField, indexRoot, layout string) (*expr.ResultSet, error) {
-	var r expr.ResultSet
+func ESMonthly(e *expr.State, timeField, indexRoot, layout string) (*expr.ValueSet, error) {
+	var r expr.ValueSet
 	indexer := tsdbs.ESIndexer{}
 	indexer.TimeField = timeField
 	indexer.Generate = func(start, end *time.Time) []string {
@@ -406,11 +406,11 @@ func ESMonthly(e *expr.State, timeField, indexRoot, layout string) (*expr.Result
 		}
 		return indices
 	}
-	r.Results = append(r.Results, &expr.Result{Value: indexer})
+	r.Elements = append(r.Elements, &expr.Element{Value: indexer})
 	return &r, nil
 }
 
-func ESCount(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter tsdbs.ESQuery, interval, sduration, eduration string) (r *expr.ResultSet, err error) {
+func ESCount(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter tsdbs.ESQuery, interval, sduration, eduration string) (r *expr.ValueSet, err error) {
 	switch ver := ESVersion(e.TSDBs.Elastic.Hosts[prefix].Version); ver {
 	case ESV2:
 		return ESDateHistogram2(prefix, e, indexer, keystring, filter.Query(string(ver)).(elastic2.Query), interval, sduration, eduration, "", "", 0)
@@ -423,7 +423,7 @@ func ESCount(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring st
 }
 
 // ESStat returns a bucketed statistical reduction for the specified field.
-func ESStat(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter tsdbs.ESQuery, field, rstat, interval, sduration, eduration string) (r *expr.ResultSet, err error) {
+func ESStat(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter tsdbs.ESQuery, field, rstat, interval, sduration, eduration string) (r *expr.ValueSet, err error) {
 	switch ver := ESVersion(e.Elastic.Hosts[prefix].Version); ver {
 	case ESV2:
 		return ESDateHistogram2(prefix, e, indexer, keystring, filter.Query(string(ver)).(elastic2.Query), interval, sduration, eduration, field, rstat, 0)

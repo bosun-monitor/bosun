@@ -188,7 +188,7 @@ func TestQueryExpr(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, r := range results.Results {
+		for _, r := range results.Elements {
 			tag := r.Group.Tags()
 			ex := expected[tag]
 			if ex == nil {

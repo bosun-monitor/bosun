@@ -140,8 +140,8 @@ func timeESRequest2(e *expr.State, req *ElasticRequest2) (resp *elastic.SearchRe
 	return
 }
 
-func ESDateHistogram2(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *expr.ResultSet, err error) {
-	r = new(expr.ResultSet)
+func ESDateHistogram2(prefix string, e *expr.State, indexer tsdbs.ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *expr.ValueSet, err error) {
+	r = new(expr.ValueSet)
 	req, err := ESBaseQuery2(e.Now(), indexer, filter, sduration, eduration, size, prefix)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func ESDateHistogram2(prefix string, e *expr.State, indexer tsdbs.ESIndexer, key
 		if len(series) == 0 {
 			return r, nil
 		}
-		r.Results = append(r.Results, &expr.Result{
+		r.Elements = append(r.Elements, &expr.Element{
 			Value: series,
 			Group: make(opentsdb.TagSet),
 		})
@@ -213,7 +213,7 @@ func ESDateHistogram2(prefix string, e *expr.State, indexer tsdbs.ESIndexer, key
 			if len(series) == 0 {
 				return nil
 			}
-			r.Results = append(r.Results, &expr.Result{
+			r.Elements = append(r.Elements, &expr.Element{
 				Value: series,
 				Group: tags.Copy(),
 			})

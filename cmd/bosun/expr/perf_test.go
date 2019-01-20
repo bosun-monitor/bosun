@@ -17,17 +17,17 @@ func TestSlowUnion(t *testing.T) {
 	}
 }
 
-func buildFakeResults() (ra, rb *ResultSet) {
-	ra = &ResultSet{}
-	rb = &ResultSet{}
+func buildFakeResults() (ra, rb *ValueSet) {
+	ra = &ValueSet{}
+	rb = &ValueSet{}
 	for i := 0; i < 50000; i++ {
 		tags := opentsdb.TagSet{}
 		tags["disk"] = fmt.Sprint("a", i)
 		tags["host"] = fmt.Sprint("b", i)
 		if i < 1000 {
-			ra.Results = append(ra.Results, &Result{Value: Number(0), Group: tags})
+			ra.Elements = append(ra.Elements, &Element{Value: Number(0), Group: tags})
 		}
-		rb.Results = append(ra.Results, &Result{Value: Number(0), Group: tags})
+		rb.Elements = append(ra.Elements, &Element{Value: Number(0), Group: tags})
 	}
 	return ra, rb
 }

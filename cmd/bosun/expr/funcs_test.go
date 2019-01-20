@@ -13,7 +13,7 @@ import (
 
 type exprInOut struct {
 	expr           string
-	out            ResultSet
+	out            ValueSet
 	shouldParseErr bool
 }
 
@@ -45,9 +45,9 @@ func testExpression(eio exprInOut, t *testing.T) error {
 func TestDuration(t *testing.T) {
 	d := exprInOut{
 		`d("1h")`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Scalar(3600),
 				},
 			},
@@ -83,9 +83,9 @@ func TestToDuration(t *testing.T) {
 	for i := range inputs {
 		d := exprInOut{
 			fmt.Sprintf(`tod(%d)`, inputs[i]),
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: String(outputs[i]),
 					},
 				},
@@ -103,9 +103,9 @@ func TestUngroup(t *testing.T) {
 	dictum := `series("foo=bar", 0, ungroup(last(series("foo=baz", 0, 1))))`
 	err := testExpression(exprInOut{
 		dictum,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 1,
 					},
@@ -126,15 +126,15 @@ func TestMerge(t *testing.T) {
 	seriesB := `series("foo=baz", 0, 1)`
 	err := testExpression(exprInOut{
 		fmt.Sprintf("merge(%v, %v)", seriesA, seriesB),
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 1,
 					},
 					Group: opentsdb.TagSet{"foo": "bar"},
 				},
-				&Result{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 1,
 					},
@@ -151,15 +151,15 @@ func TestMerge(t *testing.T) {
 	//Should Error due to identical groups in merge
 	err = testExpression(exprInOut{
 		fmt.Sprintf("merge(%v, %v)", seriesA, seriesA),
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 1,
 					},
 					Group: opentsdb.TagSet{"foo": "bar"},
 				},
-				&Result{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 1,
 					},
@@ -196,9 +196,9 @@ func TestTimedelta(t *testing.T) {
 
 		err := testExpression(exprInOut{
 			i.input,
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: i.expected,
 						Group: opentsdb.TagSet{"foo": "bar"},
 					},
@@ -242,9 +242,9 @@ func TestTail(t *testing.T) {
 
 		err := testExpression(exprInOut{
 			i.input,
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: i.expected,
 						Group: opentsdb.TagSet{"foo": "bar"},
 					},
@@ -275,15 +275,15 @@ func TestAggr(t *testing.T) {
 	aggrTestCases := []struct {
 		name      string
 		expr      string
-		want      ResultSet
+		want      ValueSet
 		shouldErr bool
 	}{
 		{
 			name: "median aggregator",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p.50\")", seriesA, seriesB, seriesC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0):   3,
 							time.Unix(100, 0): 4,
@@ -297,9 +297,9 @@ func TestAggr(t *testing.T) {
 		{
 			name: "average aggregator",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"avg\")", seriesA, seriesB, seriesC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0):   3,
 							time.Unix(100, 0): 4,
@@ -313,9 +313,9 @@ func TestAggr(t *testing.T) {
 		{
 			name: "min aggregator",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"min\")", seriesA, seriesB, seriesC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0):   1,
 							time.Unix(100, 0): 2,
@@ -329,9 +329,9 @@ func TestAggr(t *testing.T) {
 		{
 			name: "max aggregator",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"max\")", seriesA, seriesB, seriesC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0):   5,
 							time.Unix(100, 0): 6,
@@ -345,9 +345,9 @@ func TestAggr(t *testing.T) {
 		{
 			name: "check p0 == min",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p0\")", seriesA, seriesB, seriesC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0):   1,
 							time.Unix(100, 0): 2,
@@ -361,9 +361,9 @@ func TestAggr(t *testing.T) {
 		{
 			name: "check that sum aggregator sums up the aligned points in the series",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"sum\")", seriesA, seriesB, seriesC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0):   9,
 							time.Unix(100, 0): 12,
@@ -377,22 +377,22 @@ func TestAggr(t *testing.T) {
 		{
 			name:      "check that unknown aggregator errors out",
 			expr:      fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
-			want:      ResultSet{},
+			want:      ValueSet{},
 			shouldErr: true,
 		},
 		{
 			name: "single group",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"color\", \"p.50\")", seriesGroupsA, seriesGroupsB, seriesGroupsC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 1,
 							time.Unix(1, 0): 3,
 						},
 						Group: opentsdb.TagSet{"color": "blue"},
 					},
-					&Result{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 5,
 						},
@@ -405,16 +405,16 @@ func TestAggr(t *testing.T) {
 		{
 			name: "multiple groups",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"color,type\", \"p.50\")", seriesGroupsA, seriesGroupsB, seriesGroupsC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 1,
 							time.Unix(1, 0): 3,
 						},
 						Group: opentsdb.TagSet{"color": "blue", "type": "apple"},
 					},
-					&Result{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 5,
 						},
@@ -427,9 +427,9 @@ func TestAggr(t *testing.T) {
 		{
 			name: "aggregator with no groups and math operation",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p.50\") * 2", seriesMathA, seriesMathB, seriesMathC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 10,
 							time.Unix(1, 0): 6,
@@ -443,16 +443,16 @@ func TestAggr(t *testing.T) {
 		{
 			name: "aggregator with one group and math operation",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"color\", \"p.50\") * 2", seriesMathA, seriesMathB, seriesMathC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 2,
 							time.Unix(1, 0): 6,
 						},
 						Group: opentsdb.TagSet{"color": "blue"},
 					},
-					&Result{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 10,
 						},
@@ -465,16 +465,16 @@ func TestAggr(t *testing.T) {
 		{
 			name: "aggregator with multiple groups and math operation",
 			expr: fmt.Sprintf("aggr(merge(%v, %v, %v), \"color,type\", \"p.50\") * 2", seriesMathA, seriesMathB, seriesMathC),
-			want: ResultSet{
-				Results: ResultSlice{
-					&Result{
+			want: ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 2,
 							time.Unix(1, 0): 6,
 						},
 						Group: opentsdb.TagSet{"color": "blue", "type": "apple"},
 					},
-					&Result{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 10,
 						},
@@ -508,9 +508,9 @@ func TestAggrNaNHandling(t *testing.T) {
 	// expect NaN points to be dropped
 	eio := exprInOut{
 		fmt.Sprintf("aggr(merge(%v, %v), \"\", \"p.90\")", seriesD, seriesE),
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0):   math.NaN(),
 						time.Unix(100, 0): 2,
@@ -534,7 +534,7 @@ func TestAggrNaNHandling(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	results := eio.out.Results
+	results := eio.out.Elements
 	if len(results) != 1 {
 		t.Errorf("got len(results) == %d, want 1", len(results))
 	}

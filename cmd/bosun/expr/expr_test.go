@@ -67,16 +67,16 @@ func TestExprSimple(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 			break
-		} else if len(r.Results) != 1 {
-			t.Error("bad r len", len(r.Results))
+		} else if len(r.Elements) != 1 {
+			t.Error("bad r len", len(r.Elements))
 			break
-		} else if len(r.Results[0].Group) != 0 {
-			t.Error("bad group len", r.Results[0].Group)
+		} else if len(r.Elements[0].Group) != 0 {
+			t.Error("bad group len", r.Elements[0].Group)
 			break
-		} else if math.IsNaN(float64(et.output)) && math.IsNaN(float64(r.Results[0].Value.(Scalar))) {
+		} else if math.IsNaN(float64(et.output)) && math.IsNaN(float64(r.Elements[0].Value.(Scalar))) {
 			// ok
-		} else if r.Results[0].Value != et.output {
-			t.Errorf("expected %v, got %v: %v\nast: %v", et.output, r.Results[0].Value, et.input, e)
+		} else if r.Elements[0].Value != et.output {
+			t.Errorf("expected %v, got %v: %v\nast: %v", et.output, r.Elements[0].Value, et.input, e)
 		}
 	}
 }
@@ -121,9 +121,9 @@ func TestSetVariant(t *testing.T) {
 	tests := []exprInOut{
 		{
 			fmt.Sprintf(`addtags(addtags(%v, "key3=a"), "key4=b") + 1`, series),
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 2,
 							time.Unix(1, 0): 4,
@@ -136,9 +136,9 @@ func TestSetVariant(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(`addtags(addtags(avg(%v + 1), "key3=a"), "key4=b") + 1`, series),
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Number(4),
 						Group: opentsdb.TagSet{"key1": "a", "key2": "b", "key3": "a", "key4": "b"},
 					},
@@ -148,15 +148,15 @@ func TestSetVariant(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(`avg(addtags(addtags(avg(%v + 1), "key3=a"), "key4=b")) + 1`, series),
-			ResultSet{},
+			ValueSet{},
 			true,
 		},
 
 		{
 			fmt.Sprintf(`1 + abs(%v)`, seriesAbs),
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 2,
 							time.Unix(1, 0): 4,
@@ -169,9 +169,9 @@ func TestSetVariant(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(`1 + abs(avg(%v))`, seriesAbs),
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Number(2),
 						Group: opentsdb.TagSet{},
 					},
@@ -196,9 +196,9 @@ func TestSeriesOperations(t *testing.T) {
 	tests := []exprInOut{
 		{
 			fmt.Sprintf(template, seriesA, "+", seriesB),
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 2,
 							time.Unix(2, 0): 1,
@@ -212,9 +212,9 @@ func TestSeriesOperations(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(template, seriesA, "+", seriesC),
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							// Should be empty
 						},
@@ -226,9 +226,9 @@ func TestSeriesOperations(t *testing.T) {
 		},
 		{
 			fmt.Sprintf(template, seriesA, "/", seriesB),
-			ResultSet{
-				Results: ResultSlice{
-					&Result{
+			ValueSet{
+				Elements: ElementSlice{
+					&Element{
 						Value: Series{
 							time.Unix(0, 0): 1,
 							time.Unix(2, 0): math.Inf(1),

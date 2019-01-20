@@ -12,8 +12,8 @@ import (
 	"bosun.org/opentsdb"
 )
 
-// Result contains a single result and is generally contained within a Results Object.
-type Result struct {
+// Element contains a single result and is generally contained within a Results Object.
+type Element struct {
 	// a list of sub computations for the expression. Collecting computations is not always enabled.
 	models.Computations
 	// The embedded Value which has a Value() method to get the actual Value, and Type() method to get the type.
@@ -22,15 +22,15 @@ type Result struct {
 	Group opentsdb.TagSet
 }
 
-// ResultSet contains the results of an expression operation or a expression function.
+// ValueSet contains the results of an expression operation or a expression function.
 // It will also be the type returned from any completed evaluation of a complete expression.
 // In addition it contains properties about how those results should behave in with certain Union
 // operations.
 //
 // Each Result in the Results property should be of the same type. It is up to functions in the expression
 // language to ensure the Results are a set with no conflicting entries and that all entries are of the same type.
-type ResultSet struct {
-	Results ResultSlice
+type ValueSet struct {
+	Elements ElementSlice
 	// If true, ungrouped joins from this set will be ignored.
 	IgnoreUnjoined bool
 	// If true, ungrouped joins from the other set will be ignored.
@@ -39,8 +39,8 @@ type ResultSet struct {
 	NaNValue *float64
 }
 
-// ResultSlice is a slice of Result Pointers.
-type ResultSlice []*Result
+// ElementSlice is a slice of Result Pointers.
+type ElementSlice []*Element
 
 // Value is the interface that all valid types in the expression language must
 // fullfill.
@@ -137,7 +137,7 @@ type Table struct {
 // Type returns the type representation of the Table so it fullfills the Value interface.
 func (t Table) Type() models.FuncType { return models.TypeTable }
 
-// Value returns the value of the Series and exists so it fullfills the Value interface.
+// Value returns the value of the Table and exists so it fullfills the Value interface.
 func (t Table) Value() interface{} { return t }
 
 // SortableSeries is an alternative datastructure for timeseries data,
@@ -165,11 +165,11 @@ func NewSortedSeries(dps Series) SortableSeries {
 	return series
 }
 
-// Equal inspects if two ResultSets have the same content.
-// An error will return explaing why they are not equal if they are not equal.
-func (r *ResultSet) Equal(b *ResultSet) (bool, error) {
-	if len(r.Results) != len(b.Results) {
-		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(r.Results), len(b.Results))
+// Equal inspects if two ValueSets have the same content.
+// An error will return explaining why they are not equal if they are not equal.
+func (r *ValueSet) Equal(b *ValueSet) (bool, error) {
+	if len(r.Elements) != len(b.Elements) {
+		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(r.Elements), len(b.Elements))
 	}
 	if r.IgnoreUnjoined != b.IgnoreUnjoined {
 		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreUnjoined, b.IgnoreUnjoined)
@@ -180,9 +180,9 @@ func (r *ResultSet) Equal(b *ResultSet) (bool, error) {
 	if r.NaNValue != b.NaNValue {
 		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", r.NaNValue, b.NaNValue)
 	}
-	sortedA := ResultSliceByGroup(r.Results)
+	sortedA := ElementSliceByGroup(r.Elements)
 	sort.Sort(sortedA)
-	sortedB := ResultSliceByGroup(b.Results)
+	sortedB := ElementSliceByGroup(b.Elements)
 	sort.Sort(sortedB)
 	for i, result := range sortedA {
 		for ic, computation := range result.Computations {
@@ -210,27 +210,27 @@ func (r *ResultSet) Equal(b *ResultSet) (bool, error) {
 	return true, nil
 }
 
-// ResultSliceByGroup allows a ResultSlice to be sorted by Group (a.k.a. Tags).
-type ResultSliceByGroup ResultSlice
+// ElementSliceByGroup allows a ElementSlice to be sorted by Group (a.k.a. Tags).
+type ElementSliceByGroup ElementSlice
 
-// ResultSliceByValue allows a ResultSlice to be sorted by value.
-type ResultSliceByValue ResultSlice
+// ElementSliceByValue allows a ElementSlice to be sorted by value.
+type ElementSliceByValue ElementSlice
 
-// DescByValue sorts a ResultSlice in Descending order by value.
-func (r ResultSlice) DescByValue() ResultSlice {
+// DescByValue sorts a ElementSlice in Descending order by value.
+func (r ElementSlice) DescByValue() ElementSlice {
 	for _, v := range r {
 		if _, ok := v.Value.(Number); !ok {
 			return r
 		}
 	}
 	c := r[:]
-	sort.Sort(sort.Reverse(ResultSliceByValue(c)))
+	sort.Sort(sort.Reverse(ElementSliceByValue(c)))
 	return c
 }
 
 // Filter returns a slice with only the results that have a tagset that conforms to the given key/value pair restrictions
-func (r ResultSlice) Filter(filter opentsdb.TagSet) ResultSlice {
-	output := make(ResultSlice, 0, len(r))
+func (r ElementSlice) Filter(filter opentsdb.TagSet) ElementSlice {
+	output := make(ElementSlice, 0, len(r))
 	for _, res := range r {
 		if res.Group.Compatible(filter) {
 			output = append(output, res)
@@ -239,13 +239,13 @@ func (r ResultSlice) Filter(filter opentsdb.TagSet) ResultSlice {
 	return output
 }
 
-func (r ResultSliceByValue) Len() int           { return len(r) }
-func (r ResultSliceByValue) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r ResultSliceByValue) Less(i, j int) bool { return r[i].Value.(Number) < r[j].Value.(Number) }
+func (r ElementSliceByValue) Len() int           { return len(r) }
+func (r ElementSliceByValue) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ElementSliceByValue) Less(i, j int) bool { return r[i].Value.(Number) < r[j].Value.(Number) }
 
-func (r ResultSliceByGroup) Len() int           { return len(r) }
-func (r ResultSliceByGroup) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r ResultSliceByGroup) Less(i, j int) bool { return r[i].Group.String() < r[j].Group.String() }
+func (r ElementSliceByGroup) Len() int           { return len(r) }
+func (r ElementSliceByGroup) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ElementSliceByGroup) Less(i, j int) bool { return r[i].Group.String() < r[j].Group.String() }
 
 func marshalFloat(n float64) ([]byte, error) {
 	if math.IsNaN(n) {

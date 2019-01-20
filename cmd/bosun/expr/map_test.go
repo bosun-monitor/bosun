@@ -10,9 +10,9 @@ import (
 func TestMap(t *testing.T) {
 	err := testExpression(exprInOut{
 		`map(series("test=test", 0, 1, 1, 3), expr(v()+1))`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 2,
 						time.Unix(1, 0): 4,
@@ -29,9 +29,9 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`avg(map(series("test=test", 0, 1, 1, 3), expr(v()+1)))`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Number(3),
 					Group: opentsdb.TagSet{"test": "test"},
 				},
@@ -45,9 +45,9 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`1 + avg(map(series("test=test", 0, 1, 1, 3), expr(v()+1))) + 1`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Number(5),
 					Group: opentsdb.TagSet{"test": "test"},
 				},
@@ -61,9 +61,9 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`max(map(series("test=test", 0, 1, 1, 3), expr(v()+v())))`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Number(6),
 					Group: opentsdb.TagSet{"test": "test"},
 				},
@@ -77,9 +77,9 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`map(series("test=test", 0, -2, 1, 3), expr(1+1))`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 2,
 						time.Unix(1, 0): 2,
@@ -96,9 +96,9 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`map(series("test=test", 0, -2, 1, 3), expr(abs(v())))`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 2,
 						time.Unix(1, 0): 3,
@@ -115,9 +115,9 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`map(series("test=test", 0, -2, 1, 3), expr(series("test=test", 0, v())))`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{},
 					Group: opentsdb.TagSet{"test": "test"},
 				},
@@ -131,9 +131,9 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`v()`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{},
 					Group: opentsdb.TagSet{"test": "test"},
 				},
@@ -147,9 +147,9 @@ func TestMap(t *testing.T) {
 
 	err = testExpression(exprInOut{
 		`map(series("test=test", 0, -2, 1, 0), expr(!v()))`,
-		ResultSet{
-			Results: ResultSlice{
-				&Result{
+		ValueSet{
+			Elements: ElementSlice{
+				&Element{
 					Value: Series{
 						time.Unix(0, 0): 0,
 						time.Unix(1, 0): 1,

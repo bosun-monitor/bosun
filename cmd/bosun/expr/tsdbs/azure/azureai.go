@@ -14,8 +14,8 @@ import (
 )
 
 // AIQuery queries the Azure Application Insights API for metrics data and transforms the response into a series set
-func AIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, apps tsdbs.AzureApplicationInsightsApps, agtype, interval, sdur, edur string) (r *expr.ResultSet, err error) {
-	r = new(expr.ResultSet)
+func AIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, apps tsdbs.AzureApplicationInsightsApps, agtype, interval, sdur, edur string) (r *expr.ValueSet, err error) {
+	r = new(expr.ValueSet)
 	if apps.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use apps from client "%v" on a query with client "%v"`, apps.Prefix, prefix)
 	}
@@ -185,7 +185,7 @@ func AIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, ap
 		if err != nil {
 			return r, err
 		}
-		r.Results = append(r.Results, &expr.Result{
+		r.Elements = append(r.Elements, &expr.Element{
 			Value: series,
 			Group: tags,
 		})
@@ -194,8 +194,8 @@ func AIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, ap
 }
 
 // AIListApps get a list of all applications on the subscription and returns those apps in a AzureApplicationInsightsApps within the result
-func AIListApps(prefix string, e *expr.State) (r *expr.ResultSet, err error) {
-	r = new(expr.ResultSet)
+func AIListApps(prefix string, e *expr.State) (r *expr.ValueSet, err error) {
+	r = new(expr.ValueSet)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	key := fmt.Sprintf("AzureAIAppCache:%s:%s", prefix, time.Now().Truncate(time.Minute*1)) // https://github.com/golang/groupcache/issues/92
 
@@ -229,7 +229,7 @@ func AIListApps(prefix string, e *expr.State) (r *expr.ResultSet, err error) {
 				})
 			}
 		}
-		r.Results = append(r.Results, &expr.Result{Value: applist})
+		r.Elements = append(r.Elements, &expr.Element{Value: applist})
 		return r, nil
 	}
 	val, err, hit := e.Cache.Get(key, getFn)
@@ -237,13 +237,13 @@ func AIListApps(prefix string, e *expr.State) (r *expr.ResultSet, err error) {
 	if err != nil {
 		return r, err
 	}
-	return val.(*expr.ResultSet), nil
+	return val.(*expr.ValueSet), nil
 }
 
 // AIMetricMD returns metric metadata for the listed AzureApplicationInsightsApps. This is not meant
 // as core expression function, but rather one for interactive inspection through the expression UI.
-func AIMetricMD(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsightsApps) (r *expr.ResultSet, err error) {
-	r = new(expr.ResultSet)
+func AIMetricMD(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsightsApps) (r *expr.ValueSet, err error) {
+	r = new(expr.ValueSet)
 	if apps.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use apps from client "%v" on a query with client "%v"`, apps.Prefix, prefix)
 	}
@@ -257,7 +257,7 @@ func AIMetricMD(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsight
 		if err != nil {
 			return r, err
 		}
-		r.Results = append(r.Results, &expr.Result{
+		r.Elements = append(r.Elements, &expr.Element{
 			Value: expr.Info{md.Value},
 			Group: opentsdb.TagSet{"app": app.ApplicationName},
 		})

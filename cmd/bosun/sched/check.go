@@ -565,13 +565,13 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	}
 	var warns, crits models.AlertKeys
 	type res struct {
-		results *expr.ResultSet
+		results *expr.ValueSet
 		error   error
 	}
 	// buffered channel so go func that runs executeExpr won't leak if the Check is cancelled
 	// by the closing of the schedule
 	rc := make(chan res, 1)
-	var d *expr.ResultSet
+	var d *expr.ValueSet
 	var err error
 	go func() {
 		d, err := s.executeExpr(T, r, a, a.Depends)
@@ -586,7 +586,7 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	case <-s.runnerContext.Done():
 		return true
 	}
-	var deps expr.ResultSlice
+	var deps expr.ElementSlice
 	if err == nil {
 		deps = filterDependencyResults(d)
 		crits, err, cancelled = s.CheckExpr(T, r, a, a.Crit, models.StCritical, nil)
@@ -618,14 +618,14 @@ func removeUnknownEvents(evs map[models.AlertKey]*models.Event, alert string) {
 	}
 }
 
-func filterDependencyResults(results *expr.ResultSet) expr.ResultSlice {
+func filterDependencyResults(results *expr.ValueSet) expr.ElementSlice {
 	// take the results of the dependency expression and filter it to
 	// non-zero tag sets.
-	filtered := expr.ResultSlice{}
+	filtered := expr.ElementSlice{}
 	if results == nil {
 		return filtered
 	}
-	for _, r := range results.Results {
+	for _, r := range results.Elements {
 		var n float64
 		switch v := r.Value.(type) {
 		case expr.Number:
@@ -640,7 +640,7 @@ func filterDependencyResults(results *expr.ResultSet) expr.ResultSlice {
 	return filtered
 }
 
-func markDependenciesUnevaluated(events map[models.AlertKey]*models.Event, deps expr.ResultSlice, alert string) (unevalCount, unknownCount int) {
+func markDependenciesUnevaluated(events map[models.AlertKey]*models.Event, deps expr.ElementSlice, alert string) (unevalCount, unknownCount int) {
 	for ak, ev := range events {
 		if ak.Name() != alert {
 			continue
@@ -658,7 +658,7 @@ func markDependenciesUnevaluated(events map[models.AlertKey]*models.Event, deps 
 	return unevalCount, unknownCount
 }
 
-func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr) (*expr.ResultSet, error) {
+func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr) (*expr.ValueSet, error) {
 	if e == nil {
 		return nil, nil
 	}
@@ -686,12 +686,12 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		slog.Errorln(err)
 	}()
 	type res struct {
-		results *expr.ResultSet
+		results *expr.ValueSet
 		error   error
 	}
 	// See s.CheckAlert for an explanation of execution and cancellation with this channel
 	rc := make(chan res, 1)
-	var results *expr.ResultSet
+	var results *expr.ValueSet
 	go func() {
 		results, err := s.executeExpr(T, rh, a, e)
 		rc <- res{results, err}
@@ -707,7 +707,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		return
 	}
 Loop:
-	for _, r := range results.Results {
+	for _, r := range results.Elements {
 		if s.RuleConf.Squelched(a, r.Group) {
 			continue
 		}

@@ -513,8 +513,8 @@ func (c *Conf) NewExpr(s string) *expr.Expr {
 }
 
 func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
-	lookup := func(e *expr.State, lookup, key string) (results *expr.ResultSet, err error) {
-		results = new(expr.ResultSet)
+	lookup := func(e *expr.State, lookup, key string) (results *expr.ValueSet, err error) {
+		results = new(expr.ValueSet)
 		results.IgnoreUnjoined = true
 		l := c.Lookups[lookup]
 		if l == nil {
@@ -554,15 +554,15 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 			if err != nil {
 				return nil, err
 			}
-			results.Results = append(results.Results, &expr.Result{
+			results.Elements = append(results.Elements, &expr.Element{
 				Value: expr.Number(num),
 				Group: tag,
 			})
 		}
 		return results, nil
 	}
-	lookupSeries := func(e *expr.State, series *expr.ResultSet, lookup, key string) (results *expr.ResultSet, err error) {
-		results = new(expr.ResultSet)
+	lookupSeries := func(e *expr.State, series *expr.ValueSet, lookup, key string) (results *expr.ValueSet, err error) {
+		results = new(expr.ValueSet)
 		results.IgnoreUnjoined = true
 		l := c.Lookups[lookup]
 		if l == nil {
@@ -573,7 +573,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 			err = fmt.Errorf("lookup table not found: %v", lookup)
 			return
 		}
-		for _, res := range series.Results {
+		for _, res := range series.Elements {
 			value, ok := lookups.Get(key, res.Group)
 			if !ok {
 				continue
@@ -583,7 +583,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 			if err != nil {
 				return nil, err
 			}
-			results.Results = append(results.Results, &expr.Result{
+			results.Elements = append(results.Elements, &expr.Element{
 				Value: expr.Number(num),
 				Group: res.Group,
 			})
@@ -697,7 +697,7 @@ func (c *Conf) getAlertExpr(name, key string) (*conf.Alert, *expr.Expr, error) {
 	return a, e, nil
 }
 
-func (c *Conf) alert(s *expr.State, name, key string) (results *expr.ResultSet, err error) {
+func (c *Conf) alert(s *expr.State, name, key string) (results *expr.ValueSet, err error) {
 	_, e, err := c.getAlertExpr(name, key)
 	if err != nil {
 		return nil, err
@@ -711,24 +711,24 @@ func (c *Conf) alert(s *expr.State, name, key string) (results *expr.ResultSet, 
 		// For currently unknown tags NOT in the result set, add an error result
 		for _, ak := range unknownTags {
 			found := false
-			for _, result := range results.Results {
+			for _, result := range results.Elements {
 				if result.Group.Equal(ak.Group()) {
 					found = true
 					break
 				}
 			}
 			if !found {
-				res := expr.Result{
+				res := expr.Element{
 					Value: expr.Number(1),
 					Group: ak.Group(),
 				}
-				results.Results = append(results.Results, &res)
+				results.Elements = append(results.Elements, &res)
 			}
 		}
 		//For all unevaluated tags in run history, make sure we report a nonzero result.
 		for _, ak := range unevalTags {
 			found := false
-			for _, result := range results.Results {
+			for _, result := range results.Elements {
 				if result.Group.Equal(ak.Group()) {
 					result.Value = expr.Number(1)
 					found = true
@@ -736,11 +736,11 @@ func (c *Conf) alert(s *expr.State, name, key string) (results *expr.ResultSet, 
 				}
 			}
 			if !found {
-				res := expr.Result{
+				res := expr.Element{
 					Value: expr.Number(1),
 					Group: ak.Group(),
 				}
-				results.Results = append(results.Results, &res)
+				results.Elements = append(results.Elements, &res)
 			}
 		}
 	}

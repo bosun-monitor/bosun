@@ -42,7 +42,7 @@ func Autostyle(i int) chart.Style {
 
 var white = color.RGBA{0xff, 0xff, 0xff, 0xff}
 
-func (s *Schedule) ExprSVG(t miniprofiler.Timer, w io.Writer, width, height int, unit string, res []*expr.Result) error {
+func (s *Schedule) ExprSVG(t miniprofiler.Timer, w io.Writer, width, height int, unit string, res []*expr.Element) error {
 	ch, err := s.ExprGraph(t, unit, res)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (s *Schedule) ExprSVG(t miniprofiler.Timer, w io.Writer, width, height int,
 	return nil
 }
 
-func (s *Schedule) ExprPNG(t miniprofiler.Timer, w io.Writer, width, height int, unit string, res []*expr.Result) error {
+func (s *Schedule) ExprPNG(t miniprofiler.Timer, w io.Writer, width, height int, unit string, res []*expr.Element) error {
 	ch, err := s.ExprGraph(t, unit, res)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (s *Schedule) ExprPNG(t miniprofiler.Timer, w io.Writer, width, height int,
 	return png.Encode(w, g)
 }
 
-func (s *Schedule) ExprGraph(t miniprofiler.Timer, unit string, res []*expr.Result) (chart.Chart, error) {
+func (s *Schedule) ExprGraph(t miniprofiler.Timer, unit string, res []*expr.Element) (chart.Chart, error) {
 	c := chart.ScatterChart{
 		Key:    chart.Key{Pos: "itl"},
 		YRange: chart.Range{Label: unit},

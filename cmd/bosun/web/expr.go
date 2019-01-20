@@ -100,18 +100,18 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	if err != nil {
 		return nil, err
 	}
-	for _, r := range res.Results {
+	for _, r := range res.Elements {
 		if r.Computations == nil {
 			r.Computations = make(models.Computations, 0)
 		}
 	}
 	ret := struct {
 		Type    string
-		Results []*expr.Result
+		Results []*expr.Element
 		Queries map[string]opentsdb.Request
 	}{
 		e.Tree.Root.Return().String(),
-		res.Results,
+		res.Elements,
 		make(map[string]opentsdb.Request),
 	}
 	for _, q := range queries {

@@ -30,13 +30,13 @@ var ExprFuncs = map[string]parse.Func{
 	},
 }
 
-func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*expr.Result, error) {
+func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*expr.Element, error) {
 	const parseErrFmt = "graphite ParseError (%s): %s"
 	if len(*s) == 0 {
 		return nil, fmt.Errorf(parseErrFmt, req.URL, "empty response")
 	}
 	seen := make(map[string]bool)
-	results := make([]*expr.Result, 0)
+	results := make([]*expr.Element, 0)
 	for _, res := range *s {
 		// build tag set
 		tags := make(opentsdb.TagSet)
@@ -86,7 +86,7 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 			t := time.Unix(unixTS, 0)
 			dps[t] = val
 		}
-		results = append(results, &expr.Result{
+		results = append(results, &expr.Element{
 			Value: dps,
 			Group: tags,
 		})
@@ -95,8 +95,8 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 }
 
 // Band maps to the "graphiteBand" function in Bosun's expression language.
-func Band(e *expr.State, query, duration, period, format string, num float64) (r *expr.ResultSet, err error) {
-	r = new(expr.ResultSet)
+func Band(e *expr.State, query, duration, period, format string, num float64) (r *expr.ValueSet, err error) {
+	r = new(expr.ValueSet)
 	r.IgnoreOtherUnjoined = true
 	r.IgnoreUnjoined = true
 	e.Timer.Step("graphiteBand", func(T miniprofiler.Timer) {
@@ -130,19 +130,19 @@ func Band(e *expr.State, query, duration, period, format string, num float64) (r
 				return
 			}
 			formatTags := strings.Split(format, ".")
-			var results []*expr.Result
+			var results []*expr.Element
 			results, err = parseGraphiteResponse(req, &s, formatTags)
 			if err != nil {
 				return
 			}
 			if i == 0 {
-				r.Results = results
+				r.Elements = results
 			} else {
 				// different graphite requests might return series with different id's.
 				// i.e. a different set of tagsets.  merge the data of corresponding tagsets
 				for _, result := range results {
 					updateKey := -1
-					for j, existing := range r.Results {
+					for j, existing := range r.Elements {
 						if result.Group.Equal(existing.Group) {
 							updateKey = j
 							break
@@ -150,11 +150,11 @@ func Band(e *expr.State, query, duration, period, format string, num float64) (r
 					}
 					if updateKey == -1 {
 						// result tagset is new
-						r.Results = append(r.Results, result)
-						updateKey = len(r.Results) - 1
+						r.Elements = append(r.Elements, result)
+						updateKey = len(r.Elements) - 1
 					}
 					for k, v := range result.Value.(expr.Series) {
-						r.Results[updateKey].Value.(expr.Series)[k] = v
+						r.Elements[updateKey].Value.(expr.Series)[k] = v
 					}
 				}
 			}
@@ -167,7 +167,7 @@ func Band(e *expr.State, query, duration, period, format string, num float64) (r
 }
 
 // Query maps to the "graphite" function in Bosun's expression language.
-func Query(e *expr.State, query string, sduration, eduration, format string) (r *expr.ResultSet, err error) {
+func Query(e *expr.State, query string, sduration, eduration, format string) (r *expr.ValueSet, err error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
@@ -191,12 +191,12 @@ func Query(e *expr.State, query string, sduration, eduration, format string) (r 
 		return nil, err
 	}
 	formatTags := strings.Split(format, ".")
-	r = new(expr.ResultSet)
+	r = new(expr.ValueSet)
 	results, err := parseGraphiteResponse(req, &s, formatTags)
 	if err != nil {
 		return nil, err
 	}
-	r.Results = results
+	r.Elements = results
 
 	return
 }

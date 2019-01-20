@@ -260,11 +260,11 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	}
 	switch format {
 	case "svg":
-		if err := schedule.ExprSVG(t, w, 800, 600, "", res.Results); err != nil {
+		if err := schedule.ExprSVG(t, w, 800, 600, "", res.Elements); err != nil {
 			return nil, err
 		}
 	case "png":
-		if err := schedule.ExprPNG(t, w, 800, 600, "", res.Results); err != nil {
+		if err := schedule.ExprPNG(t, w, 800, 600, "", res.Elements); err != nil {
 			return nil, err
 		}
 	}
