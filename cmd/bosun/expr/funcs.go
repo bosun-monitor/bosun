@@ -168,13 +168,13 @@ var builtins = map[string]parse.Func{
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return:  models.TypeNumberSet,
 		TagKeys: TagFirst,
-		F:       Forecast_lr,
+		F:       ForecastLR,
 	},
 	"linelr": {
 		Args:    []models.FuncType{models.TypeSeriesSet, models.TypeString},
 		Return:  models.TypeSeriesSet,
 		TagKeys: TagFirst,
-		F:       Line_lr,
+		F:       LineLR,
 	},
 	"last": {
 		Args:    []models.FuncType{models.TypeSeriesSet},
@@ -373,7 +373,7 @@ var builtins = map[string]parse.Func{
 		VArgsOmit: true,
 		Return:    models.TypeSeriesSet,
 		TagKeys:   seriesFuncTags,
-		F:         SeriesFunc,
+		F:         CreateSeries,
 	},
 	"sort": {
 		Args:    []models.FuncType{models.TypeNumberSet, models.TypeString},
@@ -552,7 +552,7 @@ func aggrPercentile(series ResultSlice, percValue float64) Series {
 		for i := range merged[t] {
 			dps[time.Unix(int64(i), 0)] = merged[t][i]
 		}
-		newSeries[t] = percentile(dps, percValue)
+		newSeries[t] = seriesPercentile(dps, percValue)
 	}
 	return newSeries
 }
@@ -610,10 +610,13 @@ func aggrCheck(t *parse.Tree, f *parse.FuncNode) error {
 	return fmt.Errorf("aggr: unrecognized aggregation function %s", name)
 }
 
+// V is the "v" function in the expression language which is only valid within subExpression (the "map" function).
 func V(e *State) (*ResultSet, error) {
 	return FromScalar(e.vValue), nil
 }
 
+// Map is the "map" function in the expression language.
+// It may be removed in the future now that we have variant sets.
 func Map(e *State, seriesSet *ResultSet, expr *ResultSet) (*ResultSet, error) {
 	newExpr := Expr{expr.Results[0].Value.Value().(NumberExpr).Tree}
 	for _, result := range seriesSet.Results {
@@ -642,7 +645,8 @@ func Map(e *State, seriesSet *ResultSet, expr *ResultSet) (*ResultSet, error) {
 	return seriesSet, nil
 }
 
-func SeriesFunc(e *State, tags string, pairs ...float64) (*ResultSet, error) {
+// CreateSeries is the "series" function in the expression language.
+func CreateSeries(e *State, tags string, pairs ...float64) (*ResultSet, error) {
 	if len(pairs)%2 != 0 {
 		return nil, fmt.Errorf("uneven number of time stamps and values")
 	}
@@ -669,6 +673,7 @@ func SeriesFunc(e *State, tags string, pairs ...float64) (*ResultSet, error) {
 	}, nil
 }
 
+// Crop is the "crop" function in the expression language.
 func Crop(e *State, seriesSet *ResultSet, startSet *ResultSet, endSet *ResultSet) (*ResultSet, error) {
 	results := ResultSet{}
 INNER:
@@ -680,7 +685,7 @@ INNER:
 				startOverlapsSeries := seriesResult.Group.Overlaps(startResult.Group)
 				endOverlapsSeries := seriesResult.Group.Overlaps(endResult.Group)
 				if (startHasNoGroup || startOverlapsSeries) && (endHasNoGroup || endOverlapsSeries) {
-					res := crop(e, seriesResult, startResult, endResult)
+					res := cropSeries(e, seriesResult, startResult, endResult)
 					results.Results = append(results.Results, res)
 					continue INNER
 				}
@@ -690,7 +695,7 @@ INNER:
 	return &results, nil
 }
 
-func crop(e *State, seriesResult *Result, startResult *Result, endResult *Result) *Result {
+func cropSeries(e *State, seriesResult *Result, startResult *Result, endResult *Result) *Result {
 	startNumber := startResult.Value.(Number)
 	endNumber := endResult.Value.(Number)
 	start := e.now.Add(-time.Duration(time.Duration(startNumber) * time.Second))
@@ -704,6 +709,7 @@ func crop(e *State, seriesResult *Result, startResult *Result, endResult *Result
 	return seriesResult
 }
 
+// DropBool is the "drop" function in the expression language.
 func DropBool(e *State, target *ResultSet, filter *ResultSet) (*ResultSet, error) {
 	res := ResultSet{}
 	unions := e.union(target, filter, "dropbool union")
@@ -725,6 +731,7 @@ func DropBool(e *State, target *ResultSet, filter *ResultSet) (*ResultSet, error
 	return &res, nil
 }
 
+// Epoch is the "map" function in the expression language.
 func Epoch(e *State) (*ResultSet, error) {
 	return &ResultSet{
 		Results: []*Result{
@@ -733,6 +740,7 @@ func Epoch(e *State) (*ResultSet, error) {
 	}, nil
 }
 
+// IsNaN is the "isnan" function in the expression language.
 func IsNaN(e *State, numberSet *ResultSet) (*ResultSet, error) {
 	for _, res := range numberSet.Results {
 		if math.IsNaN(float64(res.Value.Value().(Number))) {
@@ -744,6 +752,7 @@ func IsNaN(e *State, numberSet *ResultSet) (*ResultSet, error) {
 	return numberSet, nil
 }
 
+// Month is the "map" function in the expression language.
 func Month(e *State, offset float64, startEnd string) (*ResultSet, error) {
 	if startEnd != "start" && startEnd != "end" {
 		return nil, fmt.Errorf("last parameter for mtod must be 'start' or 'end'")
@@ -764,16 +773,22 @@ func Month(e *State, offset float64, startEnd string) (*ResultSet, error) {
 	}, nil
 }
 
-func NV(e *State, series *ResultSet, v float64) (results *ResultSet, err error) {
+// NV is the "nv" function in the expression language.
+// If the numberSet is empty (no Results) then a Result is returned with an empty tagset
+// and the provided value. Otherwise the numberSet has its NaNValue set which is used to
+// replace any NaN values within the seriesSet when it is used in the left and/or
+// right of a union operation.
+func NV(e *State, numberSet *ResultSet, v float64) (results *ResultSet, err error) {
 	// If there are no results in the set, promote it to a number with the empty group ({})
-	if len(series.Results) == 0 {
-		series.Results = append(series.Results, &Result{Value: Number(v), Group: make(opentsdb.TagSet)})
-		return series, nil
+	if len(numberSet.Results) == 0 {
+		numberSet.Results = append(numberSet.Results, &Result{Value: Number(v), Group: make(opentsdb.TagSet)})
+		return numberSet, nil
 	}
-	series.NaNValue = &v
-	return series, nil
+	numberSet.NaNValue = &v
+	return numberSet, nil
 }
 
+// Sort is the "sort" function in the expression language.
 func Sort(e *State, numberSet *ResultSet, order string) (*ResultSet, error) {
 	// Sort by groupname first to make the search deterministic
 	sort.Sort(ResultSliceByGroup(numberSet.Results))
@@ -788,9 +803,10 @@ func Sort(e *State, numberSet *ResultSet, order string) (*ResultSet, error) {
 	return numberSet, nil
 }
 
+// Limit is the "limit" function in the expression language.
 func Limit(e *State, set *ResultSet, v float64) (*ResultSet, error) {
 	if v < 0 {
-		return nil, errors.New(fmt.Sprintf("Limit can't be negative value. We have received value %f as limit", v))
+		return nil, fmt.Errorf("Limit can't be negative value. We have received value %f as limit", v)
 	}
 	i := int(v)
 	if len(set.Results) > i {
@@ -799,6 +815,7 @@ func Limit(e *State, set *ResultSet, v float64) (*ResultSet, error) {
 	return set, nil
 }
 
+// Filter is the "filter" function in the expression language.
 func Filter(e *State, set *ResultSet, numberSet *ResultSet) (*ResultSet, error) {
 	var ns ResultSlice
 	for _, sr := range set.Results {
@@ -814,8 +831,9 @@ func Filter(e *State, set *ResultSet, numberSet *ResultSet) (*ResultSet, error) 
 	return set, nil
 }
 
-func Tail(e *State, seriesSet *ResultSet, number *ResultSet) (*ResultSet, error) {
-	f := func(res *ResultSet, s *Result, floats []float64) error {
+// Tail is the "tail" function in the expression language.
+func Tail(e *State, seriesSet *ResultSet, numberSet *ResultSet) (*ResultSet, error) {
+	tailSeries := func(res *ResultSet, s *Result, floats []float64) error {
 		tailLength := int(floats[0])
 
 		// if there are fewer points than the requested tail
@@ -848,9 +866,10 @@ func Tail(e *State, seriesSet *ResultSet, number *ResultSet) (*ResultSet, error)
 		return nil
 	}
 
-	return match(f, seriesSet, number)
+	return match(tailSeries, seriesSet, numberSet)
 }
 
+// Merge is the "merge" function in the expression language.
 func Merge(e *State, seriesSets ...*ResultSet) (*ResultSet, error) {
 	res := &ResultSet{}
 	if len(seriesSets) == 0 {
@@ -872,6 +891,7 @@ func Merge(e *State, seriesSets ...*ResultSet) (*ResultSet, error) {
 	return res, nil
 }
 
+// Remove is the "remove" function in the expresion language.
 func Remove(e *State, set *ResultSet, tagKey string) (*ResultSet, error) {
 	seen := make(map[string]bool)
 	for _, r := range set.Results {
@@ -888,6 +908,7 @@ func Remove(e *State, set *ResultSet, tagKey string) (*ResultSet, error) {
 	return set, nil
 }
 
+// LeftJoin is the "leftjoin" function in the expression language.
 func LeftJoin(e *State, keysCSV, columnsCSV string, rowData ...*ResultSet) (*ResultSet, error) {
 	res := &ResultSet{}
 	dataWidth := len(rowData)
@@ -938,6 +959,7 @@ func LeftJoin(e *State, keysCSV, columnsCSV string, rowData ...*ResultSet) (*Res
 	}, nil
 }
 
+// Shift is the "shift" function in the expression language.
 func Shift(e *State, seriesSet *ResultSet, d string) (*ResultSet, error) {
 	dur, err := opentsdb.ParseDuration(d)
 	if err != nil {
@@ -954,6 +976,7 @@ func Shift(e *State, seriesSet *ResultSet, d string) (*ResultSet, error) {
 	return seriesSet, nil
 }
 
+// Duration is the "d" function in the expression language.
 func Duration(e *State, d string) (*ResultSet, error) {
 	duration, err := opentsdb.ParseDuration(d)
 	if err != nil {
@@ -966,6 +989,7 @@ func Duration(e *State, d string) (*ResultSet, error) {
 	}, nil
 }
 
+// ToDuration is the "tod" function in the expression language.
 func ToDuration(e *State, sec float64) (*ResultSet, error) {
 	d := opentsdb.Duration(time.Duration(int64(sec)) * time.Second)
 	return &ResultSet{
@@ -975,8 +999,8 @@ func ToDuration(e *State, sec float64) (*ResultSet, error) {
 	}, nil
 }
 
-func DropValues(e *State, seriesSet *ResultSet, threshold *ResultSet, dropFunction func(float64, float64) bool) (*ResultSet, error) {
-	f := func(res *ResultSet, s *Result, floats []float64) error {
+func dropValues(e *State, seriesSet *ResultSet, thresholdSet *ResultSet, dropFunction func(float64, float64) bool) (*ResultSet, error) {
+	dropSeries := func(res *ResultSet, s *Result, floats []float64) error {
 		nv := make(Series)
 		for k, v := range s.Value.Value().(Series) {
 			if !dropFunction(float64(v), floats[0]) {
@@ -991,36 +1015,43 @@ func DropValues(e *State, seriesSet *ResultSet, threshold *ResultSet, dropFuncti
 		res.Results = append(res.Results, s)
 		return nil
 	}
-	return match(f, seriesSet, threshold)
+	return match(dropSeries, seriesSet, thresholdSet)
 }
 
-func DropGe(e *State, seriesSet *ResultSet, threshold *ResultSet) (*ResultSet, error) {
+// DropGe is the "dropge" function in the expression language.
+func DropGe(e *State, seriesSet *ResultSet, thresholdSet *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value >= threshold }
-	return DropValues(e, seriesSet, threshold, dropFunction)
+	return dropValues(e, seriesSet, thresholdSet, dropFunction)
 }
 
-func DropG(e *State, seriesSet *ResultSet, threshold *ResultSet) (*ResultSet, error) {
+// DropG is the "dropg" function in the expression language.
+func DropG(e *State, seriesSet *ResultSet, thresholdSet *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value > threshold }
-	return DropValues(e, seriesSet, threshold, dropFunction)
+	return dropValues(e, seriesSet, thresholdSet, dropFunction)
 }
 
-func DropLe(e *State, seriesSet *ResultSet, threshold *ResultSet) (*ResultSet, error) {
+// DropLe is the "drople" function in the expression language.
+func DropLe(e *State, seriesSet *ResultSet, thresholdSet *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value <= threshold }
-	return DropValues(e, seriesSet, threshold, dropFunction)
+	return dropValues(e, seriesSet, thresholdSet, dropFunction)
 }
 
-func DropL(e *State, seriesSet *ResultSet, threshold *ResultSet) (*ResultSet, error) {
+// DropL is the "dropl" function in the expression language.
+func DropL(e *State, seriesSet *ResultSet, thresholdSet *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value < threshold }
-	return DropValues(e, seriesSet, threshold, dropFunction)
+	return dropValues(e, seriesSet, thresholdSet, dropFunction)
 }
 
+// DropNA is the "dropna" function in the expression language.
 func DropNA(e *State, seriesSet *ResultSet) (*ResultSet, error) {
 	dropFunction := func(value float64, threshold float64) bool {
 		return math.IsNaN(float64(value)) || math.IsInf(float64(value), 0)
 	}
-	return DropValues(e, seriesSet, FromScalar(0), dropFunction)
+	return dropValues(e, seriesSet, FromScalar(0), dropFunction)
 }
 
+// FromScalar takes a single float64 and turns it into an numberSet
+// with no tags.
 func FromScalar(f float64) *ResultSet {
 	return &ResultSet{
 		Results: ResultSlice{
@@ -1031,13 +1062,14 @@ func FromScalar(f float64) *ResultSet {
 	}
 }
 
+// match allows functions to union operations internally
 func match(f func(res *ResultSet, series *Result, floats []float64) error, seriesSet *ResultSet, numberSets ...*ResultSet) (*ResultSet, error) {
 	res := *seriesSet
 	res.Results = nil
 	for _, s := range seriesSet.Results {
 		var floats []float64
-		for _, num := range numberSets {
-			for _, n := range num.Results {
+		for _, numberSet := range numberSets {
+			for _, n := range numberSet.Results {
 				if len(n.Group) == 0 || s.Group.Overlaps(n.Group) {
 					floats = append(floats, float64(n.Value.(Number)))
 					break
@@ -1057,7 +1089,10 @@ func match(f func(res *ResultSet, series *Result, floats []float64) error, serie
 	return &res, nil
 }
 
-func ReduceSeriesSet(e *State, seriesSet *ResultSet, F func(Series, ...float64) float64, args ...*ResultSet) (*ResultSet, error) {
+// ReduceSeriesSet applies the reducerFunc to each series in the set. It then calls match so function
+// can use internal unions to handle the case where it is passed a numberSet as an additional
+// argument to the reducer function.
+func ReduceSeriesSet(e *State, seriesSet *ResultSet, reducerFunc func(Series, ...float64) float64, args ...*ResultSet) (*ResultSet, error) {
 	f := func(res *ResultSet, s *Result, floats []float64) error {
 		switch tp := s.Value.(type) {
 		case Series:
@@ -1065,16 +1100,14 @@ func ReduceSeriesSet(e *State, seriesSet *ResultSet, F func(Series, ...float64) 
 			if len(t) == 0 {
 				return nil
 			}
-			s.Value = Number(F(t, floats...))
+			s.Value = Number(reducerFunc(t, floats...))
 			res.Results = append(res.Results, s)
 			return nil
 		default:
-			return errors.New(
-				fmt.Sprintf(
-					"Unsupported type passed to ReduceSeriesSet for alarm [%s]. Want: Series, got: %s. "+
-						"It can happen when we can't unjoin values. Please set IgnoreUnjoined and/or "+
-						"IgnoreOtherUnjoined for distiguish this error.", e.Origin, reflect.TypeOf(tp).String(),
-				),
+			return fmt.Errorf(`Unsupported type passed to ReduceSeriesSet for alarm [%s].`+
+				`Want: Series, got: %s. It can happen when we can't unjoin values.`+
+				`Please set IgnoreUnjoined and/or IgnoreOtherUnjoined for distiguish this error.`,
+				e.Origin, reflect.TypeOf(tp).String(),
 			)
 		}
 
@@ -1082,6 +1115,7 @@ func ReduceSeriesSet(e *State, seriesSet *ResultSet, F func(Series, ...float64) 
 	return match(f, seriesSet, args...)
 }
 
+// Abs is the "abs" function in the expression language. It can take a numberSet or a seriesSet.
 func Abs(e *State, set *ResultSet) *ResultSet {
 	for _, s := range set.Results {
 		switch s.Type() {
@@ -1096,19 +1130,22 @@ func Abs(e *State, set *ResultSet) *ResultSet {
 	return set
 }
 
+// Diff is the "diff" function in the expression language.
 func Diff(e *State, seriesSet *ResultSet) (r *ResultSet, err error) {
-	return ReduceSeriesSet(e, seriesSet, diff)
+	return ReduceSeriesSet(e, seriesSet, diffSeries)
 }
 
-func diff(dps Series, args ...float64) float64 {
-	return last(dps) - first(dps)
+func diffSeries(dps Series, args ...float64) float64 {
+	return seriesLastValue(dps) - seriesFirstValue(dps)
 }
 
+// Avg is the "avg" function in the expression language.
 func Avg(e *State, seriesSet *ResultSet) (*ResultSet, error) {
 	return ReduceSeriesSet(e, seriesSet, SeriesAvg)
 }
 
-// SeriesAvg returns the mean of x.
+// SeriesAvg returns the mean of x. It exported to make it available
+// to tsdb packages.
 func SeriesAvg(dps Series, args ...float64) (a float64) {
 	for _, v := range dps {
 		a += float64(v)
@@ -1117,11 +1154,12 @@ func SeriesAvg(dps Series, args ...float64) (a float64) {
 	return
 }
 
+// CCount is the "cCount" function in the expression language.
 func CCount(e *State, seriesSet *ResultSet) (*ResultSet, error) {
-	return ReduceSeriesSet(e, seriesSet, cCount)
+	return ReduceSeriesSet(e, seriesSet, cCountSeries)
 }
 
-func cCount(dps Series, args ...float64) (a float64) {
+func cCountSeries(dps Series, args ...float64) (a float64) {
 	if len(dps) < 2 {
 		return float64(0)
 	}
@@ -1137,6 +1175,7 @@ func cCount(dps Series, args ...float64) (a float64) {
 	return float64(count)
 }
 
+// TimeDelta is the "timedelta" function in the expression language.
 func TimeDelta(e *State, seriesSet *ResultSet) (*ResultSet, error) {
 	for _, res := range seriesSet.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
@@ -1158,17 +1197,19 @@ func TimeDelta(e *State, seriesSet *ResultSet) (*ResultSet, error) {
 	return seriesSet, nil
 }
 
+// Sum is the "sum" function in the expression language.
 func Sum(e *State, seriesSet *ResultSet) (*ResultSet, error) {
-	return ReduceSeriesSet(e, seriesSet, sum)
+	return ReduceSeriesSet(e, seriesSet, sumSeries)
 }
 
-func sum(dps Series, args ...float64) (a float64) {
+func sumSeries(dps Series, args ...float64) (a float64) {
 	for _, v := range dps {
 		a += float64(v)
 	}
 	return
 }
 
+// Des is the "des" function the expression language.
 func Des(e *State, seriesSet *ResultSet, alpha float64, beta float64) *ResultSet {
 	for _, res := range seriesSet.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
@@ -1189,11 +1230,12 @@ func Des(e *State, seriesSet *ResultSet, alpha float64, beta float64) *ResultSet
 	return seriesSet
 }
 
+// Streak is the "streak" function the expression language.
 func Streak(e *State, seriesSet *ResultSet) (*ResultSet, error) {
-	return ReduceSeriesSet(e, seriesSet, streak)
+	return ReduceSeriesSet(e, seriesSet, streakSeries)
 }
 
-func streak(dps Series, args ...float64) (a float64) {
+func streakSeries(dps Series, args ...float64) (a float64) {
 	max := func(a, b int) int {
 		if a > b {
 			return a
@@ -1217,12 +1259,13 @@ func streak(dps Series, args ...float64) (a float64) {
 	return float64(longest)
 }
 
+// Dev is the "dev" function in the expression language.
 func Dev(e *State, seriesSet *ResultSet) (*ResultSet, error) {
-	return ReduceSeriesSet(e, seriesSet, dev)
+	return ReduceSeriesSet(e, seriesSet, devSeries)
 }
 
-// dev returns the sample standard deviation of x.
-func dev(dps Series, args ...float64) (d float64) {
+// devSeries returns the sample standard deviation of x.
+func devSeries(dps Series, args ...float64) (d float64) {
 	if len(dps) == 1 {
 		return 0
 	}
@@ -1234,19 +1277,21 @@ func dev(dps Series, args ...float64) (d float64) {
 	return math.Sqrt(d)
 }
 
+// Length in the "len" function in the expression language.
 func Length(e *State, seriesSet *ResultSet) (*ResultSet, error) {
-	return ReduceSeriesSet(e, seriesSet, length)
+	return ReduceSeriesSet(e, seriesSet, seriesLength)
 }
 
-func length(dps Series, args ...float64) (a float64) {
+func seriesLength(dps Series, args ...float64) (a float64) {
 	return float64(len(dps))
 }
 
+// Last is the "last" function in the expression language.
 func Last(e *State, seriesSet *ResultSet) (*ResultSet, error) {
-	return ReduceSeriesSet(e, seriesSet, last)
+	return ReduceSeriesSet(e, seriesSet, seriesLastValue)
 }
 
-func last(dps Series, args ...float64) (a float64) {
+func seriesLastValue(dps Series, args ...float64) (a float64) {
 	var last time.Time
 	for k, v := range dps {
 		if k.After(last) {
@@ -1257,11 +1302,12 @@ func last(dps Series, args ...float64) (a float64) {
 	return
 }
 
+// First in the "first" function in the expression language.
 func First(e *State, seriesSet *ResultSet) (*ResultSet, error) {
-	return ReduceSeriesSet(e, seriesSet, first)
+	return ReduceSeriesSet(e, seriesSet, seriesFirstValue)
 }
 
-func first(dps Series, args ...float64) (a float64) {
+func seriesFirstValue(dps Series, args ...float64) (a float64) {
 	var first time.Time
 	for k, v := range dps {
 		if k.Before(first) || first.IsZero() {
@@ -1272,11 +1318,12 @@ func first(dps Series, args ...float64) (a float64) {
 	return
 }
 
+// Since is the "since" function in the expression language.
 func Since(e *State, seriesSet *ResultSet) (*ResultSet, error) {
-	return ReduceSeriesSet(e, seriesSet, e.since)
+	return ReduceSeriesSet(e, seriesSet, e.seriesSince)
 }
 
-func (e *State) since(dps Series, args ...float64) (a float64) {
+func (e *State) seriesSince(dps Series, args ...float64) (a float64) {
 	var last time.Time
 	for k, v := range dps {
 		if k.After(last) {
@@ -1288,13 +1335,14 @@ func (e *State) since(dps Series, args ...float64) (a float64) {
 	return s.Seconds()
 }
 
-func Forecast_lr(e *State, seriesSet *ResultSet, y *ResultSet) (r *ResultSet, err error) {
-	return ReduceSeriesSet(e, seriesSet, e.forecast_lr, y)
+// ForecastLR is the "forecast_lr" function in the expression language.
+func ForecastLR(e *State, seriesSet *ResultSet, y *ResultSet) (r *ResultSet, err error) {
+	return ReduceSeriesSet(e, seriesSet, e.forecastLRSeries, y)
 }
 
-// forecast_lr returns the number of seconds a linear regression predicts the
+// forecastLRSeries returns the number of seconds a linear regression predicts the
 // series will take to reach y_val.
-func (e *State) forecast_lr(dps Series, args ...float64) float64 {
+func (e *State) forecastLRSeries(dps Series, args ...float64) float64 {
 	const tenYears = time.Hour * 24 * 365 * 10
 	yVal := args[0]
 	var x []float64
@@ -1325,20 +1373,21 @@ func (e *State) forecast_lr(dps Series, args ...float64) float64 {
 	return s.Seconds()
 }
 
-func Line_lr(e *State, seriesSet *ResultSet, d string) (*ResultSet, error) {
+// LineLR is the "linelr" function in the expression language.
+func LineLR(e *State, seriesSet *ResultSet, d string) (*ResultSet, error) {
 	dur, err := opentsdb.ParseDuration(d)
 	if err != nil {
 		return seriesSet, err
 	}
 	for _, res := range seriesSet.Results {
-		res.Value = line_lr(res.Value.(Series), time.Duration(dur))
+		res.Value = lineLRSeries(res.Value.(Series), time.Duration(dur))
 		res.Group.Merge(opentsdb.TagSet{"regression": "line"})
 	}
 	return seriesSet, nil
 }
 
-// line_lr generates a series representing the line up to duration in the future.
-func line_lr(dps Series, d time.Duration) Series {
+// lineLRSeries generates a series representing the line up to duration in the future.
+func lineLRSeries(dps Series, d time.Duration) Series {
 	var x []float64
 	var y []float64
 	sortedDPS := NewSortedSeries(dps)
@@ -1361,25 +1410,29 @@ func line_lr(dps Series, d time.Duration) Series {
 	return s
 }
 
+// Percentile is the "percentile" function in the expression language.
 func Percentile(e *State, seriesSet *ResultSet, p *ResultSet) (r *ResultSet, err error) {
-	return ReduceSeriesSet(e, seriesSet, percentile, p)
+	return ReduceSeriesSet(e, seriesSet, seriesPercentile, p)
 }
 
+// Min is the "min" function in the expression language.
 func Min(e *State, seriesSet *ResultSet) (r *ResultSet, err error) {
-	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(0))
+	return ReduceSeriesSet(e, seriesSet, seriesPercentile, FromScalar(0))
 }
 
+// Median is the "median" function in the expression language.
 func Median(e *State, seriesSet *ResultSet) (r *ResultSet, err error) {
-	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(.5))
+	return ReduceSeriesSet(e, seriesSet, seriesPercentile, FromScalar(.5))
 }
 
+// Max is the "max" function in the expression language.
 func Max(e *State, seriesSet *ResultSet) (r *ResultSet, err error) {
-	return ReduceSeriesSet(e, seriesSet, percentile, FromScalar(1))
+	return ReduceSeriesSet(e, seriesSet, seriesPercentile, FromScalar(1))
 }
 
-// percentile returns the value at the corresponding percentile between 0 and 1.
+// seriesPercentile returns the value at the corresponding seriesPercentile between 0 and 1.
 // Min and Max can be simulated using p <= 0 and p >= 1, respectively.
-func percentile(dps Series, args ...float64) (a float64) {
+func seriesPercentile(dps Series, args ...float64) (a float64) {
 	p := args[0]
 	var x []float64
 	for _, v := range dps {
@@ -1397,6 +1450,7 @@ func percentile(dps Series, args ...float64) (a float64) {
 	return x[int(i)]
 }
 
+// Rename is the "rename" function in the expression language.
 func Rename(e *State, set *ResultSet, s string) (*ResultSet, error) {
 	for _, section := range strings.Split(s, ",") {
 		kv := strings.Split(section, "=")
@@ -1420,6 +1474,7 @@ func Rename(e *State, set *ResultSet, s string) (*ResultSet, error) {
 	return set, nil
 }
 
+// AddTags is the "addtags" function in the expression language.
 func AddTags(e *State, set *ResultSet, s string) (*ResultSet, error) {
 	if s == "" {
 		return set, nil
@@ -1442,6 +1497,7 @@ func AddTags(e *State, set *ResultSet, s string) (*ResultSet, error) {
 	return set, nil
 }
 
+// Ungroup is the "ungroup" function in the expression language.
 func Ungroup(e *State, d *ResultSet) (*ResultSet, error) {
 	if len(d.Results) != 1 {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
@@ -1455,6 +1511,7 @@ func Ungroup(e *State, d *ResultSet) (*ResultSet, error) {
 	}, nil
 }
 
+// Transpose is the "t" function in the expression language.
 func Transpose(e *State, numberSet *ResultSet, gp string) (*ResultSet, error) {
 	gps := strings.Split(gp, ",")
 	m := make(map[string]*Result)
