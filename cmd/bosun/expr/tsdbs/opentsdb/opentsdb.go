@@ -269,7 +269,7 @@ func Window(e *expr.State, query, duration, period string, num float64, rfunc st
 			}
 		}
 		if !found {
-			results.Elements = append(results.Elements, &expr.Element{
+			results.Append(&expr.Element{
 				Group: resp.Tags,
 				Value: expr.Series{
 					minTime: fres,
@@ -341,7 +341,7 @@ func BandQuery(e *expr.State, query, duration, period, eduration string, num flo
 				values[time.Unix(i, 0).UTC()] = float64(v)
 			}
 			a.Value = values
-			r.Elements = append(r.Elements, a)
+			r.Append(a)
 		}
 		return nil
 	})
@@ -351,7 +351,7 @@ func BandQuery(e *expr.State, query, duration, period, eduration string, num flo
 	return
 }
 
-// OverQuery maps to the "overQuery" function in the expression language.
+// OverQuery is the "overQuery" function in the expression language.
 func OverQuery(e *expr.State, query, duration, period, eduration string, num float64) (r *expr.ValueSet, err error) {
 	r, err = bandTSDB(e, query, duration, period, eduration, num, func(r *expr.ValueSet, res *opentsdb.Response, offset time.Duration) error {
 		values := make(expr.Series)
@@ -364,7 +364,7 @@ func OverQuery(e *expr.State, query, duration, period, eduration string, num flo
 			values[time.Unix(i, 0).Add(offset).UTC()] = float64(v)
 		}
 		a.Value = values
-		r.Elements = append(r.Elements, a)
+		r.Append(a)
 		return nil
 	})
 	if err != nil {
@@ -437,7 +437,7 @@ func Query(e *expr.State, query, sduration, eduration string) (r *expr.ValueSet,
 			}
 			values[time.Unix(i, 0).UTC()] = float64(v)
 		}
-		r.Elements = append(r.Elements, &expr.Element{
+		r.Append(&expr.Element{
 			Value: values,
 			Group: res.Tags,
 		})

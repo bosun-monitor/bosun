@@ -54,7 +54,7 @@ func ESAll(e *expr.State) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -85,7 +85,7 @@ func ESAnd(e *expr.State, esqueries ...tsdbs.ESQuery) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -104,7 +104,7 @@ func ESNot(e *expr.State, query tsdbs.ESQuery) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -135,7 +135,7 @@ func ESOr(e *expr.State, esqueries ...tsdbs.ESQuery) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -154,7 +154,7 @@ func ESRegexp(e *expr.State, key string, regex string) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -186,7 +186,7 @@ func ESQueryString(e *expr.State, key string, query string) (*expr.ValueSet, err
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -205,7 +205,7 @@ func ESExists(e *expr.State, field string) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -224,7 +224,7 @@ func ESGT(e *expr.State, key string, gt float64) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -243,7 +243,7 @@ func ESGTE(e *expr.State, key string, gte float64) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -262,7 +262,7 @@ func ESLT(e *expr.State, key string, lt float64) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -281,7 +281,7 @@ func ESLTE(e *expr.State, key string, lte float64) (*expr.ValueSet, error) {
 			return nil
 		},
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: q})
+	r.Append(&expr.Element{Value: q})
 	return &r, nil
 }
 
@@ -368,7 +368,7 @@ func ESIndicies(e *expr.State, timeField string, literalIndices ...string) *expr
 		return literalIndices
 	}
 	indexer.TimeField = timeField
-	r.Elements = append(r.Elements, &expr.Element{Value: indexer})
+	r.Append(&expr.Element{Value: indexer})
 	return &r
 }
 
@@ -389,7 +389,7 @@ func ESDaily(e *expr.State, timeField, indexRoot, layout string) (*expr.ValueSet
 		}
 		return indices
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: indexer})
+	r.Append(&expr.Element{Value: indexer})
 	return &r, nil
 }
 
@@ -406,7 +406,7 @@ func ESMonthly(e *expr.State, timeField, indexRoot, layout string) (*expr.ValueS
 		}
 		return indices
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: indexer})
+	r.Append(&expr.Element{Value: indexer})
 	return &r, nil
 }
 

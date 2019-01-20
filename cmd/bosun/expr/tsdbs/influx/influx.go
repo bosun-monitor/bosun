@@ -83,7 +83,7 @@ func Query(e *expr.State, db, query, startDuration, endDuration, groupByInterval
 			}
 			values[t] = f
 		}
-		r.Elements = append(r.Elements, &expr.Element{
+		r.Append(&expr.Element{
 			Value: values,
 			Group: tags,
 		})

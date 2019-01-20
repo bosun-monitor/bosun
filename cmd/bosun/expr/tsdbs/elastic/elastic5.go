@@ -174,7 +174,7 @@ func ESDateHistogram5(prefix string, e *expr.State, indexer tsdbs.ESIndexer, key
 		if len(series) == 0 {
 			return r, nil
 		}
-		r.Elements = append(r.Elements, &expr.Element{
+		r.Append(&expr.Element{
 			Value: series,
 			Group: make(opentsdb.TagSet),
 		})
@@ -211,7 +211,7 @@ func ESDateHistogram5(prefix string, e *expr.State, indexer tsdbs.ESIndexer, key
 			if len(series) == 0 {
 				return nil
 			}
-			r.Elements = append(r.Elements, &expr.Element{
+			r.Append(&expr.Element{
 				Value: series,
 				Group: tags.Copy(),
 			})

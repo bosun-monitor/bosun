@@ -474,7 +474,7 @@ func matrixToResults(prefix string, e *expr.State, res promModels.Value, expecte
 		for _, v := range row.Values {
 			values[v.Timestamp.Time()] = float64(v.Value)
 		}
-		r.Elements = append(r.Elements, &expr.Element{
+		r.Append(&expr.Element{
 			Value: values,
 			Group: tags,
 		})
@@ -506,7 +506,7 @@ func MetricList(prefix string, e *expr.State) (r *expr.ValueSet, err error) {
 		return nil, err
 	}
 	metrics := val.(promModels.LabelValues)
-	r.Elements = append(r.Elements, &expr.Element{Value: expr.Info{metrics}})
+	r.Append(&expr.Element{Value: expr.Info{metrics}})
 	return
 }
 
@@ -585,7 +585,7 @@ func TagInfo(prefix string, e *expr.State, metric, sdur, edur string) (r *expr.V
 		tagInfo.UniqueSets = append(tagInfo.UniqueSets, s)
 	}
 	sort.Strings(tagInfo.UniqueSets)
-	r.Elements = append(r.Elements, &expr.Element{
+	r.Append(&expr.Element{
 		Value: expr.Info{tagInfo},
 	})
 	return

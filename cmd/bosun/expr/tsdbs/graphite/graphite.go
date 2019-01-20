@@ -150,7 +150,7 @@ func Band(e *expr.State, query, duration, period, format string, num float64) (r
 					}
 					if updateKey == -1 {
 						// result tagset is new
-						r.Elements = append(r.Elements, result)
+						r.Append(result)
 						updateKey = len(r.Elements) - 1
 					}
 					for k, v := range result.Value.(expr.Series) {

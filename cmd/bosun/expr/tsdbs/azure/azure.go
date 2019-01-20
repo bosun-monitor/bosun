@@ -286,7 +286,7 @@ func query(prefix string, e *expr.State, metric, tagKeysCSV, rsg, resName, resou
 				if len(series) == 0 {
 					continue // If we end up with an empty series then skip
 				}
-				r.Elements = append(r.Elements, &expr.Element{
+				r.Append(&expr.Element{
 					Value: series,
 					Group: tags,
 				})
@@ -445,7 +445,7 @@ func ResourcesByType(prefix string, e *expr.State, tp string) (r *expr.ValueSet,
 			resources.Resources = append(resources.Resources, res)
 		}
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: resources})
+	r.Append(&expr.Element{Value: resources})
 	return
 }
 
@@ -468,7 +468,7 @@ func FilterResources(e *expr.State, resources tsdbs.AzureResources, filter strin
 			filteredResources.Resources = append(filteredResources.Resources, res)
 		}
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: filteredResources})
+	r.Append(&expr.Element{Value: filteredResources})
 	return
 }
 
@@ -490,7 +490,7 @@ func FilterApps(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsight
 			filteredApps.Applications = append(filteredApps.Applications, app)
 		}
 	}
-	r.Elements = append(r.Elements, &expr.Element{Value: filteredApps})
+	r.Append(&expr.Element{Value: filteredApps})
 	return
 }
 

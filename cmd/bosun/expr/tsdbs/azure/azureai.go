@@ -185,7 +185,7 @@ func AIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, ap
 		if err != nil {
 			return r, err
 		}
-		r.Elements = append(r.Elements, &expr.Element{
+		r.Append(&expr.Element{
 			Value: series,
 			Group: tags,
 		})
@@ -229,7 +229,7 @@ func AIListApps(prefix string, e *expr.State) (r *expr.ValueSet, err error) {
 				})
 			}
 		}
-		r.Elements = append(r.Elements, &expr.Element{Value: applist})
+		r.Append(&expr.Element{Value: applist})
 		return r, nil
 	}
 	val, err, hit := e.Cache.Get(key, getFn)
@@ -257,7 +257,7 @@ func AIMetricMD(prefix string, e *expr.State, apps tsdbs.AzureApplicationInsight
 		if err != nil {
 			return r, err
 		}
-		r.Elements = append(r.Elements, &expr.Element{
+		r.Append(&expr.Element{
 			Value: expr.Info{md.Value},
 			Group: opentsdb.TagSet{"app": app.ApplicationName},
 		})
