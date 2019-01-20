@@ -39,6 +39,11 @@ type ValueSet struct {
 	NaNValue *float64
 }
 
+// Append appends an Element ot the Elements property for the ValueSet
+func (v *ValueSet) Append(e ...*Element) {
+	v.Elements = append(v.Elements, e...)
+}
+
 // ElementSlice is a slice of Result Pointers.
 type ElementSlice []*Element
 
@@ -167,20 +172,20 @@ func NewSortedSeries(dps Series) SortableSeries {
 
 // Equal inspects if two ValueSets have the same content.
 // An error will return explaining why they are not equal if they are not equal.
-func (r *ValueSet) Equal(b *ValueSet) (bool, error) {
-	if len(r.Elements) != len(b.Elements) {
-		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(r.Elements), len(b.Elements))
+func (v *ValueSet) Equal(b *ValueSet) (bool, error) {
+	if len(v.Elements) != len(b.Elements) {
+		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(v.Elements), len(b.Elements))
 	}
-	if r.IgnoreUnjoined != b.IgnoreUnjoined {
-		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreUnjoined, b.IgnoreUnjoined)
+	if v.IgnoreUnjoined != b.IgnoreUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", v.IgnoreUnjoined, b.IgnoreUnjoined)
 	}
-	if r.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
-		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
+	if v.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", v.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
 	}
-	if r.NaNValue != b.NaNValue {
-		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", r.NaNValue, b.NaNValue)
+	if v.NaNValue != b.NaNValue {
+		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", v.NaNValue, b.NaNValue)
 	}
-	sortedA := ElementSliceByGroup(r.Elements)
+	sortedA := ElementSliceByGroup(v.Elements)
 	sort.Sort(sortedA)
 	sortedB := ElementSliceByGroup(b.Elements)
 	sort.Sort(sortedB)

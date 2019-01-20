@@ -448,7 +448,7 @@ func Aggr(e *State, seriesSet *ValueSet, groups string, aggregator string) (*Val
 			return &results, err
 		}
 		res.Group = opentsdb.TagSet{}
-		results.Elements = append(results.Elements, res)
+		results.Append(res)
 		return &results, nil
 	}
 
@@ -468,7 +468,7 @@ func Aggr(e *State, seriesSet *ValueSet, groups string, aggregator string) (*Val
 		if _, ok := newGroups[groupName]; !ok {
 			newGroups[groupName] = &ValueSet{}
 		}
-		newGroups[groupName].Elements = append(newGroups[groupName].Elements, result)
+		newGroups[groupName].Append(result)
 	}
 
 	for groupName, series := range newGroups {
@@ -481,7 +481,7 @@ func Aggr(e *State, seriesSet *ValueSet, groups string, aggregator string) (*Val
 		for i := 0; i < len(grps); i++ {
 			res.Group.Merge(opentsdb.TagSet{grps[i]: vs[i]})
 		}
-		results.Elements = append(results.Elements, res)
+		results.Append(res)
 	}
 
 	return &results, nil
@@ -686,7 +686,7 @@ INNER:
 				endOverlapsSeries := seriesResult.Group.Overlaps(endResult.Group)
 				if (startHasNoGroup || startOverlapsSeries) && (endHasNoGroup || endOverlapsSeries) {
 					res := cropSeries(e, seriesResult, startResult, endResult)
-					results.Elements = append(results.Elements, res)
+					results.Append(res)
 					continue INNER
 				}
 			}
@@ -725,7 +725,7 @@ func DropBool(e *State, target *ValueSet, filter *ValueSet) (*ValueSet, error) {
 			}
 		}
 		if len(newSeries) > 0 {
-			res.Elements = append(res.Elements, &Element{Group: union.Group, Value: newSeries})
+			res.Append(&Element{Group: union.Group, Value: newSeries})
 		}
 	}
 	return &res, nil
@@ -781,7 +781,7 @@ func Month(e *State, offset float64, startEnd string) (*ValueSet, error) {
 func NV(e *State, numberSet *ValueSet, v float64) (results *ValueSet, err error) {
 	// If there are no results in the set, promote it to a number with the empty group ({})
 	if len(numberSet.Elements) == 0 {
-		numberSet.Elements = append(numberSet.Elements, &Element{Value: Number(v), Group: make(opentsdb.TagSet)})
+		numberSet.Append(&Element{Value: Number(v), Group: make(opentsdb.TagSet)})
 		return numberSet, nil
 	}
 	numberSet.NaNValue = &v
@@ -839,7 +839,7 @@ func Tail(e *State, seriesSet *ValueSet, numberSet *ValueSet) (*ValueSet, error)
 		// if there are fewer points than the requested tail
 		// short circut and just return current series
 		if len(s.Value.Value().(Series)) <= tailLength {
-			res.Elements = append(res.Elements, s)
+			res.Append(s)
 			return nil
 		}
 
@@ -862,7 +862,7 @@ func Tail(e *State, seriesSet *ValueSet, numberSet *ValueSet) (*ValueSet, error)
 		for _, item := range sorted[len(sorted)-tailLength:] {
 			newSeries[item.T] = item.V
 		}
-		res.Elements = append(res.Elements, s)
+		res.Append(s)
 		return nil
 	}
 
@@ -886,7 +886,7 @@ func Merge(e *State, seriesSets ...*ValueSet) (*ValueSet, error) {
 			}
 			seen[entry.Group.String()] = true
 		}
-		res.Elements = append(res.Elements, sSet.Elements...)
+		res.Append(sSet.Elements...)
 	}
 	return res, nil
 }
@@ -1012,7 +1012,7 @@ func dropValues(e *State, seriesSet *ValueSet, thresholdSet *ValueSet, dropFunct
 			return fmt.Errorf("series %s is empty", s.Group)
 		}
 		s.Value = nv
-		res.Elements = append(res.Elements, s)
+		res.Append(s)
 		return nil
 	}
 	return match(dropSeries, seriesSet, thresholdSet)
@@ -1101,7 +1101,7 @@ func ReduceSeriesSet(e *State, seriesSet *ValueSet, reducerFunc func(Series, ...
 				return nil
 			}
 			s.Value = Number(reducerFunc(t, floats...))
-			res.Elements = append(res.Elements, s)
+			res.Append(s)
 			return nil
 		default:
 			return fmt.Errorf(`Unsupported type passed to ReduceSeriesSet for alarm [%s].`+
@@ -1542,7 +1542,7 @@ func Transpose(e *State, numberSet *ValueSet, gp string) (*ValueSet, error) {
 	}
 	var r ValueSet
 	for _, res := range m {
-		r.Elements = append(r.Elements, res)
+		r.Append(res)
 	}
 	return &r, nil
 }
