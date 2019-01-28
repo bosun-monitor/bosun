@@ -772,6 +772,8 @@ func (c *Context) SlackColor() string {
 	return ""
 }
 
+// SlackAttachment returns a SlackAttachment structure with the color
+// and Timestamp set from the Context of the alert.
 func (c *Context) SlackAttachment() *SlackAttachment {
 	a := new(SlackAttachment)
 	a.Color = c.SlackColor()
@@ -779,97 +781,116 @@ func (c *Context) SlackAttachment() *SlackAttachment {
 	return a
 }
 
+// AddActions appends an Action to the Actions field of the SlackAttachment.
 func (a *SlackAttachment) AddActions(action ...interface{}) interface{} {
 	a.Actions = append(a.Actions, action...)
 	return "" // have to return something
 }
 
+// AddFields appends a Field to the Fields field of the SlackAttachment.
 func (a *SlackAttachment) AddFields(field ...interface{}) interface{} {
 	a.Fields = append(a.Fields, field...)
 	return "" // have to return something
 }
 
+// AddActions appends an Action to the Actions field of the SlackAttachment.
 func (a *SlackAttachment) SetColor(color string) interface{} {
 	a.Color = color
 	return ""
 }
 
+// SetFallback sets the FallBack field of the SlackAttachment.
 func (a *SlackAttachment) SetFallback(fallback string) interface{} {
 	a.Fallback = fallback
 	return ""
 }
 
+// SetAuthorID sets the AuthorID field of the SlackAttachment.
 func (a *SlackAttachment) SetAuthorID(authorID string) interface{} {
 	a.AuthorID = authorID
 	return ""
 }
 
+// SetAuthorName sets the AuthorName field of the SlackAttachment.
 func (a *SlackAttachment) SetAuthorName(authorName string) interface{} {
 	a.AuthorName = authorName
 	return ""
 }
 
+// SetAuthorSubname sets the AuthorSubname field of the SlackAttachment.
 func (a *SlackAttachment) SetAuthorSubname(authorSubname string) interface{} {
 	a.AuthorSubname = authorSubname
 	return ""
 }
 
+// SetAuthorLink sets the AuthorLink field of the SlackAttachment.
 func (a *SlackAttachment) SetAuthorLink(authorLink string) interface{} {
 	a.AuthorLink = authorLink
 	return ""
 }
 
+// SetAuthorIcon sets the AuthorIcon field of the SlackAttachment.
 func (a *SlackAttachment) SetAuthorIcon(authorIcon string) interface{} {
 	a.AuthorIcon = authorIcon
 	return ""
 }
 
+// SetTitle sets the Title field of the SlackAttachment.
 func (a *SlackAttachment) SetTitle(title string) interface{} {
 	a.Title = title
 	return ""
 }
 
+// SetTitleLink sets the TitleLink field of the SlackAttachment.
 func (a *SlackAttachment) SetTitleLink(titleLink string) interface{} {
 	a.TitleLink = titleLink
 	return ""
 }
 
+// SetPretext sets the Pretext field of the SlackAttachment.
 func (a *SlackAttachment) SetPretext(pretext string) interface{} {
 	a.Pretext = pretext
 	return ""
 }
 
+// SetText sets the Text field of the SlackAttachment.
 func (a *SlackAttachment) SetText(text string) interface{} {
 	a.Text = text
 	return ""
 }
 
+// SetImageURL sets the ImageURL field of the SlackAttachment.
 func (a *SlackAttachment) SetImageURL(url string) interface{} {
 	a.ImageURL = url
 	return ""
 }
 
+// SetThumbURL sets the ThumbURL field of the SlackAttachment.
 func (a *SlackAttachment) SetThumbURL(url string) interface{} {
 	a.ThumbURL = url
 	return ""
 }
 
+// SetFooter sets the Footer field of the SlackAttachment.
 func (a *SlackAttachment) SetFooter(footer string) interface{} {
 	a.Footer = footer
 	return ""
 }
 
+// SetFooterIcon sets the FooterIcon field of the SlackAttachment.
 func (a *SlackAttachment) SetFooterIcon(footerIcon string) interface{} {
 	a.FooterIcon = footerIcon
 	return ""
 }
 
+// SetTs sets the Ts field of the SlackAttachment.
 func (a *SlackAttachment) SetTs(ts int64) interface{} {
 	a.Ts = ts
 	return ""
 }
 
-// SlackAttachment contains all the information for a slack message attachment.
+// SlackAttachment contains all the information for a slack message attachment and
+// has methods to Set/Append fields.
 type SlackAttachment struct {
 	Color    string `json:"color,omitempty"`
 	Fallback string `json:"fallback"`
