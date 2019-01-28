@@ -451,6 +451,30 @@ var defaultFuncs = template.FuncMap{
 		}
 		return string(b)
 	},
+	"slackLinkButton": func(text, url, style string) interface{} {
+		return struct {
+			Type  string `json:"type"`
+			Text  string `json:"text"`
+			URL   string `json:"url"`
+			Style string `json:"style,omitempty"`
+		}{
+			"button",
+			text,
+			url,
+			style,
+		}
+	},
+	"slackField": func(title string, value interface{}, short bool) interface{} {
+		return struct {
+			Title string      `json:"title"`
+			Value interface{} `json:"value"`
+			Short bool        `json:"short"`
+		}{
+			title,
+			value,
+			short,
+		}
+	},
 }
 
 var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
