@@ -1,3 +1,4 @@
+// Package slack is for creating slack notifications inside of Bosun templates
 package slack
 
 import "bosun.org/models"
@@ -54,6 +55,21 @@ type Attachment struct {
 	FooterIcon string `json:"footer_icon,omitempty"`
 
 	Ts int64 `json:"ts,omitempty"`
+}
+
+// Field is a structure for what slack expects as an item in the Fields slice of an Attachment.
+type Field struct {
+	Title string      `json:"title"`
+	Value interface{} `json:"value"`
+	Short bool        `json:"short"`
+}
+
+// Action is a struture for what slack expects as an item in the Actions slice of an Attachment.
+type Action struct {
+	Type  string `json:"type"`
+	Text  string `json:"text"`
+	URL   string `json:"url"`
+	Style string `json:"style,omitempty"`
 }
 
 // AddActions appends an Action to the Actions field of the Attachment.
