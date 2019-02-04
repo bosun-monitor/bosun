@@ -19,6 +19,7 @@ import (
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/cmd/bosun/sched/slack"
 	"bosun.org/opentsdb"
 )
 
@@ -450,6 +451,21 @@ var defaultFuncs = template.FuncMap{
 			return err.Error()
 		}
 		return string(b)
+	},
+	"slackLinkButton": func(text, url, style string) interface{} {
+		return slack.Action{
+			Type:  "button",
+			Text:  text,
+			URL:   url,
+			Style: style,
+		}
+	},
+	"slackField": func(title string, value interface{}, short bool) interface{} {
+		return slack.Field{
+			Title: title,
+			Value: value,
+			Short: short,
+		}
 	},
 }
 

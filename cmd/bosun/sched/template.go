@@ -19,6 +19,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/sched/slack"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -754,4 +755,10 @@ func (c *Context) azureSelectResource(prefix, rType, rsg, name string) (expr.Azu
 		return selectedResource, nil
 	}
 	return az, fmt.Errorf("resource with type %s, group %s, and name %s not found", rType, rsg, name)
+}
+
+// SlackAttachment creates a new SlackAttachment with fields initalized
+// from the IncidentState.
+func (c *Context) SlackAttachment() *slack.Attachment {
+	return slack.NewAttachment(c.IncidentState)
 }
