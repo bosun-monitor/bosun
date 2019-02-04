@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registerInit(startGithubCollectors)
+	RegisterInit(startGithubCollectors)
 }
 
 type githubRoundTripper struct {

@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		for _, f := range c.Fastly {
 			client := newFastlyClient(f.Key)
 			collectors = append(collectors, &IntervalCollector{

@@ -19,7 +19,7 @@ import (
 func init() {
 	os.Setenv("NLS_LANG", "AMERICAN_AMERICA.AL32UTF8")
 
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		for _, o := range c.Oracles {
 			name := o.ClusterName
 			for _, inst := range o.Instances {

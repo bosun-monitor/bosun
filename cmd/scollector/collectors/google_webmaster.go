@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		for _, g := range c.GoogleWebmaster {
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {

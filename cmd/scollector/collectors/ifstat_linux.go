@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		if c.IfaceExpr != "" {
 			ifstatRE = regexp.MustCompile(fmt.Sprintf("(%s):(.*)", c.IfaceExpr))
 		}

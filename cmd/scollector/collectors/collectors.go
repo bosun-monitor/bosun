@@ -217,11 +217,11 @@ func Run(cs []Collector) (chan *opentsdb.DataPoint, chan struct{}) {
 	return ch, quit
 }
 
-type initFunc func(*conf.Conf)
+type InitFunc func(*conf.Conf)
 
-var inits = []initFunc{}
+var inits = []InitFunc{}
 
-func registerInit(i initFunc) {
+func RegisterInit(i InitFunc) {
 	inits = append(inits, i)
 }
 

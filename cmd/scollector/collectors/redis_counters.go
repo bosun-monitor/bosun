@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		for _, red := range c.RedisCounters {
 			collectors = append(collectors,
 				&IntervalCollector{

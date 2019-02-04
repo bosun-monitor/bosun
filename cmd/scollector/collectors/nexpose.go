@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		for _, n := range c.Nexpose {
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {

@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		for _, filter := range c.ElasticIndexFilters {
 			err := AddElasticIndexFilter(filter, true)
 			if err != nil {

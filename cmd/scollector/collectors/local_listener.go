@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		if c.LocalListener != "" {
 			collectors = append(collectors, &StreamCollector{F: func() <-chan *opentsdb.MultiDataPoint {
 				return c_local_listener(c.LocalListener)

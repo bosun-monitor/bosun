@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	registerInit(startCadvisorCollector)
+	RegisterInit(startCadvisorCollector)
 }
 
 var cadvisorMeta = map[string]MetricMeta{

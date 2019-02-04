@@ -23,7 +23,7 @@ type systemdServiceConfig struct {
 var systemdServices []*systemdServiceConfig
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		if _, err := exec.LookPath("systemctl"); err == nil {
 			for _, s := range c.SystemdService {
 				AddSystemdServiceConfig(s)

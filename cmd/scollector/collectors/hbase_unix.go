@@ -23,7 +23,7 @@ var (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		host := ""
 		if c.HadoopHost != "" {
 			host = "http://" + c.HadoopHost

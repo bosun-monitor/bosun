@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registerInit(func(c *conf.Conf) {
+	RegisterInit(func(c *conf.Conf) {
 		for _, h := range c.HAProxy {
 			for _, i := range h.Instances {
 				ii := i

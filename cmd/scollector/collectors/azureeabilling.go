@@ -24,7 +24,7 @@ const (
 )
 
 func init() {
-	registerInit(startAzureEABilling)
+	RegisterInit(startAzureEABilling)
 }
 
 func startAzureEABilling(c *conf.Conf) {
