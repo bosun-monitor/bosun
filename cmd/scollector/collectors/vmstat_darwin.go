@@ -35,7 +35,7 @@ func c_vmstat_darwin() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "darwin.mem.vm.4kpages."+name, value, nil, metadata.Unknown, metadata.None, "")
 			if name == "free" {
 				free = value * 4096
-				Add(&md, osMemFree, free, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
+				Add(&md, OSMemFree, free, nil, metadata.Gauge, metadata.Bytes, OSMemFreeDesc)
 			}
 		} else if fields[0] == "Pageins" {
 			Add(&md, "darwin.mem.vm.pageins", value, nil, metadata.Counter, metadata.None, "")
@@ -49,12 +49,12 @@ func c_vmstat_darwin() (opentsdb.MultiDataPoint, error) {
 		if total == 0 {
 			return nil
 		}
-		Add(&md, osMemTotal, total, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
+		Add(&md, OSMemTotal, total, nil, metadata.Gauge, metadata.Bytes, OSMemTotalDesc)
 		if free == 0 {
 			return nil
 		}
-		Add(&md, osMemUsed, total-free, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
-		Add(&md, osMemPctFree, free/total, nil, metadata.Gauge, metadata.Pct, osMemPctFreeDesc)
+		Add(&md, OSMemUsed, total-free, nil, metadata.Gauge, metadata.Bytes, OSMemUsedDesc)
+		Add(&md, OSMemPctFree, free/total, nil, metadata.Gauge, metadata.Pct, OSMemPctFreeDesc)
 		return nil
 	}, "sysctl", "-n", "hw.memsize")
 	return md, nil

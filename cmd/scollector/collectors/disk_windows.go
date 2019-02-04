@@ -33,16 +33,16 @@ func c_diskspace_windows() (opentsdb.MultiDataPoint, error) {
 	for _, v := range dst {
 		tags := opentsdb.TagSet{"disk": v.Name}
 		space_used := v.Size - v.FreeSpace
-		Add(&md, "win.disk.fs.space_free", v.FreeSpace, tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
-		Add(&md, "win.disk.fs.space_total", v.Size, tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
-		Add(&md, "win.disk.fs.space_used", space_used, tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
-		Add(&md, osDiskFree, v.FreeSpace, tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
-		Add(&md, osDiskTotal, v.Size, tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
-		Add(&md, osDiskUsed, space_used, tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
+		Add(&md, "win.disk.fs.space_free", v.FreeSpace, tags, metadata.Gauge, metadata.Bytes, OSDiskFreeDesc)
+		Add(&md, "win.disk.fs.space_total", v.Size, tags, metadata.Gauge, metadata.Bytes, OSDiskTotalDesc)
+		Add(&md, "win.disk.fs.space_used", space_used, tags, metadata.Gauge, metadata.Bytes, OSDiskUsedDesc)
+		Add(&md, OSDiskFree, v.FreeSpace, tags, metadata.Gauge, metadata.Bytes, OSDiskFreeDesc)
+		Add(&md, OSDiskTotal, v.Size, tags, metadata.Gauge, metadata.Bytes, OSDiskTotalDesc)
+		Add(&md, OSDiskUsed, space_used, tags, metadata.Gauge, metadata.Bytes, OSDiskUsedDesc)
 		if v.Size != 0 {
 			percent_free := float64(v.FreeSpace) / float64(v.Size) * 100
-			Add(&md, "win.disk.fs.percent_free", percent_free, tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
-			Add(&md, osDiskPctFree, percent_free, tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
+			Add(&md, "win.disk.fs.percent_free", percent_free, tags, metadata.Gauge, metadata.Pct, OSDiskPctFreeDesc)
+			Add(&md, OSDiskPctFree, percent_free, tags, metadata.Gauge, metadata.Pct, OSDiskPctFreeDesc)
 		}
 		if v.VolumeName != "" {
 			metadata.AddMeta("", tags, "label", v.VolumeName, true)

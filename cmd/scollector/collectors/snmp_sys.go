@@ -32,7 +32,7 @@ func c_snmp_sys(host, community string) (opentsdb.MultiDataPoint, error) {
 	if err != nil {
 		return md, err
 	}
-	Add(&md, osSystemUptime, uptime.Int64()/big.NewInt(100).Int64(), opentsdb.TagSet{"host": host}, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+	Add(&md, OSSystemUptime, uptime.Int64()/big.NewInt(100).Int64(), opentsdb.TagSet{"host": host}, metadata.Gauge, metadata.Second, OSSystemUptimeDesc)
 	return md, nil
 }
 

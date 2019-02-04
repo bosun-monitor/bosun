@@ -233,16 +233,16 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 			metric += "rem."
 			ometric += "rem."
 		}
-		Add(&md, metric+"space_total", spaceTotal, tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
-		Add(&md, metric+"space_used", spaceUsed, tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
-		Add(&md, metric+"space_free", spaceFree, tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
-		Add(&md, ometric+"space_total", spaceTotal, os_tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
-		Add(&md, ometric+"space_used", spaceUsed, os_tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
-		Add(&md, ometric+"space_free", spaceFree, os_tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
+		Add(&md, metric+"space_total", spaceTotal, tags, metadata.Gauge, metadata.Bytes, OSDiskTotalDesc)
+		Add(&md, metric+"space_used", spaceUsed, tags, metadata.Gauge, metadata.Bytes, OSDiskUsedDesc)
+		Add(&md, metric+"space_free", spaceFree, tags, metadata.Gauge, metadata.Bytes, OSDiskFreeDesc)
+		Add(&md, ometric+"space_total", spaceTotal, os_tags, metadata.Gauge, metadata.Bytes, OSDiskTotalDesc)
+		Add(&md, ometric+"space_used", spaceUsed, os_tags, metadata.Gauge, metadata.Bytes, OSDiskUsedDesc)
+		Add(&md, ometric+"space_free", spaceFree, os_tags, metadata.Gauge, metadata.Bytes, OSDiskFreeDesc)
 		st, _ := strconv.ParseFloat(spaceTotal, 64)
 		sf, _ := strconv.ParseFloat(spaceFree, 64)
 		if st != 0 {
-			Add(&md, osDiskPctFree, sf/st*100, os_tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
+			Add(&md, OSDiskPctFree, sf/st*100, os_tags, metadata.Gauge, metadata.Pct, OSDiskPctFreeDesc)
 		}
 		return nil
 	}, "df", "-lPT", "--block-size", "1")

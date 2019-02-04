@@ -164,7 +164,7 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.num_fds", len(fds), tags, metadata.Gauge, metadata.Files, descLinuxProcFd)
 		Add(md, "linux.proc.start_time", start_ts, tags, metadata.Gauge, metadata.Timestamp, descLinuxProcStartTS)
 		Add(md, "linux.proc.uptime", now()-start_ts, tags, metadata.Gauge, metadata.Second, descLinuxProcUptime)
-		Add(md, "linux.proc.pid", pid, tags, metadata.Gauge, metadata.Unit("PID"), osProcPID)
+		Add(md, "linux.proc.pid", pid, tags, metadata.Gauge, metadata.Unit("PID"), OSProcPID)
 	}
 	coreCount, err := linuxCoreCount()
 	if err != nil {
@@ -172,10 +172,10 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	}
 	tsName := opentsdb.TagSet{"name": w.Name}
 	if processCount > 0 {
-		Add(md, osProcCPU, float64(totalCPU)/float64(coreCount), tsName, metadata.Counter, metadata.Pct, osProcCPUDesc)
-		Add(md, osProcMemReal, totalRSSMem*int64(os.Getpagesize()), tsName, metadata.Gauge, metadata.Bytes, osProcMemRealDesc)
-		Add(md, osProcMemVirtual, totalVirtualMem, tsName, metadata.Gauge, metadata.Bytes, osProcMemVirtualDesc)
-		Add(md, osProcCount, processCount, tsName, metadata.Gauge, metadata.Process, osProcCountDesc)
+		Add(md, OSProcCPU, float64(totalCPU)/float64(coreCount), tsName, metadata.Counter, metadata.Pct, OSProcCPUDesc)
+		Add(md, OSProcMemReal, totalRSSMem*int64(os.Getpagesize()), tsName, metadata.Gauge, metadata.Bytes, OSProcMemRealDesc)
+		Add(md, OSProcMemVirtual, totalVirtualMem, tsName, metadata.Gauge, metadata.Bytes, OSProcMemVirtualDesc)
+		Add(md, OSProcCount, processCount, tsName, metadata.Gauge, metadata.Process, OSProcCountDesc)
 	}
 	if w.IncludeCount {
 		Add(md, "linux.proc.count", processCount, tsName, metadata.Gauge, metadata.Process, descLinuxProcCount)

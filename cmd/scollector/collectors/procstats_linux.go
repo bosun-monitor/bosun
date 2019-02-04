@@ -47,9 +47,9 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		if m == nil {
 			return nil
 		}
-		Add(&md, "linux.uptime_total", m[1], nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+		Add(&md, "linux.uptime_total", m[1], nil, metadata.Gauge, metadata.Second, OSSystemUptimeDesc)
 		Add(&md, "linux.uptime_now", m[2], nil, metadata.Gauge, metadata.Second, "")
-		Add(&md, osSystemUptime, m[1], nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+		Add(&md, OSSystemUptime, m[1], nil, metadata.Gauge, metadata.Second, OSSystemUptimeDesc)
 		return nil
 	}); err != nil {
 		Error = err
@@ -77,17 +77,17 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0a
 	// We used this metric if it is available
 	available, availableIsAvailable := mem["MemAvailable"]
-	Add(&md, osMemTotal, memTotal*1024, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
+	Add(&md, OSMemTotal, memTotal*1024, nil, metadata.Gauge, metadata.Bytes, OSMemTotalDesc)
 	freeValue := memFree + bufferCacheSlab
 	usedValue := memTotal - memFree - bufferCacheSlab
 	if availableIsAvailable {
 		freeValue = available
 		usedValue = memTotal - available
 	}
-	Add(&md, osMemFree, freeValue*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
-	Add(&md, osMemUsed, usedValue*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
+	Add(&md, OSMemFree, freeValue*1024, nil, metadata.Gauge, metadata.Bytes, OSMemFreeDesc)
+	Add(&md, OSMemUsed, usedValue*1024, nil, metadata.Gauge, metadata.Bytes, OSMemUsedDesc)
 	if memTotal != 0 {
-		Add(&md, osMemPctFree, (float64(freeValue))/float64(memTotal)*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
+		Add(&md, OSMemPctFree, (float64(freeValue))/float64(memTotal)*100, nil, metadata.Gauge, metadata.Pct, OSMemFreeDesc)
 	}
 
 	num_cores := 0
@@ -164,7 +164,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Error = err
 	}
 	if num_cores != 0 && t_util != 0 {
-		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Counter, metadata.Pct, "")
+		Add(&md, OSCPU, t_util/float64(num_cores), nil, metadata.Counter, metadata.Pct, "")
 	}
 	cpuinfo_index := 0
 	if err := readLine("/proc/cpuinfo", func(s string) error {
@@ -173,8 +173,8 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			return nil
 		}
 		tags := opentsdb.TagSet{"cpu": strconv.Itoa(cpuinfo_index)}
-		Add(&md, osCPUClock, m[1], tags, metadata.Gauge, metadata.MHz, osCPUClockDesc)
-		Add(&md, "linux.cpu.clock", m[1], tags, metadata.Gauge, metadata.MHz, osCPUClockDesc)
+		Add(&md, OSCPUClock, m[1], tags, metadata.Gauge, metadata.MHz, OSCPUClockDesc)
+		Add(&md, "linux.cpu.clock", m[1], tags, metadata.Gauge, metadata.MHz, OSCPUClockDesc)
 		cpuinfo_index += 1
 		return nil
 	}); err != nil {

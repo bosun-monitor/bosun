@@ -145,7 +145,7 @@ func ciscoCPU(host, community string, ts opentsdb.TagSet, cpuIntegrator tsIntegr
 	}
 	for _, pct := range cpu {
 		Add(md, "cisco.cpu", pct, ts, metadata.Gauge, metadata.Pct, "")
-		Add(md, osCPU, cpuIntegrator(time.Now().Unix(), float64(pct)), ts, metadata.Counter, metadata.Pct, "")
+		Add(md, OSCPU, cpuIntegrator(time.Now().Unix(), float64(pct)), ts, metadata.Counter, metadata.Pct, "")
 	}
 	return nil
 }
@@ -226,11 +226,11 @@ func c_cisco_ios(host, community string, cpuIntegrator tsIntegrator) (opentsdb.M
 		totalFreeMem += entry.Free
 		totalUsedMem += entry.Used
 	}
-	Add(&md, osMemFree, totalFreeMem, ts, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
-	Add(&md, osMemUsed, totalUsedMem, ts, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
+	Add(&md, OSMemFree, totalFreeMem, ts, metadata.Gauge, metadata.Bytes, OSMemFreeDesc)
+	Add(&md, OSMemUsed, totalUsedMem, ts, metadata.Gauge, metadata.Bytes, OSMemUsedDesc)
 	totalMem := totalFreeMem + totalUsedMem
-	Add(&md, osMemTotal, totalMem, ts, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
-	Add(&md, osMemPctFree, int64(float64(totalFreeMem)/float64(totalMem)*100), ts, metadata.Gauge, metadata.Pct, osMemPctFreeDesc)
+	Add(&md, OSMemTotal, totalMem, ts, metadata.Gauge, metadata.Bytes, OSMemTotalDesc)
+	Add(&md, OSMemPctFree, int64(float64(totalFreeMem)/float64(totalMem)*100), ts, metadata.Gauge, metadata.Pct, OSMemPctFreeDesc)
 	return md, nil
 }
 
@@ -259,7 +259,7 @@ func c_cisco_nxos(host, community string, cpuIntegrator tsIntegrator) (opentsdb.
 			if v, usedOk = value.(int64); usedOk {
 				usedMem = v * 2 << 9 // KiB to Bytes
 				totalMem += usedMem
-				Add(&md, osMemUsed, usedMem, ts, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
+				Add(&md, OSMemUsed, usedMem, ts, metadata.Gauge, metadata.Bytes, OSMemUsedDesc)
 			} else {
 				slog.Errorf("failed to convert used memory %v to int64 for host %v", value, host)
 			}
@@ -267,15 +267,15 @@ func c_cisco_nxos(host, community string, cpuIntegrator tsIntegrator) (opentsdb.
 			if v, freeOk = value.(int64); freeOk {
 				freeMem = v * 2 << 9
 				totalMem += freeMem
-				Add(&md, osMemFree, freeMem, ts, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
+				Add(&md, OSMemFree, freeMem, ts, metadata.Gauge, metadata.Bytes, OSMemFreeDesc)
 			} else {
 				slog.Errorf("failed to convert free memory %v to int64 for host %v", value, host)
 			}
 		}
 	}
 	if usedOk && freeOk {
-		Add(&md, osMemTotal, totalMem, ts, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
-		Add(&md, osMemPctFree, int64(float64(freeMem)/float64(totalMem)*100), ts, metadata.Gauge, metadata.Pct, osMemPctFreeDesc)
+		Add(&md, OSMemTotal, totalMem, ts, metadata.Gauge, metadata.Bytes, OSMemTotalDesc)
+		Add(&md, OSMemPctFree, int64(float64(freeMem)/float64(totalMem)*100), ts, metadata.Gauge, metadata.Pct, OSMemPctFreeDesc)
 	} else {
 		slog.Errorf("failed to get both free and used memory for host %v", host)
 	}

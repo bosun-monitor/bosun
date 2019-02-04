@@ -86,7 +86,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "win.service.status", util.Btoi(svc.Status != "OK"), tags, metadata.Gauge, metadata.Ok, descWinServiceStatus)
 			Add(&md, "win.service.checkpoint", svc.CheckPoint, tags, metadata.Gauge, metadata.None, descWinServiceCheckPoint)
 			Add(&md, "win.service.wait_hint", svc.WaitHint, tags, metadata.Gauge, metadata.MilliSecond, descWinServiceWaitHint)
-			Add(&md, osServiceRunning, util.Btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, osServiceRunningDesc)
+			Add(&md, OSServiceRunning, util.Btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, OSServiceRunningDesc)
 		}
 	}
 
@@ -177,22 +177,22 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.proc.priority_base", v.PriorityBase, tags, metadata.Gauge, metadata.None, descWinProcPriority_base)
 		Add(&md, "win.proc.private_bytes", v.PrivateBytes, tags, metadata.Gauge, metadata.Bytes, descWinProcPrivate_bytes)
 		Add(&md, "win.proc.thread_count", v.ThreadCount, tags, metadata.Gauge, metadata.Count, descWinProcthread_count)
-		Add(&md, "win.proc.pid", v.IDProcess, tags, metadata.Gauge, metadata.Unit("PID"), osProcPID)
+		Add(&md, "win.proc.pid", v.IDProcess, tags, metadata.Gauge, metadata.Unit("PID"), OSProcPID)
 		countByName[name]++
 	}
 	for name, count := range countByName {
 		if count < 1 {
 			continue
 		}
-		Add(&md, osProcCount, count, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Process, osProcCountDesc)
+		Add(&md, OSProcCount, count, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Process, OSProcCountDesc)
 		if totalCPU, ok := totalCPUByName[name]; ok {
-			Add(&md, osProcCPU, totalCPU, opentsdb.TagSet{"name": name}, metadata.Counter, metadata.Pct, osProcCPUDesc)
+			Add(&md, OSProcCPU, totalCPU, opentsdb.TagSet{"name": name}, metadata.Counter, metadata.Pct, OSProcCPUDesc)
 		}
 		if totalVM, ok := totalVirtualMemByName[name]; ok {
-			Add(&md, osProcMemVirtual, totalVM, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, osProcMemVirtualDesc)
+			Add(&md, OSProcMemVirtual, totalVM, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, OSProcMemVirtualDesc)
 		}
 		if totalPWS, ok := totalPrivateWSMemByName[name]; ok {
-			Add(&md, osProcMemReal, totalPWS, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, osProcMemRealDesc)
+			Add(&md, OSProcMemReal, totalPWS, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, OSProcMemRealDesc)
 		}
 	}
 	return md, nil

@@ -201,7 +201,7 @@ func c_if_team_linux() (opentsdb.MultiDataPoint, error) {
 				metadata.AddMeta("", opentsdb.TagSet{"iface": portName}, "master", name, true)
 				Add(&md, "linux.net.bond.slave.is_up", port.Link.Up, opentsdb.TagSet{"slave": portName, "bond": name}, metadata.Gauge, metadata.Bool, linuxNetBondSlaveIsUpDesc)
 			}
-			Add(&md, "os.net.bond.ifspeed", speed, opentsdb.TagSet{"bond": name}, metadata.Gauge, metadata.Megabit, osNetIfSpeedDesc)
+			Add(&md, "os.net.bond.ifspeed", speed, opentsdb.TagSet{"bond": name}, metadata.Gauge, metadata.Megabit, OSNetIfSpeedDesc)
 			Add(&md, "linux.net.bond.slave.count", slaveCount, opentsdb.TagSet{"bond": name}, metadata.Gauge, metadata.Count, linuxNetBondSlaveCount)
 		}
 	}

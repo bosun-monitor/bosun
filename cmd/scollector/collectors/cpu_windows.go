@@ -42,7 +42,7 @@ func c_cpu_windows() (opentsdb.MultiDataPoint, error) {
 	}
 	if num > 0 {
 		cpu := used / num
-		Add(&md, osCPU, cpu, nil, metadata.Counter, metadata.Pct, "")
+		Add(&md, OSCPU, cpu, nil, metadata.Counter, metadata.Pct, "")
 	}
 	if winCPUTotalPerfOS != nil {
 		v := winCPUTotalPerfOS
@@ -100,7 +100,7 @@ func c_cpu_info_windows() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
 		tags := opentsdb.TagSet{"cpu": strings.Replace(v.DeviceID, "CPU", "", 1)}
-		Add(&md, osCPUClock, v.CurrentClockSpeed, tags, metadata.Gauge, metadata.MHz, osCPUClockDesc)
+		Add(&md, OSCPUClock, v.CurrentClockSpeed, tags, metadata.Gauge, metadata.MHz, OSCPUClockDesc)
 		Add(&md, "win.cpu.clock", v.CurrentClockSpeed, tags, metadata.Gauge, metadata.MHz, descWinCPUClock)
 		Add(&md, "win.cpu.clock_max", v.MaxClockSpeed, tags, metadata.Gauge, metadata.MHz, descWinCPUClockMax)
 		Add(&md, "win.cpu.voltage", v.CurrentVoltage, tags, metadata.Gauge, metadata.V10, descWinCPUVoltage)

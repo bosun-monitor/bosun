@@ -136,31 +136,31 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 			metadata.AddMeta("", tags, "alias", ifAliases[k], false)
 			metadata.AddMeta("", tags, "mac", ifPhysAddresses[k], false)
 		}
-		if sA.metric == osNetBytes {
+		if sA.metric == OSNetBytes {
 			tags := opentsdb.TagSet{"host": host, "direction": sA.dir}
-			Add(&md, osNetBytes+".total", sum, tags, metadata.Counter, metadata.Bytes, "The total number of bytes transfered through the network device.")
+			Add(&md, OSNetBytes+".total", sum, tags, metadata.Counter, metadata.Bytes, "The total number of bytes transfered through the network device.")
 		}
 		return nil
 	}
 	oids := []snmpAdd{
-		{ifHCInBroadcastPkts, osNetBroadcast, "in", metadata.Counter, metadata.Packet, osNetBroadcastDesc},
-		{ifHCInMulticastPkts, osNetMulticast, "in", metadata.Counter, metadata.Packet, osNetMulticastDesc},
-		{ifHCInUcastPkts, osNetUnicast, "in", metadata.Counter, metadata.Packet, osNetUnicastDesc},
-		{ifHCOutBroadcastPkts, osNetBroadcast, "out", metadata.Counter, metadata.Packet, osNetBroadcastDesc},
-		{ifHCOutMulticastPkts, osNetMulticast, "out", metadata.Counter, metadata.Packet, osNetMulticastDesc},
-		{ifHCOutOctets, osNetBytes, "out", metadata.Counter, metadata.Bytes, osNetBytesDesc},
-		{ifHCOutUcastPkts, osNetUnicast, "out", metadata.Counter, metadata.Packet, osNetUnicastDesc},
-		{ifHCinOctets, osNetBytes, "in", metadata.Counter, metadata.Bytes, osNetBytesDesc},
-		{ifInDiscards, osNetDropped, "in", metadata.Counter, metadata.Packet, osNetDroppedDesc},
-		{ifInErrors, osNetErrors, "in", metadata.Counter, metadata.Error, osNetErrorsDesc},
-		{ifOutDiscards, osNetDropped, "out", metadata.Counter, metadata.Packet, osNetDroppedDesc},
-		{ifOutErrors, osNetErrors, "out", metadata.Counter, metadata.Error, osNetErrorsDesc},
-		{ifInPauseFrames, osNetPauseFrames, "in", metadata.Counter, metadata.Frame, osNetPauseFrameDesc},
-		{ifOutPauseFrames, osNetPauseFrames, "out", metadata.Counter, metadata.Frame, osNetPauseFrameDesc},
-		{ifMTU, osNetMTU, "", metadata.Gauge, metadata.Bytes, osNetMTUDesc},
-		{ifHighSpeed, osNetIfSpeed, "", metadata.Gauge, metadata.Megabit, osNetIfSpeedDesc},
-		{ifAdminStatus, osNetAdminStatus, "", metadata.Gauge, metadata.StatusCode, osNetAdminStatusDesc},
-		{ifOperStatus, osNetOperStatus, "", metadata.Gauge, metadata.StatusCode, osNetOperStatusDesc},
+		{ifHCInBroadcastPkts, OSNetBroadcast, "in", metadata.Counter, metadata.Packet, OSNetBroadcastDesc},
+		{ifHCInMulticastPkts, OSNetMulticast, "in", metadata.Counter, metadata.Packet, OSNetMulticastDesc},
+		{ifHCInUcastPkts, OSNetUnicast, "in", metadata.Counter, metadata.Packet, OSNetUnicastDesc},
+		{ifHCOutBroadcastPkts, OSNetBroadcast, "out", metadata.Counter, metadata.Packet, OSNetBroadcastDesc},
+		{ifHCOutMulticastPkts, OSNetMulticast, "out", metadata.Counter, metadata.Packet, OSNetMulticastDesc},
+		{ifHCOutOctets, OSNetBytes, "out", metadata.Counter, metadata.Bytes, OSNetBytesDesc},
+		{ifHCOutUcastPkts, OSNetUnicast, "out", metadata.Counter, metadata.Packet, OSNetUnicastDesc},
+		{ifHCinOctets, OSNetBytes, "in", metadata.Counter, metadata.Bytes, OSNetBytesDesc},
+		{ifInDiscards, OSNetDropped, "in", metadata.Counter, metadata.Packet, OSNetDroppedDesc},
+		{ifInErrors, OSNetErrors, "in", metadata.Counter, metadata.Error, OSNetErrorsDesc},
+		{ifOutDiscards, OSNetDropped, "out", metadata.Counter, metadata.Packet, OSNetDroppedDesc},
+		{ifOutErrors, OSNetErrors, "out", metadata.Counter, metadata.Error, OSNetErrorsDesc},
+		{ifInPauseFrames, OSNetPauseFrames, "in", metadata.Counter, metadata.Frame, OSNetPauseFrameDesc},
+		{ifOutPauseFrames, OSNetPauseFrames, "out", metadata.Counter, metadata.Frame, OSNetPauseFrameDesc},
+		{ifMTU, OSNetMTU, "", metadata.Gauge, metadata.Bytes, OSNetMTUDesc},
+		{ifHighSpeed, OSNetIfSpeed, "", metadata.Gauge, metadata.Megabit, OSNetIfSpeedDesc},
+		{ifAdminStatus, OSNetAdminStatus, "", metadata.Gauge, metadata.StatusCode, OSNetAdminStatusDesc},
+		{ifOperStatus, OSNetOperStatus, "", metadata.Gauge, metadata.StatusCode, OSNetOperStatusDesc},
 	}
 	for _, sA := range oids {
 		if err := add(sA); err != nil {

@@ -25,10 +25,10 @@ func c_simple_mem_windows() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.mem.vm.free", v.FreeVirtualMemory*1024, nil, metadata.Gauge, metadata.Bytes, descWinMemVirtual_Free)
 		Add(&md, "win.mem.total", v.TotalVisibleMemorySize*1024, nil, metadata.Gauge, metadata.Bytes, descWinMemVisible_Total)
 		Add(&md, "win.mem.free", v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, descWinMemVisible_Free)
-		Add(&md, osMemTotal, v.TotalVisibleMemorySize*1024, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
-		Add(&md, osMemFree, v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
-		Add(&md, osMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
-		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil, metadata.Gauge, metadata.Pct, osMemPctFreeDesc)
+		Add(&md, OSMemTotal, v.TotalVisibleMemorySize*1024, nil, metadata.Gauge, metadata.Bytes, OSMemTotalDesc)
+		Add(&md, OSMemFree, v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, OSMemFreeDesc)
+		Add(&md, OSMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, OSMemUsedDesc)
+		Add(&md, OSMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil, metadata.Gauge, metadata.Pct, OSMemPctFreeDesc)
 	}
 	return md, nil
 }

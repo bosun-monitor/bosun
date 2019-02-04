@@ -84,7 +84,7 @@ func c_systemd() (opentsdb.MultiDataPoint, error) {
 					systemdTags := opentsdb.TagSet{"name": unit.Name}
 					osTags := opentsdb.TagSet{"name": shortName}
 					Add(&md, "linux.systemd.unit.activestate", activeState[unit.ActiveState], systemdTags, metadata.Gauge, metadata.StatusCode, descActiveState)
-					Add(&md, osServiceRunning, util.Btoi(unit.ActiveState == "active"), osTags, metadata.Gauge, metadata.Bool, osServiceRunningDesc)
+					Add(&md, OSServiceRunning, util.Btoi(unit.ActiveState == "active"), osTags, metadata.Gauge, metadata.Bool, OSServiceRunningDesc)
 				}
 			}
 		}

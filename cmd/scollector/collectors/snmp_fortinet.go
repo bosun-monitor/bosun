@@ -98,7 +98,7 @@ func c_fortinet_os(host, community string, cpuIntegrators map[string]tsIntegrato
 	if _, ok := cpuIntegrators[host]; !ok {
 		cpuIntegrators[host] = getTsIntegrator()
 	}
-	Add(&md, osCPU, cpuIntegrators[host](time.Now().Unix(), float64(totalPercent)/float64(coreCount)), opentsdb.TagSet{"host": host}, metadata.Counter, metadata.Pct, "")
+	Add(&md, OSCPU, cpuIntegrators[host](time.Now().Unix(), float64(totalPercent)/float64(coreCount)), opentsdb.TagSet{"host": host}, metadata.Counter, metadata.Pct, "")
 
 	// Memory
 	memTotal, err := snmp_oid(host, community, fortinetBaseOID+fortinetMemTotal)
@@ -107,7 +107,7 @@ func c_fortinet_os(host, community string, cpuIntegrators map[string]tsIntegrato
 	}
 	memTotalBytes := memTotal.Int64() * 2 << 9 // KiB to Bytes
 	Add(&md, "fortinet.mem.total", memTotal, ts, metadata.Gauge, metadata.KBytes, "The total memory in kilobytes.")
-	Add(&md, osMemTotal, memTotalBytes, ts, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
+	Add(&md, OSMemTotal, memTotalBytes, ts, metadata.Gauge, metadata.Bytes, OSMemTotalDesc)
 	memPctUsed, err := snmp_oid(host, community, fortinetBaseOID+fortinetMemPercentUsed)
 	if err != nil {
 		return md, fmt.Errorf("failed to get percent of memory used for fortinet host %v: %v", host, err)
@@ -115,10 +115,10 @@ func c_fortinet_os(host, community string, cpuIntegrators map[string]tsIntegrato
 	Add(&md, "fortinet.mem.percent_used", memPctUsed, ts, metadata.Gauge, metadata.Pct, "The percent of memory used.")
 	memPctUsedFloat := float64(memPctUsed.Int64()) / 100
 	memPctFree := 100 - memPctUsed.Int64()
-	Add(&md, osMemPctFree, memPctFree, ts, metadata.Gauge, metadata.Pct, osMemPctFreeDesc)
+	Add(&md, OSMemPctFree, memPctFree, ts, metadata.Gauge, metadata.Pct, OSMemPctFreeDesc)
 	memFree := float64(memTotalBytes) * (float64(1) - memPctUsedFloat)
-	Add(&md, osMemFree, int64(memFree), ts, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
-	Add(&md, osMemUsed, int64(float64(memTotalBytes)-memFree), ts, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
+	Add(&md, OSMemFree, int64(memFree), ts, metadata.Gauge, metadata.Bytes, OSMemFreeDesc)
+	Add(&md, OSMemUsed, int64(float64(memTotalBytes)-memFree), ts, metadata.Gauge, metadata.Bytes, OSMemUsedDesc)
 
 	return md, nil
 }

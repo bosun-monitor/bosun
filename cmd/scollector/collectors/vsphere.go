@@ -67,14 +67,14 @@ func c_vsphere(user, pwd, vHost string, cpuIntegrators map[string]tsIntegrator) 
 
 		// Memory
 		memTotal := host.Summary.Hardware.MemorySize
-		Add(&md, osMemTotal, memTotal, tags, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
+		Add(&md, OSMemTotal, memTotal, tags, metadata.Gauge, metadata.Bytes, OSMemTotalDesc)
 		memUsed := int64(host.Summary.QuickStats.OverallMemoryUsage)
 		memUsed = memUsed * 1024 * 1024 // MegaBytes to Bytes
-		Add(&md, osMemUsed, memUsed, tags, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
+		Add(&md, OSMemUsed, memUsed, tags, metadata.Gauge, metadata.Bytes, OSMemUsedDesc)
 		if memTotal > 0 && memUsed > 0 {
 			memFree := memTotal - memUsed
-			Add(&md, osMemFree, memFree, tags, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
-			Add(&md, osMemPctFree, float64(memFree)/float64(memTotal)*100, tags, metadata.Gauge, metadata.Pct, osMemPctFreeDesc)
+			Add(&md, OSMemFree, memFree, tags, metadata.Gauge, metadata.Bytes, OSMemFreeDesc)
+			Add(&md, OSMemPctFree, float64(memFree)/float64(memTotal)*100, tags, metadata.Gauge, metadata.Pct, OSMemPctFreeDesc)
 		}
 
 		// CPU
@@ -90,11 +90,11 @@ func c_vsphere(user, pwd, vHost string, cpuIntegrators map[string]tsIntegrator) 
 			if _, ok := cpuIntegrators[name]; !ok {
 				cpuIntegrators[name] = getTsIntegrator()
 			}
-			Add(&md, osCPU, cpuIntegrators[name](time.Now().Unix(), pct), tags, metadata.Counter, metadata.Pct, "")
+			Add(&md, OSCPU, cpuIntegrators[name](time.Now().Unix(), pct), tags, metadata.Counter, metadata.Pct, "")
 		}
 
 		// Uptime
-		Add(&md, osSystemUptime, host.Summary.QuickStats.Uptime, tags, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+		Add(&md, OSSystemUptime, host.Summary.QuickStats.Uptime, tags, metadata.Gauge, metadata.Second, OSSystemUptimeDesc)
 
 		// Hardware Information
 		metadata.AddMeta("", tags, "model", host.Summary.Hardware.Model, false)
@@ -209,15 +209,15 @@ func c_vsphere(user, pwd, vHost string, cpuIntegrators map[string]tsIntegrator) 
 
 		// Diskspace
 		diskTotal := ds.Summary.Capacity
-		Add(&md, osDiskTotal, diskTotal, tags, metadata.Gauge, metadata.Bytes, "")
+		Add(&md, OSDiskTotal, diskTotal, tags, metadata.Gauge, metadata.Bytes, "")
 		Add(&md, "vsphere.disk.space_total", diskTotal, tags, metadata.Gauge, metadata.Bytes, "")
 		diskFree := ds.Summary.FreeSpace
 		Add(&md, "vsphere.disk.space_free", diskFree, tags, metadata.Gauge, metadata.Bytes, "")
 		if diskTotal > 0 && diskFree > 0 {
 			diskUsed := diskTotal - diskFree
 			Add(&md, "vsphere.disk.space_used", diskUsed, tags, metadata.Gauge, metadata.Bytes, "")
-			Add(&md, osDiskUsed, diskUsed, tags, metadata.Gauge, metadata.Bytes, "")
-			Add(&md, osDiskPctFree, float64(diskFree)/float64(diskTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
+			Add(&md, OSDiskUsed, diskUsed, tags, metadata.Gauge, metadata.Bytes, "")
+			Add(&md, OSDiskPctFree, float64(diskFree)/float64(diskTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
 		}
 
 		for _, hostMount := range ds.Host {

@@ -23,8 +23,8 @@ func c_system_windows() (opentsdb.MultiDataPoint, error) {
 		if v.Frequency_Object != 0 {
 			//see http://microsoft.public.win32.programmer.wmi.narkive.com/09kqthVC/lastbootuptime
 			var uptime = (v.Timestamp_Object - v.SystemUpTime) / v.Frequency_Object
-			Add(&md, "win.system.uptime", uptime, nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
-			Add(&md, osSystemUptime, uptime, nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+			Add(&md, "win.system.uptime", uptime, nil, metadata.Gauge, metadata.Second, OSSystemUptimeDesc)
+			Add(&md, OSSystemUptime, uptime, nil, metadata.Gauge, metadata.Second, OSSystemUptimeDesc)
 		}
 		Add(&md, "win.system.context_switches", v.ContextSwitchesPersec, nil, metadata.Counter, metadata.ContextSwitch, descWinSystemContextSwitchesPersec)
 		Add(&md, "win.system.exceptions", v.ExceptionDispatchesPersec, nil, metadata.Counter, metadata.PerSecond, descWinSystemExceptionDispatchesPersec)
