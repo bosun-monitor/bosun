@@ -206,6 +206,9 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	var miniprofilerRoutes = http.StripPrefix(miniprofiler.PATH, http.HandlerFunc(miniprofiler.MiniProfilerHandler))
 	router.PathPrefix(miniprofiler.PATH).Handler(baseChain.Then(miniprofilerRoutes)).Name("miniprofiler")
 
+	//use default mux for pprof
+	router.PathPrefix("/debug/pprof").Handler(http.DefaultServeMux)
+
 	router.PathPrefix("/api").HandlerFunc(http.NotFound)
 	//MUST BE LAST!
 	router.PathPrefix("/").Handler(baseChain.Then(auth.Wrap(JSON(Index), canViewDash))).Name("index")
