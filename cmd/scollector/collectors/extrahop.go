@@ -71,8 +71,8 @@ func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_extrahop(host, apikey)
 		},
-		name:     fmt.Sprintf("extrahop-%s", u.Host),
-		Interval: time.Second * time.Duration(extraHopIntervalSeconds),
+		CollectorName: fmt.Sprintf("extrahop-%s", u.Host),
+		Interval:      time.Second * time.Duration(extraHopIntervalSeconds),
 	})
 	return nil
 

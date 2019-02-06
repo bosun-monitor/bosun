@@ -18,11 +18,11 @@ import (
 )
 
 type IntervalCollector struct {
-	F        func() (opentsdb.MultiDataPoint, error)
-	Interval time.Duration // defaults to DefaultFreq if unspecified
-	Enable   func() bool
-	name     string
-	init     func()
+	F             func() (opentsdb.MultiDataPoint, error)
+	Interval      time.Duration // defaults to DefaultFreq if unspecified
+	Enable        func() bool
+	CollectorName string
+	CollectorInit func()
 
 	// internal use
 	sync.Mutex
@@ -32,8 +32,8 @@ type IntervalCollector struct {
 }
 
 func (c *IntervalCollector) Init() {
-	if c.init != nil {
-		c.init()
+	if c.CollectorInit != nil {
+		c.CollectorInit()
 	}
 }
 
@@ -94,14 +94,14 @@ func (c *IntervalCollector) Enabled() bool {
 }
 
 func (c *IntervalCollector) Name() string {
-	if c.name != "" {
-		return c.name
+	if c.CollectorName != "" {
+		return c.CollectorName
 	}
 	v := runtime.FuncForPC(reflect.ValueOf(c.F).Pointer())
 	return v.Name()
 }
 
-func enableURL(url string, regexes ...string) func() bool {
+func EnableURL(url string, regexes ...string) func() bool {
 	res := make([]*regexp.Regexp, len(regexes))
 	for i, r := range regexes {
 		res[i] = regexp.MustCompile(r)
@@ -136,9 +136,9 @@ func enableURL(url string, regexes ...string) func() bool {
 	}
 }
 
-// enableExecutable returns true if name is an executable file in the
+// EnableExecutable returns true if name is an executable file in the
 // environment's PATH.
-func enableExecutable(name string) func() bool {
+func EnableExecutable(name string) func() bool {
 	return func() bool {
 		_, err := exec.LookPath(name)
 		return err == nil

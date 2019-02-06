@@ -17,7 +17,7 @@ func InitFake(fake int) {
 			}
 			return md, nil
 		},
-		Interval: time.Second,
-		name:     "fake",
+		Interval:      time.Second,
+		CollectorName: "fake",
 	})
 }

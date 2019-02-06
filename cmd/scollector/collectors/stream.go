@@ -15,16 +15,16 @@ import (
    the collector and forwards it internally. */
 
 type StreamCollector struct {
-	F    func() <-chan *opentsdb.MultiDataPoint
-	name string
-	init func()
+	F             func() <-chan *opentsdb.MultiDataPoint
+	CollectorName string
+	CollectorInit func()
 
 	TagOverride
 }
 
 func (s *StreamCollector) Init() {
-	if s.init != nil {
-		s.init()
+	if s.CollectorInit != nil {
+		s.CollectorInit()
 	}
 }
 
@@ -58,8 +58,8 @@ func (s *StreamCollector) Enabled() bool {
 }
 
 func (s *StreamCollector) Name() string {
-	if s.name != "" {
-		return s.name
+	if s.CollectorName != "" {
+		return s.CollectorName
 	}
 	v := runtime.FuncForPC(reflect.ValueOf(s.F).Pointer())
 	return v.Name()

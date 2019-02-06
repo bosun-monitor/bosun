@@ -530,7 +530,7 @@ func startCadvisorCollector(c *conf.Conf) {
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_cadvisor(cClient, &config)
 			},
-			name: "cadvisor",
+			CollectorName: "cadvisor",
 		})
 	}
 }

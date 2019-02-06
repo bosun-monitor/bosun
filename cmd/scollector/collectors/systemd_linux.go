@@ -32,7 +32,7 @@ func init() {
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_systemd()
 				},
-				name: "c_systemd",
+				CollectorName: "c_systemd",
 			})
 		}
 	})

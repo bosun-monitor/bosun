@@ -20,8 +20,8 @@ func init() {
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_google_webmaster(g.ClientID, g.Secret, g.Token, g.JSONToken)
 				},
-				name:     "c_google_webmaster",
-				Interval: time.Hour * 1,
+				CollectorName: "c_google_webmaster",
+				Interval:      time.Hour * 1,
 			})
 		}
 	})

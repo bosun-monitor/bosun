@@ -23,8 +23,8 @@ func SNMPCiscoASA(cfg conf.SNMP) {
 				// won't require a configuration change
 				return c_cisco_ios(cfg.Host, cfg.Community, cpuIntegrator)
 			},
-			Interval: time.Second * 30,
-			name:     fmt.Sprintf("snmp-cisco-asa-%s", cfg.Host),
+			Interval:      time.Second * 30,
+			CollectorName: fmt.Sprintf("snmp-cisco-asa-%s", cfg.Host),
 		},
 		//
 		// Execute ASA-specific checks in c_cisco_asa
@@ -33,15 +33,15 @@ func SNMPCiscoASA(cfg conf.SNMP) {
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_cisco_asa(cfg.Host, cfg.Community)
 			},
-			Interval: time.Second * 30,
-			name:     fmt.Sprintf("snmp-cisco-asa-specific-%s", cfg.Host),
+			Interval:      time.Second * 30,
+			CollectorName: fmt.Sprintf("snmp-cisco-asa-specific-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_cisco_desc(cfg.Host, cfg.Community)
 			},
-			Interval: time.Minute * 5,
-			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
+			Interval:      time.Minute * 5,
+			CollectorName: fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
 		},
 	)
 }
@@ -54,15 +54,15 @@ func SNMPCiscoIOS(cfg conf.SNMP) {
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_cisco_ios(cfg.Host, cfg.Community, cpuIntegrator)
 			},
-			Interval: time.Second * 30,
-			name:     fmt.Sprintf("snmp-cisco-ios-%s", cfg.Host),
+			Interval:      time.Second * 30,
+			CollectorName: fmt.Sprintf("snmp-cisco-ios-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_cisco_desc(cfg.Host, cfg.Community)
 			},
-			Interval: time.Minute * 5,
-			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
+			Interval:      time.Minute * 5,
+			CollectorName: fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
 		},
 	)
 }
@@ -75,15 +75,15 @@ func SNMPCiscoNXOS(cfg conf.SNMP) {
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_cisco_nxos(cfg.Host, cfg.Community, cpuIntegrator)
 			},
-			Interval: time.Second * 30,
-			name:     fmt.Sprintf("snmp-cisco-nxos-%s", cfg.Host),
+			Interval:      time.Second * 30,
+			CollectorName: fmt.Sprintf("snmp-cisco-nxos-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_cisco_desc(cfg.Host, cfg.Community)
 			},
-			Interval: time.Minute * 5,
-			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
+			Interval:      time.Minute * 5,
+			CollectorName: fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
 		},
 	)
 }

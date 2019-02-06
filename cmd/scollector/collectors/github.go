@@ -38,8 +38,8 @@ func startGithubCollectors(c *conf.Conf) {
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return githubCollect(client, owner, repo)
 			},
-			name:     fmt.Sprintf("github-%s", gh.Repo),
-			Interval: 10 * time.Minute, //10 minutes to respect api limits
+			CollectorName: fmt.Sprintf("github-%s", gh.Repo),
+			Interval:      10 * time.Minute, //10 minutes to respect api limits
 		})
 	}
 }

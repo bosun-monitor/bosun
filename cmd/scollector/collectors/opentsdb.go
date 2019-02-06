@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_opentsdb, Enable: enableURL(tsdbURL)})
+	collectors = append(collectors, &IntervalCollector{F: c_opentsdb, Enable: EnableURL(tsdbURL)})
 }
 
 const tsdbURL = "http://localhost:4242/api/stats"

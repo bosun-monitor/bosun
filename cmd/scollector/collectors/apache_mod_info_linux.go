@@ -22,7 +22,7 @@ func init() {
 		collectors,
 		&IntervalCollector{
 			F:        c_apache_mod_info,
-			Enable:   enableURL(apacheModInfoBaseURL, "Apache Server Information"),
+			Enable:   EnableURL(apacheModInfoBaseURL, "Apache Server Information"),
 			Interval: time.Minute * 30,
 		})
 }

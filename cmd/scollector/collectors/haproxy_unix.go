@@ -25,7 +25,7 @@ func init() {
 							return haproxyFetch(h.User, h.Password, ii.Tier, ii.URL)
 						}
 					},
-					name: fmt.Sprintf("haproxy-%s-%s", ii.Tier, ii.URL),
+					CollectorName: fmt.Sprintf("haproxy-%s-%s", ii.Tier, ii.URL),
 				})
 			}
 		}

@@ -39,8 +39,8 @@ func init() {
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_google_analytics(g.ClientID, g.Secret, g.Token, g.JSONToken, g.Sites)
 				},
-				name:     "c_google_analytics",
-				Interval: time.Minute * 1,
+				CollectorName: "c_google_analytics",
+				Interval:      time.Minute * 1,
 			})
 		}
 	})

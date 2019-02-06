@@ -22,8 +22,8 @@ func SNMPIPAddresses(cfg conf.SNMP) {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_snmp_ips(cfg.Community, cfg.Host)
 		},
-		Interval: time.Minute * 1,
-		name:     fmt.Sprintf("snmp-ips-%s", cfg.Host),
+		Interval:      time.Minute * 1,
+		CollectorName: fmt.Sprintf("snmp-ips-%s", cfg.Host),
 	})
 }
 

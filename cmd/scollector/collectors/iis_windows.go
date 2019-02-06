@@ -9,13 +9,13 @@ func init() {
 	c := &IntervalCollector{
 		F: c_iis_webservice,
 	}
-	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_W3SVC_WebService{} }, `WHERE Name <> '_Total'`, &iisQuery)
+	c.CollectorInit = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_W3SVC_WebService{} }, `WHERE Name <> '_Total'`, &iisQuery)
 	collectors = append(collectors, c)
 
 	c = &IntervalCollector{
 		F: c_iis_apppool,
 	}
-	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS{} }, `WHERE Name <> '_Total'`, &iisQueryAppPool)
+	c.CollectorInit = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS{} }, `WHERE Name <> '_Total'`, &iisQueryAppPool)
 	collectors = append(collectors, c)
 }
 

@@ -43,25 +43,25 @@ func RabbitMQ(url string) error {
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return rabbitmqOverview(url)
 			},
-			name: fmt.Sprintf("rabbitmq-overview-%s", safeURL),
+			CollectorName: fmt.Sprintf("rabbitmq-overview-%s", safeURL),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return rabbitmqNodes(url)
 			},
-			name: fmt.Sprintf("rabbitmq-nodes-%s", safeURL),
+			CollectorName: fmt.Sprintf("rabbitmq-nodes-%s", safeURL),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return rabbitmqQueues(url)
 			},
-			name: fmt.Sprintf("rabbitmq-queues-%s", safeURL),
+			CollectorName: fmt.Sprintf("rabbitmq-queues-%s", safeURL),
 		})
 	return nil
 }
 
 func enableRabbitmq() bool {
-	return enableURL(defaultRabbitmqURL)()
+	return EnableURL(defaultRabbitmqURL)()
 }
 
 func c_rabbitmq_overview() (opentsdb.MultiDataPoint, error) {

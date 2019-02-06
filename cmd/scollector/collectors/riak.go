@@ -474,13 +474,13 @@ func Riak(s string) error {
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return riak(s)
 			},
-			name: fmt.Sprintf("riak-%s", u.Host),
+			CollectorName: fmt.Sprintf("riak-%s", u.Host),
 		})
 	return nil
 }
 
 func enableRiak() bool {
-	return enableURL(localRiakURL)()
+	return EnableURL(localRiakURL)()
 }
 
 func c_riak() (opentsdb.MultiDataPoint, error) {

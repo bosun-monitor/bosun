@@ -56,22 +56,22 @@ func SNMPFortinet(cfg conf.SNMP) {
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return GenericSnmp(cfg, mib)
 			},
-			Interval: time.Second * 30,
-			name:     fmt.Sprintf("snmp-fortinet-%s", cfg.Host),
+			Interval:      time.Second * 30,
+			CollectorName: fmt.Sprintf("snmp-fortinet-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_fortinet_os(cfg.Host, cfg.Community, cpuIntegrators)
 			},
-			Interval: time.Second * 30,
-			name:     fmt.Sprintf("snmp-fortinet-os-%s", cfg.Host),
+			Interval:      time.Second * 30,
+			CollectorName: fmt.Sprintf("snmp-fortinet-os-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_fortinet_meta(cfg.Host, cfg.Community)
 			},
-			Interval: time.Minute * 5,
-			name:     fmt.Sprintf("snmp-fortinet-meta-%s", cfg.Host),
+			Interval:      time.Minute * 5,
+			CollectorName: fmt.Sprintf("snmp-fortinet-meta-%s", cfg.Host),
 		},
 	)
 }

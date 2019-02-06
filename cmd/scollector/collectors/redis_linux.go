@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_redis, init: redisInit})
+	collectors = append(collectors, &IntervalCollector{F: c_redis, CollectorInit: redisInit})
 }
 
 var redisMeta = map[string]MetricMeta{ // http://redis.io/commands/info)

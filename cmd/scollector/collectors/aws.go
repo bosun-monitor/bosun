@@ -48,8 +48,8 @@ func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath stri
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_aws(accessKey, secretKey, region, billingEnabled)
 		},
-		Interval: 60 * time.Second,
-		name:     fmt.Sprintf("aws-%s", region),
+		Interval:      60 * time.Second,
+		CollectorName: fmt.Sprintf("aws-%s", region),
 	})
 
 	if billingEnabled {
@@ -57,8 +57,8 @@ func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath stri
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_awsBilling(accessKey, secretKey, region, productCodes, bucketName, bucketPath, purgeDays)
 			},
-			Interval: 1 * time.Hour,
-			name:     fmt.Sprintf("awsBilling-%s", region),
+			Interval:      1 * time.Hour,
+			CollectorName: fmt.Sprintf("awsBilling-%s", region),
 		})
 	}
 	return nil

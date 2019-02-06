@@ -28,7 +28,7 @@ func Vsphere(user, pwd, host string) error {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_vsphere(user, pwd, host, cpuIntegrators)
 		},
-		name: fmt.Sprintf("vsphere-%s", host),
+		CollectorName: fmt.Sprintf("vsphere-%s", host),
 	})
 	return nil
 }

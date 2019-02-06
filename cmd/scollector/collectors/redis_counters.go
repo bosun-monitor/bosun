@@ -19,7 +19,7 @@ func init() {
 		for _, red := range c.RedisCounters {
 			collectors = append(collectors,
 				&IntervalCollector{
-					name: "redisCounters_" + red.Server,
+					CollectorName: "redisCounters_" + red.Server,
 					F: func() (opentsdb.MultiDataPoint, error) {
 						return c_redis_counters(red.Server, red.Database)
 					},

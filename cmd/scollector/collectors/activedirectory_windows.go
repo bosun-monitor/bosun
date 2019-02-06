@@ -13,7 +13,7 @@ func init() {
 		F:        c_activedirectory_windows,
 		Interval: time.Minute * 5,
 	}
-	c_ad.init = wmiInitNamespace(c_ad, func() interface{} { return &[]MSAD_ReplNeighbor{} }, "", &adQuery, rootMSAD)
+	c_ad.CollectorInit = wmiInitNamespace(c_ad, func() interface{} { return &[]MSAD_ReplNeighbor{} }, "", &adQuery, rootMSAD)
 	collectors = append(collectors, c_ad)
 }
 

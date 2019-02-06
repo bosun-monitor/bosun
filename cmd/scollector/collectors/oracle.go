@@ -28,7 +28,7 @@ func init() {
 					F: func() (opentsdb.MultiDataPoint, error) {
 						return c_oracle(name, i)
 					},
-					name: fmt.Sprintf("oracle-%s", name),
+					CollectorName: fmt.Sprintf("oracle-%s", name),
 				})
 			}
 		}

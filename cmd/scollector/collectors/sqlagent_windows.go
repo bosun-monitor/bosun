@@ -16,7 +16,7 @@ func init() {
 		F:        c_mssql_agents,
 		Interval: time.Minute * 5,
 	}
-	c.init = wmiInit(c, func() interface{} { return &[]Win32_Service{} }, wqlSQLAgentInstanceFilter, &sqlAgentQuery)
+	c.CollectorInit = wmiInit(c, func() interface{} { return &[]Win32_Service{} }, wqlSQLAgentInstanceFilter, &sqlAgentQuery)
 	collectors = append(collectors, c)
 }
 

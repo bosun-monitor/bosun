@@ -24,14 +24,14 @@ func init() {
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_nexpose(n.Username, n.Password, n.Host, n.Insecure, false)
 				},
-				name: fmt.Sprintf("nexpose-scans-%s", n.Host),
+				CollectorName: fmt.Sprintf("nexpose-scans-%s", n.Host),
 			})
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_nexpose(n.Username, n.Password, n.Host, n.Insecure, true)
 				},
-				name:     fmt.Sprintf("nexpose-assets-%s", n.Host),
-				Interval: time.Minute * 30,
+				CollectorName: fmt.Sprintf("nexpose-assets-%s", n.Host),
+				Interval:      time.Minute * 30,
 			})
 		}
 	})

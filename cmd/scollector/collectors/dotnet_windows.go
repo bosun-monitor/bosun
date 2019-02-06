@@ -38,7 +38,7 @@ func init() {
 		c := &IntervalCollector{
 			F: c_dotnet_loading,
 		}
-		c.init = wmiInit(c, func() interface{} {
+		c.CollectorInit = wmiInit(c, func() interface{} {
 			return &[]Win32_PerfRawData_NETFramework_NETCLRLoading{}
 		}, "", &dotnetLoadingQuery)
 		collectors = append(collectors, c)
@@ -46,7 +46,7 @@ func init() {
 		c = &IntervalCollector{
 			F: c_dotnet_memory,
 		}
-		c.init = wmiInit(c, func() interface{} {
+		c.CollectorInit = wmiInit(c, func() interface{} {
 			return &[]Win32_PerfRawData_NETFramework_NETCLRMemory{}
 		}, `WHERE ProcessID <> 0`, &dotnetMemoryQuery)
 		collectors = append(collectors, c)
@@ -54,7 +54,7 @@ func init() {
 		c = &IntervalCollector{
 			F: c_dotnet_sql,
 		}
-		c.init = wmiInit(c, func() interface{} {
+		c.CollectorInit = wmiInit(c, func() interface{} {
 			return &[]Win32_PerfRawData_NETDataProviderforSqlServer_NETDataProviderforSqlServer{}
 		}, "", &dotnetSQLQuery)
 		collectors = append(collectors, c)

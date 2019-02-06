@@ -42,8 +42,8 @@ func SNMPIfaces(cfg conf.SNMP) {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_snmp_ifaces(cfg.Community, cfg.Host)
 		},
-		Interval: time.Second * 30,
-		name:     fmt.Sprintf("snmp-ifaces-%s", cfg.Host),
+		Interval:      time.Second * 30,
+		CollectorName: fmt.Sprintf("snmp-ifaces-%s", cfg.Host),
 	})
 }
 

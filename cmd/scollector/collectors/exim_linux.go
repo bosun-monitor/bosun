@@ -17,7 +17,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{
 		F:        c_exim_mailq,
 		Interval: time.Minute,
-		Enable:   enableExecutable(eximExiqsumm),
+		Enable:   EnableExecutable(eximExiqsumm),
 	})
 }
 

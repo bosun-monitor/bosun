@@ -24,7 +24,7 @@ func ICMP(host string) error {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_icmp(host)
 		},
-		name: fmt.Sprintf("icmp-%s", host),
+		CollectorName: fmt.Sprintf("icmp-%s", host),
 	})
 	return nil
 }

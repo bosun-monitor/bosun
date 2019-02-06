@@ -26,23 +26,23 @@ func init() {
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_fastly(client)
 				},
-				name:     "c_fastly",
-				Interval: time.Minute * 1,
+				CollectorName: "c_fastly",
+				Interval:      time.Minute * 1,
 			})
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_fastly_billing(client)
 				},
-				name:     "c_fastly_billing",
-				Interval: time.Minute * 5,
+				CollectorName: "c_fastly_billing",
+				Interval:      time.Minute * 5,
 			})
 			if f.StatusBaseAddr != "" {
 				collectors = append(collectors, &IntervalCollector{
 					F: func() (opentsdb.MultiDataPoint, error) {
 						return c_fastly_status(f.StatusBaseAddr)
 					},
-					name:     "c_fastly_status",
-					Interval: time.Minute * 1,
+					CollectorName: "c_fastly_status",
+					Interval:      time.Minute * 1,
 				})
 			}
 		}

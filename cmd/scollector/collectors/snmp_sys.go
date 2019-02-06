@@ -21,8 +21,8 @@ func SNMPSys(cfg conf.SNMP) {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_snmp_sys(cfg.Host, cfg.Community)
 		},
-		Interval: time.Minute * 1,
-		name:     fmt.Sprintf("snmp-sys-%s", cfg.Host),
+		Interval:      time.Minute * 1,
+		CollectorName: fmt.Sprintf("snmp-sys-%s", cfg.Host),
 	})
 }
 

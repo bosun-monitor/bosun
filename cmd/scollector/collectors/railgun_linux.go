@@ -50,7 +50,7 @@ func parseRailURL() string {
 
 func enableRailgun() bool {
 	rgURL = parseRailURL()
-	return enableURL(rgURL)()
+	return EnableURL(rgURL)()
 }
 
 func c_railgun() (opentsdb.MultiDataPoint, error) {

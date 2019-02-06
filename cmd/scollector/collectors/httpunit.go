@@ -35,8 +35,8 @@ func HTTPUnitPlans(name string, plans *httpunit.Plans, freq time.Duration) {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return cHTTPUnit(plans)
 		},
-		name:     fmt.Sprintf("c_httpunit_%s", name),
-		Interval: freq,
+		CollectorName: fmt.Sprintf("c_httpunit_%s", name),
+		Interval:      freq,
 	})
 }
 

@@ -19,7 +19,7 @@ func init() {
 			collectors = append(collectors, &StreamCollector{F: func() <-chan *opentsdb.MultiDataPoint {
 				return c_local_listener(c.LocalListener)
 			},
-				name: fmt.Sprintf("local_listener-%s", c.LocalListener),
+				CollectorName: fmt.Sprintf("local_listener-%s", c.LocalListener),
 			})
 		}
 	})

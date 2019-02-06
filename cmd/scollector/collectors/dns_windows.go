@@ -12,7 +12,7 @@ func init() {
 		F:        c_dns_windows,
 		Interval: time.Second * 30, //Depending on how busy your DNS servers are, 30 might encompass a lot of change, or barely any at all. Seems like a good compromise.
 	}
-	c_dns.init = wmiInitNamespace(c_dns, func() interface{} { return &[]MicrosoftDNS_Statistic{} }, "", &dnsQuery, rootDNS)
+	c_dns.CollectorInit = wmiInitNamespace(c_dns, func() interface{} { return &[]MicrosoftDNS_Statistic{} }, "", &dnsQuery, rootDNS)
 	collectors = append(collectors, c_dns)
 }
 

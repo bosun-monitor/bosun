@@ -93,9 +93,9 @@ func init() {
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_elasticsearch(false, instance)
 				},
-				name:     name,
-				Interval: clusterInterval,
-				Enable:   enableURL(url),
+				CollectorName: name,
+				Interval:      clusterInterval,
+				Enable:        EnableURL(url),
 			})
 			// keep legacy collector name if localhost_9200
 			if instance.Name == "localhost_9200" {
@@ -107,9 +107,9 @@ func init() {
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return c_elasticsearch(true, instance)
 				},
-				name:     name,
-				Interval: indexInterval,
-				Enable:   enableURL(url),
+				CollectorName: name,
+				Interval:      indexInterval,
+				Enable:        EnableURL(url),
 			})
 		}
 	})

@@ -27,15 +27,15 @@ func SNMPBridge(cfg conf.SNMP) {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_snmp_bridge(cfg.Community, cfg.Host)
 		},
-		Interval: time.Minute * 5,
-		name:     fmt.Sprintf("snmp-bridge-%s", cfg.Host),
+		Interval:      time.Minute * 5,
+		CollectorName: fmt.Sprintf("snmp-bridge-%s", cfg.Host),
 	})
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_snmp_cdp(cfg.Community, cfg.Host)
 		},
-		Interval: time.Minute * 5,
-		name:     fmt.Sprintf("snmp-cdp-%s", cfg.Host),
+		Interval:      time.Minute * 5,
+		CollectorName: fmt.Sprintf("snmp-cdp-%s", cfg.Host),
 	})
 }
 

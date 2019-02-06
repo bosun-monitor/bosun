@@ -16,7 +16,7 @@ func init() {
 	c := &IntervalCollector{
 		F: c_mssql,
 	}
-	c.init = wmiInit(c, func() interface{} { return &[]Win32_Service{} }, wqlSQLInstanceFilter, &sqlQuery)
+	c.CollectorInit = wmiInit(c, func() interface{} { return &[]Win32_Service{} }, wqlSQLInstanceFilter, &sqlQuery)
 	collectors = append(collectors, c)
 
 	var dstCluster []MSCluster_Cluster
@@ -32,27 +32,27 @@ func init() {
 	c_replica_db := &IntervalCollector{
 		F: c_mssql_replica_db,
 	}
-	c_replica_db.init = wmiInit(c_replica_db, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica{} }, `WHERE Name <> '_Total'`, &sqlAGDBQuery)
+	c_replica_db.CollectorInit = wmiInit(c_replica_db, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica{} }, `WHERE Name <> '_Total'`, &sqlAGDBQuery)
 	collectors = append(collectors, c_replica_db)
 
 	c_replica_server := &IntervalCollector{
 		F: c_mssql_replica_server,
 	}
-	c_replica_server.init = wmiInit(c_replica_server, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica{} }, `WHERE Name <> '_Total'`, &sqlAGQuery)
+	c_replica_server.CollectorInit = wmiInit(c_replica_server, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica{} }, `WHERE Name <> '_Total'`, &sqlAGQuery)
 	collectors = append(collectors, c_replica_server)
 
 	c_replica_votes := &IntervalCollector{
 		F:        c_mssql_replica_votes,
 		Interval: time.Minute * 5,
 	}
-	c_replica_votes.init = wmiInitNamespace(c_replica_votes, func() interface{} { return &[]MSCluster_Node{} }, fmt.Sprintf("WHERE Name = '%s'", util.Hostname), &sqlAGVotes, rootMSCluster)
+	c_replica_votes.CollectorInit = wmiInitNamespace(c_replica_votes, func() interface{} { return &[]MSCluster_Node{} }, fmt.Sprintf("WHERE Name = '%s'", util.Hostname), &sqlAGVotes, rootMSCluster)
 	collectors = append(collectors, c_replica_votes)
 
 	c_replica_resources := &IntervalCollector{
 		F:        c_mssql_replica_resources,
 		Interval: time.Minute,
 	}
-	c_replica_resources.init = wmiInitNamespace(c_replica_resources, func() interface{} { return &[]MSCluster_Resource{} }, ``, &sqlAGResources, rootMSCluster)
+	c_replica_resources.CollectorInit = wmiInitNamespace(c_replica_resources, func() interface{} { return &[]MSCluster_Resource{} }, ``, &sqlAGResources, rootMSCluster)
 	collectors = append(collectors, c_replica_resources)
 }
 

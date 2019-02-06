@@ -45,7 +45,7 @@ func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 				F: func() (opentsdb.MultiDataPoint, error) {
 					return GenericSnmp(cfg, mib)
 				},
-				name: fmt.Sprintf("snmp-generic-%s-%s", cfg.Host, m),
+				CollectorName: fmt.Sprintf("snmp-generic-%s-%s", cfg.Host, m),
 			})
 		} else {
 			if f, ok := builtInSNMPs[m]; ok {
