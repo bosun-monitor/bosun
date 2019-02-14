@@ -42,7 +42,8 @@ type SystemConfProvider interface {
 	GetEmailFrom() string
 	GetLedisDir() string
 	GetLedisBindAddr() string
-	GetRedisHost() string
+	GetRedisHost() []string
+	GetRedisMasterName() string
 	GetRedisDb() int
 	GetRedisPassword() string
 	IsRedisClientSetName() bool

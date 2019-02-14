@@ -3,8 +3,10 @@ package main
 //go:generate go run ../../build/generate/generate.go
 
 import (
+	"bosun.org/_version"
 	"flag"
 	"fmt"
+	"gopkg.in/fsnotify.v1"
 	"net/http"
 	"net/http/httptest"
 	_ "net/http/pprof"
@@ -15,8 +17,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"bosun.org/_version"
 
 	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/conf"
@@ -34,7 +34,6 @@ import (
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
 	elastic6 "github.com/olivere/elastic"
-	"gopkg.in/fsnotify.v1"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
 )
@@ -318,14 +317,29 @@ func quit() {
 
 func initDataAccess(systemConf conf.SystemConfProvider) (database.DataAccess, error) {
 	var da database.DataAccess
-	if systemConf.GetRedisHost() != "" {
-		da = database.NewDataAccess(systemConf.GetRedisHost(), systemConf.IsRedisClientSetName(), systemConf.GetRedisDb(), systemConf.GetRedisPassword())
+	if len(systemConf.GetRedisHost()) != 0 {
+		da = database.NewDataAccess(
+			systemConf.GetRedisHost(),
+			systemConf.IsRedisClientSetName(),
+			systemConf.GetRedisMasterName(),
+			systemConf.GetRedisDb(),
+			systemConf.GetRedisPassword(),
+		)
 	} else {
-		_, err := database.StartLedis(systemConf.GetLedisDir(), systemConf.GetLedisBindAddr())
+		_, err := database.StartLedis(
+			systemConf.GetLedisDir(),
+			systemConf.GetLedisBindAddr(),
+		)
 		if err != nil {
 			return nil, err
 		}
-		da = database.NewDataAccess(systemConf.GetLedisBindAddr(), false, 0, "")
+		da = database.NewDataAccess(
+			[]string{systemConf.GetLedisBindAddr()},
+			false,
+			"",
+			0,
+			"",
+		)
 	}
 	err := da.Migrate()
 	return da, err

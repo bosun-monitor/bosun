@@ -234,6 +234,8 @@ type DBConf struct {
 	RedisDb            int
 	RedisPassword      string
 	RedisClientSetName bool
+	RedisSentinels     []string
+	RedisMasterName    string
 
 	LedisDir      string
 	LedisBindAddr string
@@ -454,8 +456,20 @@ func (sc *SystemConf) GetLedisBindAddr() string {
 
 // GetRedisHost returns the host to use for Redis. If this is set than Redis
 // will be used instead of Ledis.
-func (sc *SystemConf) GetRedisHost() string {
-	return sc.DBConf.RedisHost
+func (sc *SystemConf) GetRedisHost() []string {
+	if sc.GetRedisMasterName() != "" {
+		return sc.DBConf.RedisSentinels
+	}
+	if sc.DBConf.RedisHost != "" {
+		return []string{sc.DBConf.RedisHost}
+	}
+	return []string{}
+}
+
+// GetRedisMasterName returns master name of redis instance within sentinel.
+// If this is return none empty string redis sentinel will be used
+func (sc *SystemConf) GetRedisMasterName() string {
+	return sc.DBConf.RedisMasterName
 }
 
 // GetRedisDb returns the redis database number to use
