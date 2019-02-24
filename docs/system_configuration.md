@@ -272,6 +272,12 @@ Optional password to use when connecting to Redis.
 Optional key defining the sending of client's name `bosun` to Redis. Defaults to true.
 If you use Netflix/dynomite then RedisClentSetName must be set to false.
 
+#### RedisSentinels
+The redis sentinels list. Redis sentinel list will be used only if parameter `RedisMasterName` was set as well 
+
+#### RedisMasterName
+The redis master name within sentinel. If it is set bosun will use sentinel to receive information about cuurrent redis master.
+
 #### LedisDir
 Directory in which ledis will store data. Default: `LedisDir = "ledis_data"`
 
