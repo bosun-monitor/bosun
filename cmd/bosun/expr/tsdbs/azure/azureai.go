@@ -179,7 +179,7 @@ func AIQuery(prefix string, e *expr.State, metric, segmentCSV, filter string, ap
 		}
 	}
 
-	// Transform seriesMap into seriesSet (ResultSlice)
+	// Transform seriesMap into seriesSet (ElementSlice)
 	for k, series := range seriesMap {
 		tags, err := opentsdb.ParseTags(k)
 		if err != nil {

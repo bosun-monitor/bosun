@@ -101,7 +101,7 @@ func TestExprParse(t *testing.T) {
 		} else if !et.valid && err == nil {
 			t.Errorf("expected invalid, but no error: %v", et.input)
 		} else if et.valid {
-			tags, err := e.Root.Tags()
+			tags, err := e.Root.TagKeys()
 			if err != nil {
 				t.Error(err)
 				continue

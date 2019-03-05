@@ -25,7 +25,7 @@ type Node interface {
 	Position() Pos     // byte position of start of node in full original input string
 	Check(*Tree) error // performs type checking for itself and sub-nodes
 	Return() models.FuncType
-	Tags() (TagKeys, error)
+	TagKeys() (TagKeys, error)
 
 	// Make sure only functions in this package can create Nodes.
 	unexported()
@@ -157,7 +157,7 @@ func (f *FuncNode) Return() models.FuncType {
 	return f.F.Return
 }
 
-func (f *FuncNode) Tags() (TagKeys, error) {
+func (f *FuncNode) TagKeys() (TagKeys, error) {
 	if f.F.TagKeys == nil {
 		return nil, nil
 	}
@@ -215,7 +215,7 @@ func (s *ExprNode) Return() models.FuncType {
 	}
 }
 
-func (s *ExprNode) Tags() (TagKeys, error) {
+func (s *ExprNode) TagKeys() (TagKeys, error) {
 	return nil, nil
 }
 
@@ -265,7 +265,7 @@ func (n *NumberNode) Return() models.FuncType {
 	return models.TypeScalar
 }
 
-func (n *NumberNode) Tags() (TagKeys, error) {
+func (n *NumberNode) TagKeys() (TagKeys, error) {
 	return nil, nil
 }
 
@@ -297,7 +297,7 @@ func (s *StringNode) Return() models.FuncType {
 	return models.TypeString
 }
 
-func (s *StringNode) Tags() (TagKeys, error) {
+func (s *StringNode) TagKeys() (TagKeys, error) {
 	return nil, nil
 }
 
@@ -335,8 +335,8 @@ func (p *PrefixNode) Return() models.FuncType {
 	return p.Arg.Return()
 }
 
-func (p *PrefixNode) Tags() (TagKeys, error) {
-	return p.Arg.Tags()
+func (p *PrefixNode) TagKeys() (TagKeys, error) {
+	return p.Arg.TagKeys()
 }
 
 // BinaryNode holds two arguments and an operator.
@@ -375,11 +375,11 @@ func (b *BinaryNode) Check(t *Tree) error {
 	if err := b.Args[1].Check(t); err != nil {
 		return err
 	}
-	g1, err := b.Args[0].Tags()
+	g1, err := b.Args[0].TagKeys()
 	if err != nil {
 		return err
 	}
-	g2, err := b.Args[1].Tags()
+	g2, err := b.Args[1].TagKeys()
 	if err != nil {
 		return err
 	}
@@ -398,13 +398,13 @@ func (b *BinaryNode) Return() models.FuncType {
 	return t0
 }
 
-func (b *BinaryNode) Tags() (TagKeys, error) {
-	t, err := b.Args[0].Tags()
+func (b *BinaryNode) TagKeys() (TagKeys, error) {
+	t, err := b.Args[0].TagKeys()
 	if err != nil {
 		return nil, err
 	}
 	if t == nil {
-		return b.Args[1].Tags()
+		return b.Args[1].TagKeys()
 	}
 	return t, nil
 }
@@ -443,8 +443,8 @@ func (u *UnaryNode) Return() models.FuncType {
 	return u.Arg.Return()
 }
 
-func (u *UnaryNode) Tags() (TagKeys, error) {
-	return u.Arg.Tags()
+func (u *UnaryNode) TagKeys() (TagKeys, error) {
+	return u.Arg.TagKeys()
 }
 
 // Walk invokes f on n and sub-nodes of n.

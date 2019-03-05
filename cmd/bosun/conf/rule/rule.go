@@ -19,7 +19,7 @@ import (
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
-	annoExpr "bosun.org/cmd/bosun/expr/tsdbs/annotate"
+	exprAnno "bosun.org/cmd/bosun/expr/tsdbs/annotate"
 	exprAzure "bosun.org/cmd/bosun/expr/tsdbs/azure"
 	exprES "bosun.org/cmd/bosun/expr/tsdbs/elastic"
 	exprGraphite "bosun.org/cmd/bosun/expr/tsdbs/graphite"
@@ -625,7 +625,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		if a.ReturnType != models.TypeNumberSet {
 			return nil, fmt.Errorf("alert requires a number-returning expression (got %v)", a.ReturnType)
 		}
-		return e.Root.Tags()
+		return e.Root.TagKeys()
 	}
 
 	funcs := map[string]eparse.Func{
@@ -666,7 +666,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 		merge(exprInflux.ExprFuncs)
 	}
 	if backends.Annotate {
-		merge(annoExpr.ExprFuncs)
+		merge(exprAnno.ExprFuncs)
 	}
 	if backends.AzureMonitor {
 		merge(exprAzure.ExprFuncs)

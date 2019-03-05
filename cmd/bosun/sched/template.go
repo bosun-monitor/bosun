@@ -336,7 +336,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 }
 
 // eval takes an expression or string (which it turns into an expression), executes it and returns the result.
-// It can also takes a ResultSlice so callers can transparantly handle different inputs.
+// It can also takes a ElementSlice so callers can transparantly handle different inputs.
 // The filter argument constrains the result to matching tags in the current context.
 // The series argument asserts that the result is a time series.
 func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res expr.ElementSlice, title string, err error) {
@@ -574,7 +574,7 @@ func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 		results[col] = queryResults
 	}
 
-	// perform the joining by storing all results in a joined[N0][M] Result matrix:
+	// perform the joining by storing all results in a joined[N0][M] Element matrix:
 	// for N tagsets (based on first query results), tracks all M Results (results with matching group, from all other queries)
 	joined := make([][]*expr.Element, 0)
 	for row, firstQueryResult := range results[0] {

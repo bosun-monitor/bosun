@@ -31,16 +31,16 @@ type Tree struct {
 	peekCount int
 }
 
-// returnTagsFunc is the type for functions that return the expected tag keys
+// returnTagKeysFunc is the type for functions that return the expected tag keys
 // for an expression function
-type returnTagsFunc func([]Node) (TagKeys, error)
+type returnTagKeysFunc func([]Node) (TagKeys, error)
 
 // Func is used to represent an Function within Bosun's expression language and has
 // the properties of the function needed to check validity of the expression.
 type Func struct {
 	Args    []models.FuncType // an array of the the expected types to the function argument.
 	Return  models.FuncType   // expected return type of the function.
-	TagKeys returnTagsFunc    // function that returns the expected tag keys for the result of the function.
+	TagKeys returnTagKeysFunc // function that returns the expected tag keys for the result of the function.
 	F       interface{}       // a pointer to the actual Go code that will execute.
 
 	VArgs     bool // if this function support variable length arguments.
@@ -99,7 +99,7 @@ func (t TagKeys) Subset(o TagKeys) bool {
 	return true
 }
 
-// Intersection returns Tags common to both tagsets.
+// Intersection returns TagKeys common to both tagsets.
 func (t TagKeys) Intersection(o TagKeys) TagKeys {
 	result := TagKeys{}
 	for k := range t {

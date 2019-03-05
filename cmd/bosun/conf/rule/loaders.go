@@ -245,7 +245,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	var tags eparse.TagKeys
 	var ret models.FuncType
 	if a.Crit != nil {
-		ctags, err := a.Crit.Root.Tags()
+		ctags, err := a.Crit.Root.TagKeys()
 		if err != nil {
 			c.error(err)
 		}
@@ -253,7 +253,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		ret = a.Crit.Root.Return()
 	}
 	if a.Warn != nil {
-		wtags, err := a.Warn.Root.Tags()
+		wtags, err := a.Warn.Root.TagKeys()
 		if err != nil {
 			c.error(err)
 		}
@@ -268,7 +268,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		}
 	}
 	if a.Depends != nil {
-		depTags, err := a.Depends.Root.Tags()
+		depTags, err := a.Depends.Root.TagKeys()
 		if err != nil {
 			c.error(err)
 		}

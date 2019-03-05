@@ -22,7 +22,7 @@ import (
 // This function is commonly used to extract the expects tags of functions where the tag
 // keys will be the same as the first argument's object.
 func TagFirst(args []parse.Node) (parse.TagKeys, error) {
-	return args[0].Tags()
+	return args[0].TagKeys()
 }
 
 // tagRemove extracts the expected resulting tags keys from a call to the Remove function.
@@ -94,7 +94,7 @@ func tagTranspose(args []parse.Node) (parse.TagKeys, error) {
 			tags[t] = struct{}{}
 		}
 	}
-	if atags, err := args[0].Tags(); err != nil {
+	if atags, err := args[0].TagKeys(); err != nil {
 		return nil, err
 	} else if !tags.Subset(atags) {
 		return nil, fmt.Errorf("transpose tags (%v) must be a subset of first argument's tags (%v)", tags, atags)

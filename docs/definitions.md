@@ -991,10 +991,10 @@ The above would display "0.2" for host "a". More simply, you template could just
 <p>The "filtering" implementation currently behaves differently with OpenTSDB for Eval and Graph. The query text will actually be replaced so that it only queries that tags for the alert. This behavior may be removed in the future.</p>
 </div>
 
-##### .EvalAll(string|Expression|ResultSlice) (Result)
+##### .EvalAll(string|Expression|ElementSlice) (Element)
 {: .func}
 
-`.EvalAll` executes the given expression and returns a slice of [ResultSlice](/definitions#resultslice). The type of each results depends on the return type of the expression. Mostly commonly one uses a an expression that returns a numberSet ([see data types](/expressions#data-types)). If there is an error nil is returned and `.Errors` is appended to.
+`.EvalAll` executes the given expression and returns a slice of [ElementSlice](/definitions#elementslice). The type of each results depends on the return type of the expression. Mostly commonly one uses a an expression that returns a numberSet ([see data types](/expressions#data-types)). If there is an error nil is returned and `.Errors` is appended to.
 
 Example:
 
@@ -1789,7 +1789,7 @@ This type is also returned by [`.GetIncidentState` template function](/definitio
 * `End`:  a pointer to a time.Time object, will be a nil pointer if the incident has not ended yet
 * `AlertKey`: see [Template Variables .AlertKey](/definitions#alertkey)
 * `Alert`: string representation of AlertKey
-* `Result`: A pointer to an embedded [`Result` type](/definitions#result-1)
+* `Result`: A pointer to an embedded [`Result` type](/definitions#event-result)
 * `Events`: a slice of [Event objects](/definitions#event), see [Template Variables `.Events`](/definitons#events)
 * `Actions`: a slice of [Action objects](/definitions#action), see [Template Variables `.Events`](/definitons#actions)
 * `Subject`: string representation of the subject of the alert, see [Template Variables `.Events`](/definitions#subject-1)
@@ -1800,24 +1800,24 @@ This type is also returned by [`.GetIncidentState` template function](/definitio
 * `NextId` is the ID of a future incident for the same AlertKey. If there is no future incident, then the value is 0.
 * `Notifications` is a string slice of all notifications names that were sent for the incident at the present time.
 
-#### Result
+#### Element
 {: .type}
 
-A `Result` as two fields:
+A `Element` has two fields:
 
  1. `Group`: The Group is the TagSet of the result. 
- 2. `Value`: The Value of the Result
+ 2. `Value`: The Value of the Element
 
 A tagset is a map of of string to string (`map[string]string` in Go). The keys represent the tag key and their corresponding values are the tag values.
 
 The Value can be of different types. Technically, it is a go `interface{}` with two methods, `Type()` which returns the type of the `Value()` which returns an `interface{}` as well, but will be of the type returned by the `Type()` method.
 
-The most common case of dealing with Results in a ResultSlice is to use the `.EvalAll` func on an expression that would return a NumberSet. See the example under [EvalAll](/definitions#evalall).
+The most common case of dealing with Elements in a ElementSlice is to use the `.EvalAll` func on an expression that would return a NumberSet. See the example under [EvalAll](/definitions#evalall).
 
-#### ResultSlice
+#### ElementSlice
 {: .type}
 
-A `ResultSlice` is returned by using the [`.EvalAll` template function](/definitions#evalallstringexpressionresultslice-result). It is a slice of pointers to [`Result` objects](/definitions#result-1). Each result represents the an item in the set when the type is something like a NumberSet or a SeriesSet.
+A `ElementSlice` is returned by using the [`.EvalAll` template function](/definitions#evalallstringexpressionelementslice-element). It is a slice of pointers to [`Element` objects](/definitions#element-1). Each element represents the an item in the set when the type is something like a NumberSet or a SeriesSet.
 
 #### Status 
 {: .type}
