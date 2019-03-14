@@ -29,7 +29,7 @@
 			// In the generate index, remove arguments from functions and all bold
 			// anything that has the string Endpoints for the API Page
 			$('#markdown-toc').find('a').each( function() {
-				$(this).text($(this).text().replace(/\(.*\)/, "()"));
+				$(this).text($(this).text().replace(/\([^)]+\)/, "()"));
 				if ($(this).text().indexOf("Endpoints") > -1) {
 					$(this).addClass("endpoint");
 				}
