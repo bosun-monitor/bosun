@@ -33,6 +33,13 @@ The flags are:
 		no RFC1918 addresses
 	-timeout="3s"
 		connection timeout
+	-tags=""
+	    if specified, only runs plans that are tagged with one of the
+		tags specified. You can specify more than one tag, seperated by commas
+	-protos=""
+		if specified, only runs plans where the URL contains the given
+		protocol. Valid protocols are: http,https,tcp,tcp4,tcp6,udp,udp4,udp6,ip,ip4,ip6
+		You can specify more than one protocol, seperated by commas
 	-header="X-Request-Guid"
 		in more verbose mode, print this HTTP header
 	-v
@@ -63,6 +70,9 @@ Each `[[plan]]` lists:
  * `string =` For http/https, a string we expect to find in the result.
  * `regex =` For http/https, a regular expression we expect to match in the result.
  * `timeout =` An optional timeout for the test in seconds. Default is 3 seconds.
+ * `tags =` An optional set of tags for the test. Used for when you want to only run a subset of tests with the `-tags` flag
+ * `insecureSkipVerify = true` Will allow testing of untrusted or self-signed certificates.
+
 
 The test plan is run once for each item in the ips list, or more if macros
 are in effect.
@@ -140,7 +150,7 @@ diagnosing outages.
 In this example we want an IP address to mean the IP address, but if we
 specify a single number (e.g. "16") we want that to expand to the .16 address
 of a few different CIDR blocks. We also want to be able to specify a number +
-INT (e.g. "16INT") to indicate a slightly diffenent list.
+INT (e.g. "16INT") to indicate a slightly different list.
 
 	[IPs]
 	  BASEIP = ["87.65.43."]
@@ -154,6 +164,7 @@ INT (e.g. "16INT") to indicate a slightly diffenent list.
 	  ips = ["16", "8.7.6.5"]
 	  text = "API for example.com"
 	  regex = "some regex"
+	  tags = ["apis","example.com"]
 	
 	[[plan]]
 	  label = "redirect"
@@ -161,6 +172,7 @@ INT (e.g. "16INT") to indicate a slightly diffenent list.
 	  # This will generate the DNS A/AAAA records, 10.0.1.20, 10.0.2.20, 87.65.43.20, 87.65.43.84:
 	  ips = ["*", "20INT"]
 	  code = 301
+	  tags = ["redirect","example.com"]
 	
 	[[plan]]
 	  label = "mail"

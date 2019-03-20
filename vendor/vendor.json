@@ -125,9 +125,10 @@
 			"revisionTime": "2015-09-27T16:28:20-04:00"
 		},
 		{
+			"checksumSHA1": "Pr+f+/r3NimCCjwpm67NyiGKxLw=",
 			"path": "github.com/StackExchange/httpunit",
-			"revision": "24f1d74ace5188b9d3c082b3bb99f170fba64fe6",
-			"revisionTime": "2016-06-02T11:41:49-04:00"
+			"revision": "088c22a5342e72c16ec7f8a9a11075beb3f81855",
+			"revisionTime": "2019-03-20T17:25:35Z"
 		},
 		{
 			"path": "github.com/StackExchange/mof",
