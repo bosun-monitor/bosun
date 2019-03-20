@@ -41,7 +41,7 @@ func HTTPUnitPlans(name string, plans *httpunit.Plans, freq time.Duration) {
 }
 
 func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
-	ch, _, err := plans.Test("", false)
+	ch, _, err := plans.Test("", false, nil, nil)
 	if err != nil {
 		return nil, err
 	}
