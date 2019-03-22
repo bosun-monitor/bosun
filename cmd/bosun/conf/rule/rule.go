@@ -822,10 +822,10 @@ func (c *Conf) GetHash() string {
 // returns any notifications accessible from the alert vis warn/critNotification, including chains and lookups
 func (c *Conf) getAllPossibleNotifications(a *conf.Alert) map[string]*conf.Notification {
 	nots := map[string]*conf.Notification{}
-	for k, v := range a.WarnNotification.GetAllChained() {
+	for k, v := range a.WarnNotification.Notifications {
 		nots[k] = v
 	}
-	for k, v := range a.CritNotification.GetAllChained() {
+	for k, v := range a.CritNotification.Notifications {
 		nots[k] = v
 	}
 	followLookup := func(l map[string]*conf.Lookup) {
@@ -845,5 +845,6 @@ func (c *Conf) getAllPossibleNotifications(a *conf.Alert) map[string]*conf.Notif
 	}
 	followLookup(a.CritNotification.Lookups)
 	followLookup(a.WarnNotification.Lookups)
-	return nots
+	ns := conf.Notifications{Notifications: nots, Lookups: make(map[string]*conf.Lookup)}
+	return ns.GetAllChained()
 }
