@@ -278,7 +278,7 @@ type Notification struct {
 	Print        bool
 	Next         *Notification
 	Timeout      time.Duration
-	ContentType  string
+	Headers      map[string]string
 	RunOnActions string
 	GroupActions bool
 

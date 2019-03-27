@@ -255,7 +255,9 @@ func (n *Notification) PrepHttp(method string, url string, body string, alertDet
 	}
 	if method == http.MethodPost {
 		prep.Body = body
-		prep.Headers["Content-Type"] = n.ContentType
+		for k, v := range n.Headers {
+			prep.Headers[k] = v
+		}
 	}
 	return prep
 }
