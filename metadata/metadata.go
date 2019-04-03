@@ -21,7 +21,7 @@ import (
 var (
 	// AuthToken is an optional string that sets the X-Access-Token HTTP header
 	// which is used to authenticate against Bosun
-	AuthToken string
+    AuthToken string
 )
 
 // RateType is the type of rate for a metric: gauge, counter, or rate.
