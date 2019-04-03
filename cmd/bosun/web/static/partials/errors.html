@@ -7,7 +7,7 @@
 </div>
 <div class="row" ng-show="loading">
 	<div class="col-lg-12">
-		<div class="alert alert-info">
+		<div class="alert alert-info loading">
 			Loading...
 		</div>
 	</div>
@@ -21,18 +21,46 @@
 <div class="panel-group">
 	<div class="panel" ng-repeat="err in errors | orderBy: ['Success','-Sum']" ng-show="err.Sum" ng-class="{'panel-danger': !err.Success, 'panel-success':err.Success}" >
 		<div class="panel-heading" ng-click="err.Shown = !err.Shown">
-			<h4 class="panel-title">alert {{err.Name}} - ({{err.Sum}} events)
+      <h4 class="panel-title">alert {{err.Name}} - ({{err.Sum}} events)
 			<label class="pull-right select">
 					<input type="checkbox" class="pull-right" ng-model="err.checked" ng-click="click(err, $event)">
 			</label>
 			</h4> 
 		</div>
-		<div class="panel-body" ng-if="err.Shown">
-			<div class="alert alert-danger" role="alert" ng-repeat="line in err.Errors | orderBy:['-LastTime']" style="margin:0px;">
-				{{line.Message}} - {{line.Count}} times From <span ts-time="line.FirstTime"></span> To <span ts-time="line.LastTime"></span> 
-				 - <a ng-href="{{ruleLink(line,err)}}">Rule Page</a>
-			</div>
-		</div>
+    <div class="panel-body" ng-if="err.Shown">
+      <div role="alert" style="margin:0px;" ng-class="{'panel-danger': !err.Success, 'panel-success':err.Success}">
+        <div class="col-sm-6">
+          <div class="row">
+            <div class="col-sm-3">
+              <p><strong>First Time:</strong></p>
+            </div>
+            <div class="col-sm-9">
+              <span ts-time="err.Errors.FirstTime">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-sm-3">
+              <p><strong>Last Time:</strong></p>
+            </div>
+            <div class="col-sm-9">
+              <span ts-time="err.Errors.LastTime"></span>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-sm-3">
+              <p><strong>Views:</strong></p>
+            </div>
+            <div class="col-sm-9">
+              <a ng-href="{{ruleLink(err,err)}}">Rule Editor</a>,
+              <a ng-href="/error_messages?key={{err.Name}}">Error messages</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
 	</div>
 </div>
 </div>

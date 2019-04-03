@@ -18,13 +18,10 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.errors = [];
 			_(data).forEach((err,name)=>{
 				err.Name = name;
-				err.Sum = 0;
-				err.Shown = true;
-				_(err.Errors).forEach((line)=>{
-					err.Sum += line.Count
-					line.FirstTime = moment.utc(line.FirstTime)
-					line.LastTime = moment.utc(line.LastTime)
-				})
+				err.Shown = false;
+                err.Sum = err.Errors.Count;
+			    err.Errors.FirstTime = moment.utc(err.Errors.FirstTime);
+				err.Errors.LastTime = moment.utc(err.Errors.LastTime);
 				$scope.errors.push(err);
 			})
 		})
@@ -39,6 +36,9 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
 	};
 	
 	$scope.totalLines = () => {
+        if (typeof $scope.errors === 'undefined') {
+            return -1;
+        };
 		return $scope.errors.length;
 	};
 	

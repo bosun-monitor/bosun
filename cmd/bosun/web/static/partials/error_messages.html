@@ -1,0 +1,39 @@
+<h2> Error Messages for {{ alert_key }}</h2>
+
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<pre class="alert alert-danger" ng-bind="error" style="white-space: pre-wrap;"></pre>
+	</div>
+</div>
+<div class="row" ng-show="loading">
+	<div class="col-lg-12">
+		<div class="alert alert-info loading">
+			Loading...
+		</div>
+	</div>
+</div>
+
+<div ng-show="totalLines() > 0">
+<div class="row" style="margin-bottom:15px;">
+  <button class='btn btn-default pull-right' ng-click="clearAll(alert_key)" ng-disabled="totalLines() == 0">Clear All {{totalLines()}} messages for {{ alert_key }}</button>
+</div>
+<div class="panel-group">
+	<div class="panel panel-danger" ng-repeat="err in errors | orderBy: ['-LastTime']" ng-show="1">
+		<div class="panel-heading" ng-click="err.Shown = !err.Shown">
+      <h4 class="panel-title"><span ts-time="err.LastTime"></span></h4> 
+		</div>
+
+    <div class="panel-body" if="err.Shown">
+      <div class="alert alert-danger" role="alert" style="margin:0px;">
+        {{err.Message}}
+      </div>
+    </div>
+	</div>
+</div>
+</div>
+
+<div ng-show="totalLines() == 0">
+  <div class="alert alert-success">
+    No messages here. This is a good thing.
+  </div>
+</div>

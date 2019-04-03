@@ -943,21 +943,42 @@ func Version(w http.ResponseWriter, r *http.Request) {
 
 func ErrorHistory(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if r.Method == "GET" {
-		data, err := schedule.DataAccess.Errors().GetFullErrorHistory()
-		if err != nil {
-			return nil, err
+		key := r.URL.Query().Get("key")
+
+		type AlertKeysStatus struct {
+			Success bool
+			Errors  *models.AlertCount
 		}
+
 		type AlertStatus struct {
 			Success bool
 			Errors  []*models.AlertError
 		}
+
 		failingAlerts, err := schedule.DataAccess.Errors().GetFailingAlerts()
 		if err != nil {
 			return nil, err
 		}
-		m := make(map[string]*AlertStatus, len(data))
+
+		if key != "" {
+			data, err := schedule.DataAccess.Errors().GetErrorHistoryKey(key)
+			if err != nil {
+				return nil, err
+			}
+			return &AlertStatus{
+				Success: !failingAlerts[key],
+				Errors:  data,
+			}, nil
+
+		}
+		data, err := schedule.DataAccess.Errors().GetErrorHistoryKeys()
+		if err != nil {
+			return nil, err
+		}
+
+		m := make(map[string]*AlertKeysStatus, len(data))
 		for a, list := range data {
-			m[a] = &AlertStatus{
+			m[a] = &AlertKeysStatus{
 				Success: !failingAlerts[a],
 				Errors:  list,
 			}

@@ -1,11 +1,12 @@
 package database
 
 import (
-	"bosun.org/models"
 	"encoding/json"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"time"
+
+	"bosun.org/models"
+	"github.com/garyburd/redigo/redis"
 )
 
 /*
@@ -26,6 +27,8 @@ type ErrorDataAccess interface {
 	IsAlertFailing(name string) (bool, error)
 
 	GetFullErrorHistory() (map[string][]*models.AlertError, error)
+	GetErrorHistoryKeys() (map[string]*models.AlertCount, error)
+	GetErrorHistoryKey(key string) ([]*models.AlertError, error)
 	ClearAlert(name string) error
 	ClearAll() error
 }
@@ -176,6 +179,75 @@ func (d *dataAccess) GetFullErrorHistory() (map[string][]*models.AlertError, err
 		}
 		results[a] = list
 	}
+	return results, nil
+}
+
+func (d *dataAccess) GetErrorHistoryKey(key string) ([]*models.AlertError, error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	rows, err := redis.Strings(conn.Do("LRANGE", errorListKey(key), 0, -1))
+	if err != nil {
+		return nil, err
+	}
+	list := make([]*models.AlertError, 0)
+	for _, row := range rows {
+		ae := &models.AlertError{}
+		err = json.Unmarshal([]byte(row), ae)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, ae)
+	}
+	return list, nil
+}
+
+func (d *dataAccess) GetErrorHistoryKeys() (map[string]*models.AlertCount, error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	alerts, err := redis.Strings(conn.Do("SMEMBERS", alertsWithErrors))
+	if err != nil {
+		return nil, err
+	}
+	results := make(map[string]*models.AlertCount, len(alerts))
+	for _, a := range alerts {
+		results[a] = &models.AlertCount{}
+		// get alerts count
+		res, err := redis.Int(conn.Do("LLEN", errorListKey(a)))
+		if err != nil {
+			return nil, err
+		}
+
+		results[a].Count = res
+
+		// get first alert
+		firstAlert, err := redis.String(conn.Do("LINDEX", errorListKey(a), -1))
+		if err != nil {
+			return nil, err
+		}
+
+		ae := &models.AlertError{}
+		err = json.Unmarshal([]byte(firstAlert), ae)
+		if err != nil {
+			return nil, err
+		}
+		results[a].FirstTime = ae.FirstTime
+
+		// get last alert
+		lastAlert, err := redis.String(conn.Do("LINDEX", errorListKey(a), 0))
+		if err != nil {
+			return nil, err
+		}
+
+		ae = &models.AlertError{}
+		err = json.Unmarshal([]byte(lastAlert), ae)
+		if err != nil {
+			return nil, err
+		}
+		results[a].LastTime = ae.LastTime
+	}
+
 	return results, nil
 }
 

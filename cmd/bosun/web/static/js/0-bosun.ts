@@ -52,6 +52,11 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
         templateUrl: 'partials/errors.html',
         controller: 'ErrorCtrl',
     })
+    when('/error_messages', {
+        title: 'Error Messages',
+        templateUrl: 'partials/error_messages.html',
+        controller: 'ErrorMessagesCtrl',
+    })
     when('/graph', {
         title: 'Graph',
         templateUrl: 'partials/graph.html',

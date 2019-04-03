@@ -9,3 +9,8 @@ type AlertError struct {
 	Count               int
 	Message             string
 }
+
+type AlertCount struct {
+	FirstTime, LastTime time.Time
+	Count               int
+}

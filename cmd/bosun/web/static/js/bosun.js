@@ -226,6 +226,11 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             templateUrl: 'partials/errors.html',
             controller: 'ErrorCtrl'
         });
+        when('/error_messages', {
+            title: 'Error Messages',
+            templateUrl: 'partials/error_messages.html',
+            controller: 'ErrorMessagesCtrl'
+        });
         when('/graph', {
             title: 'Graph',
             templateUrl: 'partials/graph.html',
@@ -2475,6 +2480,50 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
             }
         };
     }]);
+bosunControllers.controller('ErrorMessagesCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.alert_key = search.key;
+        $scope.loading = true;
+        $http.get('/api/errors?key=' + search.key)
+            .success(function (data) {
+            _(data).forEach(function (err, name) {
+                err.Name = name;
+                err.Sum = 0;
+                _(err.Errors).forEach(function (line) {
+                    line.Shown = true;
+                    err.Sum += line.Count;
+                    line.FirstTime = moment.utc(line.FirstTime);
+                    line.LastTime = moment.utc(line.LastTime);
+                });
+                $scope.errors = err;
+            });
+        })
+            .error(function (data) {
+            $scope.error = "Error fetching data: " + data;
+        })["finally"](function () { $scope.loading = false; });
+        $scope.click = function (err, event) {
+            event.stopPropagation();
+        };
+        $scope.hideShow = function (err, event) {
+            err.Shown = !err.Shown;
+        };
+        $scope.totalLines = function () {
+            if (typeof $scope.errors === 'undefined') {
+                return -1;
+            }
+            ;
+            return $scope.errors.length;
+        };
+        $scope.clearAll = function (key) {
+            $http.post('/api/errors', [key])
+                .success(function (data) {
+                $route.reload();
+            })
+                .error(function (data) {
+                $scope.error = "Error Clearing Errors: " + data;
+            });
+        };
+    }]);
 bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         $scope.loading = true;
         $http.get('/api/errors')
@@ -2482,13 +2531,10 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
             $scope.errors = [];
             _(data).forEach(function (err, name) {
                 err.Name = name;
-                err.Sum = 0;
-                err.Shown = true;
-                _(err.Errors).forEach(function (line) {
-                    err.Sum += line.Count;
-                    line.FirstTime = moment.utc(line.FirstTime);
-                    line.LastTime = moment.utc(line.LastTime);
-                });
+                err.Shown = false;
+                err.Sum = err.Errors.Count;
+                err.Errors.FirstTime = moment.utc(err.Errors.FirstTime);
+                err.Errors.LastTime = moment.utc(err.Errors.LastTime);
                 $scope.errors.push(err);
             });
         })
@@ -2499,6 +2545,10 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
             event.stopPropagation();
         };
         $scope.totalLines = function () {
+            if (typeof $scope.errors === 'undefined') {
+                return -1;
+            }
+            ;
             return $scope.errors.length;
         };
         $scope.selectedLines = function () {
