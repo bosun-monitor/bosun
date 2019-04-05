@@ -11,11 +11,16 @@ import (
 	"bosun.org/slog"
 )
 
+type UnknownNotificationIncidentState struct {
+	*models.IncidentState
+	AlertVars Vars
+}
+
 type unknownContext struct {
 	Time     time.Time
 	Name     string
 	Group    models.AlertKeys
-	States   *models.IncidentState
+	States   *UnknownNotificationIncidentState
 	makeLink func(string, *url.Values) string
 }
 
@@ -53,12 +58,16 @@ func init() {
 	unknownDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
-func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey, states *models.IncidentState) *PreparedNotifications {
+func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey, states *models.IncidentState, rcp RuleConfProvider) *PreparedNotifications {
+	unknownStates := &UnknownNotificationIncidentState{
+		IncidentState: states,
+		AlertVars:     rcp.GetAlert(states.Alert).Vars,
+	}
 	ctx := &unknownContext{
 		Time:     time.Now().UTC(),
 		Name:     name,
 		Group:    aks,
-		States:   states,
+		States:   unknownStates,
 		makeLink: c.MakeLink,
 	}
 	pn := &PreparedNotifications{}
@@ -112,8 +121,8 @@ func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name st
 	return pn
 }
 
-func (n *Notification) NotifyUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey, states *models.IncidentState) {
-	go n.PrepareUnknown(t, c, name, aks, states).Send(c)
+func (n *Notification) NotifyUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey, states *models.IncidentState, rcp RuleConfProvider) {
+	go n.PrepareUnknown(t, c, name, aks, states, rcp).Send(c)
 }
 
 var unknownMultiDefaults defaultTemplates
@@ -122,7 +131,7 @@ type unknownMultiContext struct {
 	Time      time.Time
 	Threshold int
 	Groups    map[string]models.AlertKeys
-	States    []*models.IncidentState
+	States    []*UnknownNotificationIncidentState
 }
 
 func init() {
@@ -147,12 +156,18 @@ func init() {
 	unknownMultiDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
-func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState) *PreparedNotifications {
+func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState, rcp RuleConfProvider) *PreparedNotifications {
+	var unknownStates []*UnknownNotificationIncidentState
+	for _, state := range states {
+		us := UnknownNotificationIncidentState{IncidentState: state, AlertVars: rcp.GetAlert(state.Alert).Vars}
+		unknownStates = append(unknownStates, &us)
+	}
+
 	ctx := &unknownMultiContext{
 		Time:      time.Now().UTC(),
 		Threshold: c.GetUnknownThreshold(),
 		Groups:    groups,
-		States:    states,
+		States:    unknownStates,
 	}
 	pn := &PreparedNotifications{}
 	buf := &bytes.Buffer{}
@@ -193,8 +208,8 @@ func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider
 	return pn
 }
 
-func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState) {
-	n.PrepareMultipleUnknowns(t, c, groups, states).Send(c)
+func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState, rcp RuleConfProvider) {
+	n.PrepareMultipleUnknowns(t, c, groups, states, rcp).Send(c)
 }
 
 // code common to PrepareAction / PrepareUnknown / PrepareMultipleUnknowns
