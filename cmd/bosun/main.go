@@ -323,6 +323,14 @@ func main() {
 			}()
 		}
 	}()
+	go func() {
+		sc := make(chan os.Signal, 1)
+		signal.Notify(sc, syscall.SIGHUP)
+		for range sc {
+			slog.Infoln("Got SIGHUP, reloading config...")
+			reload()
+		}
+	}()
 
 	if *flagWatch {
 		watch(".", "*.go", quit)
