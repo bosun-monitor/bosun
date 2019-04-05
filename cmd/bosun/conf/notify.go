@@ -23,7 +23,7 @@ import (
 const (
 	sendLogSuccessFmt = "%s; name: %s; transport: %s; dst: %s; body: %s"
 	sendLogErrorFmt   = "%s; name: %s; transport: %s; dst: %s; body: %s; error: %s"
-	httpSendErrorFmt  = "bad response for '%s' %s notification using template key '%s' for alert keys %v method %s: %d"
+	httpSendErrorFmt  = "bad response for '%s' %s notification (template '%s') (alert keys %v) method %s: %d (headers: %v): (Error: %s)"
 )
 
 func init() {
@@ -178,6 +178,7 @@ type NotificationDetails struct {
 
 func (p *PreparedHttp) Send() (int, error) {
 	var body io.Reader
+	var respBody []byte
 	if p.Body != "" {
 		body = strings.NewReader(p.Body)
 	}
@@ -190,14 +191,15 @@ func (p *PreparedHttp) Send() (int, error) {
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
-		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
-		io.CopyN(ioutil.Discard, resp.Body, 512)
+		// close the body to let the Transport reuse the connection
+		respBody, _ = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 	}
 	if err != nil {
 		return 0, err
 	}
 	if resp.StatusCode >= 300 {
+		respBodyStr := string(respBody)
 		collect.Add("post.sent_failed", nil, 1)
 		switch p.Details.NotifyType {
 		case alert:
@@ -209,6 +211,8 @@ func (p *PreparedHttp) Send() (int, error) {
 				strings.Join(p.Details.Ak, ","),
 				p.Method,
 				resp.StatusCode,
+				p.Headers,
+				respBodyStr,
 			)
 		case unknown:
 			return resp.StatusCode, fmt.Errorf(
@@ -219,6 +223,8 @@ func (p *PreparedHttp) Send() (int, error) {
 				strings.Join(p.Details.Ak, ","),
 				p.Method,
 				resp.StatusCode,
+				p.Headers,
+				respBodyStr,
 			)
 		case multiunknown:
 			return resp.StatusCode, fmt.Errorf(
@@ -229,6 +235,8 @@ func (p *PreparedHttp) Send() (int, error) {
 				strings.Join(p.Details.Ak, ","),
 				p.Method,
 				resp.StatusCode,
+				p.Headers,
+				respBodyStr,
 			)
 		default:
 			return resp.StatusCode, fmt.Errorf(
@@ -239,6 +247,8 @@ func (p *PreparedHttp) Send() (int, error) {
 				strings.Join(p.Details.Ak, ","),
 				p.Method,
 				resp.StatusCode,
+				p.Headers,
+				respBodyStr,
 			)
 		}
 	}
@@ -255,7 +265,9 @@ func (n *Notification) PrepHttp(method string, url string, body string, alertDet
 	}
 	if method == http.MethodPost {
 		prep.Body = body
-		prep.Headers["Content-Type"] = n.ContentType
+		for k, v := range n.Headers {
+			prep.Headers[k] = v
+		}
 	}
 	return prep
 }

@@ -75,6 +75,7 @@ type SystemConf struct {
 	EnableReload    bool
 	CommandHookPath string
 	RuleFilePath    string
+	RuleDirPath     string
 	md              toml.MetaData
 }
 
@@ -230,12 +231,13 @@ func (pc PromConf) Valid() error {
 
 // DBConf stores the connection information for Bosun's internal storage
 type DBConf struct {
-	RedisHost          string
-	RedisDb            int
-	RedisPassword      string
-	RedisClientSetName bool
-	RedisSentinels     []string
-	RedisMasterName    string
+	RedisHost             string
+	RedisDb               int
+	RedisPassword         string
+	RedisSentinelPassword string
+	RedisClientSetName    bool
+	RedisSentinels        []string
+	RedisMasterName       string
 
 	LedisDir      string
 	LedisBindAddr string
@@ -482,6 +484,11 @@ func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
 }
 
+// GetRedisSentinelPassword returns the password that should be used to connect to redis sentinel
+func (sc *SystemConf) GetRedisSentinelPassword() string {
+	return sc.DBConf.RedisSentinelPassword
+}
+
 // RedisClientSetName returns if CLIENT SETNAME shoud send to redis.
 func (sc *SystemConf) IsRedisClientSetName() bool {
 	return sc.DBConf.RedisClientSetName
@@ -571,6 +578,12 @@ func (sc *SystemConf) ReloadEnabled() bool {
 // GetCommandHookPath returns the path of a command that should be run on every save
 func (sc *SystemConf) GetCommandHookPath() string {
 	return sc.CommandHookPath
+}
+
+// GetRuleFilePath returns the path to the file containing contains rules
+// rules include Alerts, Macros, Notifications, Templates, and Global Variables
+func (sc *SystemConf) GetRuleDirPath() string {
+	return sc.RuleDirPath
 }
 
 // GetRuleFilePath returns the path to the file containing contains rules

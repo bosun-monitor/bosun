@@ -75,13 +75,13 @@ type dataAccess struct {
 }
 
 // Create a new data access object pointed at the specified address. isRedis parameter used to distinguish true redis from ledis in-proc.
-func NewDataAccess(addr []string, isRedis bool, masterName string, redisDb int, redisPass string) DataAccess {
-	return newDataAccess(addr, isRedis, masterName, redisDb, redisPass)
+func NewDataAccess(addr []string, isRedis bool, masterName string, redisDb int, redisPass string, redisSentinelPass string) DataAccess {
+	return newDataAccess(addr, isRedis, masterName, redisDb, redisPass, redisSentinelPass)
 }
 
-func newDataAccess(addr []string, isRedis bool, masterName string, redisDb int, redisPass string) *dataAccess {
+func newDataAccess(addr []string, isRedis bool, masterName string, redisDb int, redisPass string, redisSentinelPass string) *dataAccess {
 	return &dataAccess{
-		pool:    newPool(addr, redisPass, masterName, redisDb, isRedis, 1000, true),
+		pool:    newPool(addr, redisPass, redisSentinelPass, masterName, redisDb, isRedis, 1000, true),
 		isRedis: isRedis,
 	}
 }
@@ -139,7 +139,7 @@ func myCallerName() string {
 	return nameSplit[len(nameSplit)-1]
 }
 
-func newPool(servers []string, password, masterName string, database int, isRedis bool, maxActive int, wait bool) *redis.Pool {
+func newPool(servers []string, password string, sentinelPass string, masterName string, database int, isRedis bool, maxActive int, wait bool) *redis.Pool {
 	var lastMu sync.Mutex
 	var lastMaster string
 	var sntnl *sentinel.Sentinel
@@ -155,6 +155,7 @@ func newPool(servers []string, password, masterName string, database int, isRedi
 					redis.DialConnectTimeout(timeout),
 					redis.DialReadTimeout(timeout),
 					redis.DialWriteTimeout(timeout),
+					redis.DialPassword(sentinelPass),
 				}
 				c, err := redis.Dial("tcp", addr, opts...)
 				if err != nil {
@@ -164,6 +165,13 @@ func newPool(servers []string, password, masterName string, database int, isRedi
 				return c, nil
 			},
 		}
+		/*if sentinelPass != "" {
+			if _, err := sntnl.Do("AUTH", sentinelPass); err != nil {
+				sntnl.Close()
+				return nil, err
+			}
+		}*/
+
 		go func() {
 			if err := sntnl.Discover(); err != nil {
 				slog.Errorf("Error while discover redis master from sentinel: %s", err.Error())
@@ -202,7 +210,7 @@ func newPool(servers []string, password, masterName string, database int, isRedi
 				}
 				serverAddr = servers[0]
 			}
-			c, err := redis.Dial("tcp", serverAddr, redis.DialDatabase(database))
+			c, err := redis.Dial("tcp", serverAddr, redis.DialDatabase(database), redis.DialPassword(password))
 			if err != nil {
 				return nil, err
 			}

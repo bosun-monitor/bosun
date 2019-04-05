@@ -4,9 +4,11 @@ package main
 
 import (
 	"bosun.org/_version"
+	"bytes"
 	"flag"
 	"fmt"
 	"gopkg.in/fsnotify.v1"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	_ "net/http/pprof"
@@ -86,6 +88,36 @@ func init() {
 	}
 }
 
+func LoadRules(sysProvider conf.SystemConfProvider) *rule.Conf {
+	path := sysProvider.GetRuleDirPath()
+	var RawConfig bytes.Buffer
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		slog.Fatalf("couldn't load rule directory %v: %v", path, err)
+	}
+	for _, f := range files {
+		filepath := filepath.Join(path, f.Name())
+		if !strings.HasSuffix(filepath, ".conf") {
+			continue
+		}
+		slog.Info("Loading rule file: ", filepath)
+		raw, err := ioutil.ReadFile(filepath)
+		if err != nil {
+			slog.Fatalf("Couldn't read rule file %v: %v", filepath, err)
+		}
+		RawConfig.Write(raw)
+		RawConfig.WriteString("\n")
+	}
+	ruleConf, err := rule.NewConf("rules", sysProvider.EnabledBackends(), sysProvider.GetRuleVars(), RawConfig.String())
+	if err != nil {
+		slog.Fatalf("couldn't parse rules: %v", err)
+	}
+	if *flagTest {
+		os.Exit(0)
+	}
+	return ruleConf
+}
+
 var (
 	flagConf     = flag.String("c", "bosun.toml", "system config file location")
 	flagTest     = flag.Bool("t", false, "test for valid config; exits with 0 on success, else 1")
@@ -124,13 +156,7 @@ func main() {
 	if err != nil {
 		slog.Fatal(err)
 	}
-	ruleConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends(), systemConf.GetRuleVars())
-	if err != nil {
-		slog.Fatalf("couldn't read rules: %v", err)
-	}
-	if *flagTest {
-		os.Exit(0)
-	}
+	ruleConf := LoadRules(systemConf)
 	var ruleProvider conf.RuleConfProvider = ruleConf
 
 	addrToSendTo := sysProvider.GetHTTPSListen()
@@ -240,10 +266,7 @@ func main() {
 		defer func() {
 			<-reloading
 		}()
-		newConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), sysProvider.EnabledBackends(), sysProvider.GetRuleVars())
-		if err != nil {
-			return err
-		}
+		newConf := LoadRules(sysProvider)
 		newConf.SetSaveHook(cmdHook)
 		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
@@ -324,6 +347,7 @@ func initDataAccess(systemConf conf.SystemConfProvider) (database.DataAccess, er
 			systemConf.GetRedisMasterName(),
 			systemConf.GetRedisDb(),
 			systemConf.GetRedisPassword(),
+			systemConf.GetRedisSentinelPassword(),
 		)
 	} else {
 		_, err := database.StartLedis(
@@ -338,6 +362,7 @@ func initDataAccess(systemConf conf.SystemConfProvider) (database.DataAccess, er
 			false,
 			"",
 			0,
+			"",
 			"",
 		)
 	}

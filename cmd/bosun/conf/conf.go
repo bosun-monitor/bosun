@@ -46,6 +46,7 @@ type SystemConfProvider interface {
 	GetRedisMasterName() string
 	GetRedisDb() int
 	GetRedisPassword() string
+	GetRedisSentinelPassword() string
 	IsRedisClientSetName() bool
 	GetTimeAndDate() []int
 	GetSearchSince() time.Duration
@@ -60,6 +61,7 @@ type SystemConfProvider interface {
 	GetInternetProxy() string
 
 	GetRuleFilePath() string
+	GetRuleDirPath() string
 	SaveEnabled() bool
 	ReloadEnabled() bool
 	GetCommandHookPath() string
@@ -278,7 +280,7 @@ type Notification struct {
 	Print        bool
 	Next         *Notification
 	Timeout      time.Duration
-	ContentType  string
+	Headers      map[string]string
 	RunOnActions string
 	GroupActions bool
 

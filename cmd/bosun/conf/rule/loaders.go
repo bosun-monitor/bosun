@@ -343,7 +343,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	}
 	n := conf.Notification{
 		Vars:               make(map[string]string),
-		ContentType:        "application/x-www-form-urlencoded",
+		Headers:            make(map[string]string),
 		Name:               name,
 		RunOnActions:       "all",
 		ActionTemplateKeys: map[models.ActionType]*conf.NotificationTemplateKeys{},
@@ -381,7 +381,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		case "print":
 			n.Print = true
 		case "contentType":
-			n.ContentType = v
+			n.Headers["Content-Type"] = v
 		case "next":
 			n.NextName = v
 			next, ok := c.Notifications[n.NextName]
@@ -428,6 +428,13 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			}
 			n.UnknownThreshold = &i
 		default:
+			// Check headers
+			if strings.HasPrefix(k, "headers.") {
+				headerName := strings.TrimPrefix(k, "headers.")
+				n.Headers[headerName] = v
+				continue
+			}
+
 			// all special template keys are handled in one loop
 			// the following formats are possible:
 			// action(templateKey)(ActionType})?   //action
