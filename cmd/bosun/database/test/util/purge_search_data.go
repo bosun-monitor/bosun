@@ -20,7 +20,7 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	db := database.NewDataAccess([]string{*redis}, true, "", 0, "").(interface {
+	db := database.NewDataAccess([]string{*redis}, true, "", 0, "", "").(interface {
 		PurgeSearchData(string, bool) error
 	})
 	err := db.PurgeSearchData(*metric, *noop)

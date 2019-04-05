@@ -18,7 +18,7 @@ func StartTestRedis(port int) (database.DataAccess, func()) {
 	flag.Parse()
 	// For redis tests we just point at an external server.
 	if *flagReddisHost != "" {
-		testData := database.NewDataAccess([]string{*flagReddisHost}, true, "", 0, "")
+		testData := database.NewDataAccess([]string{*flagReddisHost}, true, "", 0, "", "")
 		if *flagFlushRedis {
 			log.Println("FLUSHING REDIS")
 			c := testData.(database.RedisConnector).Get()
@@ -38,7 +38,7 @@ func StartTestRedis(port int) (database.DataAccess, func()) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	testData := database.NewDataAccess([]string{addr}, false, "", 0, "")
+	testData := database.NewDataAccess([]string{addr}, false, "", 0, "", "")
 	return testData, func() {
 		stop()
 		os.RemoveAll(testPath)
