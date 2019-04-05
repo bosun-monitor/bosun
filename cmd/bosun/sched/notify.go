@@ -217,7 +217,8 @@ func (s *Schedule) sendUnknownNotifications() {
 			}
 		}
 		if len(overThresholdSets) > 0 {
-			n.NotifyMultipleUnknowns(gk.template, s.SystemConf, overThresholdSets, multiUstates, s.RuleConf)		}
+			n.NotifyMultipleUnknowns(gk.template, s.SystemConf, overThresholdSets, multiUstates, s.RuleConf)
+		}
 	}
 	s.pendingUnknowns = make(map[notificationGroupKey][]*models.IncidentState)
 }
