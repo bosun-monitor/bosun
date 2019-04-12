@@ -520,7 +520,7 @@ When a Prometheus query is made all time series in the response do not have to h
 ### prom(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
 {: .exprFunc}
 
-prom queries a Promethesus TSDB for time series data. It accomplishes this by generating a PromQL query from the given arguments.
+prom queries a Prometheus TSDB for time series data. It accomplishes this by generating a PromQL query from the given arguments.
 
  * `metric` is the name of the to query. To get a list of available metrics use the `prommetrics()` function.
  * `groupByTags` is a comma separated list of tag keys to aggregate the response by.
