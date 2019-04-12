@@ -467,6 +467,12 @@ var defaultFuncs = template.FuncMap{
 			Short: short,
 		}
 	},
+	"add": func(a, b int) int {
+		return a + b;
+	},
+	"subtract": func(a, b int) int {
+		return a - b;
+	},
 }
 
 var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
