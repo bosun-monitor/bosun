@@ -143,7 +143,8 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 				continue
 			}
 			silenced := silenced(ak) != nil
-			if st.CurrentStatus == models.StUnknown {
+			// Incident state CurrentStatus may go back to normal, check if the LastAbnormalStatus 
+			if st.LastAbnormalStatus == models.StUnknown {
 				if silenced {
 					slog.Infoln("silencing unknown", ak)
 					continue
