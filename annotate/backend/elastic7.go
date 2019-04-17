@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"bosun.org/annotate"
-	elastic "gopkg.in/olivere/elastic.v6"
+	elastic "gopkg.in/olivere/elastic.v7"
 )
 
-type Elastic6 struct {
+type Elastic7 struct {
 	*elastic.Client
 	index             string
 	urls              []string
@@ -23,11 +23,11 @@ type Elastic6 struct {
 	initialized       bool
 }
 
-func NewElastic6(urls []string, simpleclient bool, index string, clientoptions []elastic.ClientOptionFunc) *Elastic6 {
-	return &Elastic6{&elastic.Client{}, index, urls, simpleclient, clientoptions, 200, false}
+func NewElastic7(urls []string, simpleclient bool, index string, clientoptions []elastic.ClientOptionFunc) *Elastic7 {
+	return &Elastic7{&elastic.Client{}, index, urls, simpleclient, clientoptions, 200, false}
 }
 
-func (e *Elastic6) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFilter) (annotate.Annotations, error) {
+func (e *Elastic7) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFilter) (annotate.Annotations, error) {
 	if !e.initialized {
 		return nil, unInitErr
 	}
@@ -81,7 +81,7 @@ func (e *Elastic6) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFi
 	return annotations, nil
 }
 
-func (e *Elastic6) GetFieldValues(field string) ([]string, error) {
+func (e *Elastic7) GetFieldValues(field string) ([]string, error) {
 	if !e.initialized {
 		return nil, unInitErr
 	}
@@ -109,7 +109,7 @@ func (e *Elastic6) GetFieldValues(field string) ([]string, error) {
 	return terms, nil
 }
 
-func (e *Elastic6) InitBackend() error {
+func (e *Elastic7) InitBackend() error {
 	var err error
 	var ec *elastic.Client
 
@@ -158,7 +158,7 @@ func (e *Elastic6) InitBackend() error {
 	p[annotate.Url] = stringNA
 	mapping := make(map[string]interface{})
 	mapping["properties"] = p
-	q := e.PutMapping().Index(e.index).Type(docType).BodyJson(mapping)
+	q := e.PutMapping().Index(e.index).BodyJson(mapping)
 	res, err := q.Do(context.Background())
 	if (res != nil && !res.Acknowledged) || err != nil {
 		return fmt.Errorf("failed to create elastic mapping (ack: %v): %v", res != nil && res.Acknowledged, err)
@@ -167,7 +167,7 @@ func (e *Elastic6) InitBackend() error {
 	return nil
 }
 
-func (e *Elastic6) InsertAnnotation(a *annotate.Annotation) error {
+func (e *Elastic7) InsertAnnotation(a *annotate.Annotation) error {
 	if !e.initialized {
 		return unInitErr
 	}
@@ -175,7 +175,7 @@ func (e *Elastic6) InsertAnnotation(a *annotate.Annotation) error {
 	return err
 }
 
-func (e *Elastic6) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
+func (e *Elastic7) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
 	if !e.initialized {
 		return nil, false, unInitErr
 	}
@@ -191,13 +191,13 @@ func (e *Elastic6) GetAnnotation(id string) (*annotate.Annotation, bool, error) 
 	if err != nil {
 		return &a, false, err
 	}
-	if err := json.Unmarshal(*res.Source, &a); err != nil {
+	if err := json.Unmarshal(res.Source, &a); err != nil {
 		return &a, res.Found, err
 	}
 	return &a, res.Found, nil
 }
 
-func (e *Elastic6) DeleteAnnotation(id string) error {
+func (e *Elastic7) DeleteAnnotation(id string) error {
 	if !e.initialized {
 		return unInitErr
 	}
