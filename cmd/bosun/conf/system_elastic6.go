@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/expr"
-	elastic "github.com/olivere/elastic"
+	elastic "gopkg.in/olivere/elastic.v6"
 )
 
 // ParseESConfig return expr.ElasticHost

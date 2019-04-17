@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"bosun.org/annotate"
-	elastic "github.com/olivere/elastic"
+	elastic "gopkg.in/olivere/elastic.v6"
 )
 
 type Elastic6 struct {

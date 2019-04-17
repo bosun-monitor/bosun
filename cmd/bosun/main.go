@@ -33,7 +33,8 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
-	elastic6 "github.com/olivere/elastic"
+	elastic7 "github.com/olivere/elastic"
+	elastic6 "gopkg.in/olivere/elastic.v6"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
 )

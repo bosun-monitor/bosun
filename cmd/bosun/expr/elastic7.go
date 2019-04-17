@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"bosun.org/opentsdb"
-	elastic "github.com/olivere/elastic/v7"
+	elastic "github.com/olivere/elastic"
 )
 
 // InitClient sets up the elastic client. If the client has already been
