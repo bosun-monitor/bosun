@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"bosun.org/annotate"
-	elastic "github.com/olivere/elastic"
+	elastic "gopkg.in/olivere/elastic.v7"
 )
 
 type Elastic7 struct {
@@ -158,7 +158,7 @@ func (e *Elastic7) InitBackend() error {
 	p[annotate.Url] = stringNA
 	mapping := make(map[string]interface{})
 	mapping["properties"] = p
-	q := e.PutMapping().Index(e.index).Type(docType).BodyJson(mapping)
+	q := e.PutMapping().Index(e.index).BodyJson(mapping)
 	res, err := q.Do(context.Background())
 	if (res != nil && !res.Acknowledged) || err != nil {
 		return fmt.Errorf("failed to create elastic mapping (ack: %v): %v", res != nil && res.Acknowledged, err)
@@ -191,7 +191,7 @@ func (e *Elastic7) GetAnnotation(id string) (*annotate.Annotation, bool, error) 
 	if err != nil {
 		return &a, false, err
 	}
-	if err := json.Unmarshal(*res.Source, &a); err != nil {
+	if err := json.Unmarshal(res.Source, &a); err != nil {
 		return &a, res.Found, err
 	}
 	return &a, res.Found, nil
