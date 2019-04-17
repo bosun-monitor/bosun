@@ -8,8 +8,8 @@ import (
 
 	"github.com/jinzhu/now"
 
-	elastic7 "github.com/olivere/elastic/v7"
-	elastic6 "github.com/olivere/elastic"
+	elastic7 "gopkg.in/olivere/elastic.v7"
+	elastic6 "gopkg.in/olivere/elastic.v6"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
 )
