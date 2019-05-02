@@ -34,3 +34,28 @@ Go Version:
   
 Miniprofiler:
  * Bosun includes [miniprofiler](https://github.com/MiniProfiler/go) in the web UI which can help with debugging. The key combination `ALT-P` will show miniprofiler. This allows you to see timings, as well as the raw queries sent to TSDBs.
+
+## Auth Permissions
+
+To avoid requiring people to find the auth settings in the code, we'll add them here:
+
+### Permissions
+
+* `View Dashboard`: Can view dashboard and alert state data, metrics, and graphs
+* `View Config`: Can view bosun configuration page
+* `Put Data`: Can put and index opentsdb data and metadata
+* `Actions`: Can acknowlege and close alerts
+* `Run Tests`: Can execute expressions, graphs, and rule tests
+* `Save Config`: Can alter and save bosun rule config
+* `View Annotations`: Can view annotations on graph page
+* `Create Annotations`: Can add and manage annotations via api
+* `Silence`: Can add and manage silences
+* `Manage Tokens`: Can manage authorization tokens
+* `Set Username`: Allows external services to set username in api requests
+
+### Roles
+
+* `Reader`: Read access to dashboard and alert data
+* `Admin`: Full access to all functionality
+* `Writer`: Write access to alert data and actions
+

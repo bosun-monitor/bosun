@@ -66,16 +66,17 @@ func parseRole(s string) (easyauth.Role, error) {
 	perms := fullyOpen
 	for _, part := range parts {
 		this := fullyOpen
+		part := strings.Replace(strings.ToLower(part), " ", "", -1)
 		for _, perm := range roleDefs.Permissions {
 			pname := strings.Replace(strings.ToLower(perm.Name), " ", "", -1)
-			if strings.ToLower(part) == pname {
+			if part == pname {
 				this = perm.Bits
 				break
 			}
 		}
 		for _, perm := range roleDefs.Roles {
 			pname := strings.Replace(strings.ToLower(perm.Name), " ", "", -1)
-			if strings.ToLower(part) == pname {
+			if part == pname {
 				this = perm.Bits
 				break
 			}
