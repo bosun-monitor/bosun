@@ -140,6 +140,8 @@ func sendBatch(batch []*opentsdb.DataPoint) {
 		time.Sleep(d)
 		return
 	}
+	// sleep on success to avoid overstressing opentsdb
+	time.Sleep(500 * time.Millisecond)
 	// Drain up to 512 bytes so the Transport can reuse the connection when it is closed
 	io.CopyN(ioutil.Discard, resp.Body, 512)
 	recordSent(len(batch))
