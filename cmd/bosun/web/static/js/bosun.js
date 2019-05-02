@@ -3864,7 +3864,6 @@ var TokenListController = (function () {
         this.auth = auth;
         this["delete"] = function () {
             _this.status = "Deleting...";
-            _this.deleteTarget = "";
             _this.$http["delete"]("/api/tokens?hash=" + encodeURIComponent(_this.deleteTarget))
                 .then(function () {
                 _this.status = "";

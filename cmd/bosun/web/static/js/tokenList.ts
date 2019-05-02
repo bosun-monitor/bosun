@@ -7,7 +7,6 @@ class TokenListController {
 
     delete = () => {
         this.status = "Deleting..."
-        this.deleteTarget = "";
         this.$http.delete("/api/tokens?hash=" + encodeURIComponent(this.deleteTarget))
             .then(() => {
                 this.status = "";
