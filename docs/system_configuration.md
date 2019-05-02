@@ -622,9 +622,7 @@ Allows you to grant permissions to individual users. See example for usage.
 
 #### Permissions
 Various parts of the config allow you to specify permissions. These
-fields accept a comma seperated list of roles or permissions. Available
-roles and permissions are defined [in the Bosun
-source](https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/web/roles.go#L33).
+fields accept a comma seperated list of roles or permissions.
 Any of the description values can be used as a permission in the config.
 See example for some examples. If a user matches multiple Group or User permissions, they will have the aggregate of all permissions granted to those groups and users, as well as the defaults.
 
@@ -647,6 +645,28 @@ See example for some examples. If a user matches multiple Group or User permissi
     [AuthConf.LDAP.Users]
       jSmith = "Actions,Create Annotations,Silence"
 ```
+
+#### All Permissions
+
+##### Permissions
+
+* `View Dashboard`: Can view dashboard and alert state data, metrics, and graphs
+* `View Config`: Can view bosun configuration page
+* `Put Data`: Can put and index opentsdb data and metadata
+* `Actions`: Can acknowlege and close alerts
+* `Run Tests`: Can execute expressions, graphs, and rule tests
+* `Save Config`: Can alter and save bosun rule config
+* `View Annotations`: Can view annotations on graph page
+* `Create Annotations`: Can add and manage annotations via api
+* `Silence`: Can add and manage silences
+* `Manage Tokens`: Can manage authorization tokens
+* `Set Username`: Allows external services to set username in api requests
+
+##### Roles
+
+* `Reader`: Read access to dashboard and alert data
+* `Admin`: Full access to all functionality
+* `Writer`: Write access to alert data and actions
 
 </div>
 </div>
