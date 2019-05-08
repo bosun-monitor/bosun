@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"time"
@@ -110,6 +111,10 @@ func timeTSDBRequest(e *State, req *opentsdb.Request) (s opentsdb.ResponseSet, e
 		}
 		slog.Errorf("Error on tsdb query %d: %s", tries, err.Error())
 		tries++
+		rand.Seed(time.Now().UnixNano())
+		minSleep := 1000
+		maxSleep := 3000
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(maxSleep-minSleep)+minSleep))
 	}
 	return
 }

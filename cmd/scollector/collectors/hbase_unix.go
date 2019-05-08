@@ -19,6 +19,7 @@ var (
 	hbURL    = "/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Server"
 	hbRegURL = "/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Regions"
 	hbRepURL = "/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Replication"
+	hbICPURL = "/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=IPC"
 	hbGCURL  = "/jmx?qry=java.lang:type=GarbageCollector,name=*"
 )
 
@@ -34,12 +35,14 @@ func init() {
 		hbRegURL = host + hbRegURL
 		hbRepURL = host + hbRepURL
 		hbGCURL = host + hbGCURL
+		hbICPURL = host + hbICPURL
 		collectors = append(collectors, &IntervalCollector{F: c_hbase_region, Enable: enableURL(hbURL)})
 		if c.HbaseRegions {
 			collectors = append(collectors, &IntervalCollector{F: c_hbase_regions, Enable: enableURL(hbRegURL)})
 		}
 		collectors = append(collectors, &IntervalCollector{F: c_hbase_replication, Enable: enableURL(hbRepURL)})
 		collectors = append(collectors, &IntervalCollector{F: c_hbase_gc, Enable: enableURL(hbGCURL)})
+		collectors = append(collectors, &IntervalCollector{F: c_hbase_ipc, Enable: enableURL(hbICPURL)})
 	})
 }
 
@@ -70,6 +73,24 @@ func c_hbase_region() (opentsdb.MultiDataPoint, error) {
 			if vv, ok := v.(float64); ok {
 				if vv < math.MaxInt64 {
 					Add(&md, "hbase.region."+k, v, nil, metadata.Unknown, metadata.None, "")
+				}
+			}
+		}
+	}
+	return md, nil
+}
+
+func c_hbase_ipc() (opentsdb.MultiDataPoint, error) {
+	var j jmx
+	if err := getBeans(hbICPURL, &j); err != nil {
+		return nil, err
+	}
+	var md opentsdb.MultiDataPoint
+	if len(j.Beans) > 0 {
+		for k, v := range j.Beans[0] {
+			if vv, ok := v.(float64); ok {
+				if vv < math.MaxInt64 {
+					Add(&md, "hbase.ipc."+k, v, nil, metadata.Unknown, metadata.None, "")
 				}
 			}
 		}
