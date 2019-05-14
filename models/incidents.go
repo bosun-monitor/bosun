@@ -315,18 +315,20 @@ const (
 	ActionNote
 	ActionDelayedClose
 	ActionCancelClose
+	ActionUnacknowledge
 )
 
 //ActionShortNames is a map of keys we use in config file (notifications mostly) to reference action types
 var ActionShortNames = map[string]ActionType{
-	"Ack":          ActionAcknowledge,
-	"Close":        ActionClose,
-	"Forget":       ActionForget,
-	"ForceClose":   ActionForceClose,
-	"Purge":        ActionPurge,
-	"Note":         ActionNote,
-	"DelayedClose": ActionDelayedClose,
-	"CancelClose":  ActionCancelClose,
+	"Ack":           ActionAcknowledge,
+	"Close":         ActionClose,
+	"Forget":        ActionForget,
+	"ForceClose":    ActionForceClose,
+	"Purge":         ActionPurge,
+	"Note":          ActionNote,
+	"DelayedClose":  ActionDelayedClose,
+	"CancelClose":   ActionCancelClose,
+	"Unacknowledge": ActionUnacknowledge,
 }
 
 // HumanString gives a better human readable form than the default stringer, which we can't change due to marshalling compatibility now
@@ -348,6 +350,8 @@ func (a ActionType) HumanString() string {
 		return "Delayed Closed"
 	case ActionCancelClose:
 		return "Canceled Close"
+	case ActionUnacknowledge:
+		return "Unacknowledge"
 	default:
 		return "none"
 	}
@@ -371,6 +375,8 @@ func (a ActionType) String() string {
 		return "DelayedClose"
 	case ActionCancelClose:
 		return "CancelClose"
+	case ActionUnacknowledge:
+		return "Unacknowledge"
 	default:
 		return "none"
 	}
@@ -398,6 +404,8 @@ func (a *ActionType) UnmarshalJSON(b []byte) error {
 		*a = ActionDelayedClose
 	case `"CancelClose"`:
 		*a = ActionCancelClose
+	case `"Unacknowledge"`:
+		*a = ActionUnacknowledge
 	default:
 		*a = ActionNone
 	}

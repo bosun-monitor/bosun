@@ -752,6 +752,8 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		at = models.ActionPurge
 	case "note":
 		at = models.ActionNote
+	case "unack":
+		at = models.ActionUnacknowledge
 	}
 	errs := make(MultiError)
 	r.ParseForm()

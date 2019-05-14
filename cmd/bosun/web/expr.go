@@ -289,7 +289,7 @@ func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, inci
 		actions := map[string]*conf.PreparedNotifications{}
 		actionPreviews[name] = actions
 		// for all action types. just loop through known range. Update this if any get added
-		for at := models.ActionAcknowledge; at <= models.ActionCancelClose; at++ {
+		for at := models.ActionAcknowledge; at <= models.ActionUnacknowledge; at++ {
 			if !not.RunOnActionType(at) {
 				continue
 			}

@@ -19,6 +19,7 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 		templateUrl: '/partials/ackgroup.html',
 		link: (scope: AckGroupScope, elem: any, attrs: any) => {
 			scope.canAckSelected = scope.ack == 'Needs Acknowledgement';
+			scope.canUnackSelected = scope.ack == 'Acknowledged';
 			scope.panelClass = scope.$parent.panelClass;
 
 			scope.btoa = scope.$parent.btoa;

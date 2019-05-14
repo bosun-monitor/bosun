@@ -1,1 +1,2 @@
-<a class="btn btn-primary btn-xs" ng-disabled="state.NeedAck == false" ng-href="{{action('ack')}}">Acknowledge</a>
+<a class="btn btn-primary btn-xs" ng-if="state.NeedAck != false" ng-href="{{action('ack')}}">Acknowledge</a>
+<a class="btn btn-primary btn-xs" ng-if="state.NeedAck == false" ng-href="{{action('unack')}}">Unacknowledge</a>

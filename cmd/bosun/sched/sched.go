@@ -583,6 +583,17 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
 			return "", err
 		}
+	case models.ActionUnacknowledge:
+		if st.NeedAck {
+			return "", fmt.Errorf("alert not acknowledged")
+		}
+		if !st.Open {
+			return "", fmt.Errorf("cannot unacknowledge closed alert")
+		}
+		st.NeedAck = true
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 	case models.ActionCancelClose:
 		found := false
 		for i, a := range st.Actions {

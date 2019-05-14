@@ -3656,6 +3656,7 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', function ($location, 
             templateUrl: '/partials/ackgroup.html',
             link: function (scope, elem, attrs) {
                 scope.canAckSelected = scope.ack == 'Needs Acknowledgement';
+                scope.canUnackSelected = scope.ack == 'Acknowledged';
                 scope.panelClass = scope.$parent.panelClass;
                 scope.btoa = scope.$parent.btoa;
                 scope.encode = scope.$parent.encode;
