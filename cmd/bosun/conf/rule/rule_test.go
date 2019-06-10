@@ -89,3 +89,22 @@ func TestInvalid(t *testing.T) {
 		}
 	}
 }
+
+func isValidConfDir(dirname string, t *testing.T) (bool, error) {
+	_, err := ParseDirectory(dirname, conf.EnabledBackends{OpenTSDB: true}, nil)
+	return err == nil, err
+}
+
+func testConfDir(dirname string, valid bool, t *testing.T) {
+	if got, err := isValidConfDir(dirname, t); valid != got {
+		t.Fatalf("%v: expected %v, got %v: %v", dirname, valid, got, err)
+	}
+}
+
+func TestParseDir(t *testing.T) {
+	testConfDir("test_valid_conf", true, t)
+	testConfDir("test_invalid_conf", false, t)
+
+	// Individual configs are valid, but order makes them invalid when combined
+	testConfDir("test_invalid_order", false, t)
+}

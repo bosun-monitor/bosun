@@ -136,7 +136,7 @@ type RuleConfWriter interface {
 	BulkEdit(BulkEditRequest) error
 	GetRawText() string
 	GetHash() string
-	SaveRawText(rawConf, diff, user, message string, args ...string) error
+	SaveRawText(filename, rawConf, diff, user, message string, args ...string) error
 	RawDiff(rawConf string) (string, error)
 	SetReload(reload func() error)
 	SetSaveHook(SaveHook)

@@ -2,8 +2,13 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"bosun.org/cmd/bosun/conf"
 	"github.com/MiniProfiler/go/miniprofiler"
@@ -11,11 +16,12 @@ import (
 
 func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
-		Config  string
-		Diff    string
-		User    string
-		Message string
-		Other   []string
+		Filename string
+		Config   string
+		Diff     string
+		User     string
+		Message  string
+		Other    []string
 	}{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
@@ -27,8 +33,31 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	} else if data.User == "" {
 		data.User = getUsername(r)
 	}
-	err := schedule.RuleConf.SaveRawText(data.Config, data.Diff, data.User, data.Message, data.Other...)
+	currentDir, err := os.Getwd()
 	if err != nil {
+		return nil, err
+	}
+	currentPath, err := filepath.Abs(currentDir)
+	if err != nil {
+		return nil, err
+	}
+	dataFilepath, err := filepath.Abs(data.Filename)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasPrefix(dataFilepath, currentPath) {
+		return nil, errors.New("Failed to save file outside of bosun directory: " + data.Filename)
+	}
+	if filepath.Ext(dataFilepath) != ".conf" {
+		return nil, errors.New("Failed to save non .conf config file: " + data.Filename)
+	}
+	backup, err := ioutil.ReadFile(data.Filename)
+	if err != nil {
+		return nil, err
+	}
+	err = schedule.RuleConf.SaveRawText(data.Filename, data.Config, data.Diff, data.User, data.Message, data.Other...)
+	if err != nil {
+		ioutil.WriteFile(data.Filename, []byte(backup), os.FileMode(int(0640)))
 		return nil, err
 	}
 	fmt.Fprint(w, "save successful")

@@ -3,6 +3,8 @@ package rule
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule/parse"
@@ -14,19 +16,19 @@ import (
 // args are passed to an optionally configured save hook. If the config file is not valid the file
 // will not be saved. If the savehook fails to run or returns an error thaen the orginal config
 // will be restored and the reload will not take place.
-func (c *Conf) SaveRawText(rawConfig, diff, user, message string, args ...string) error {
-	newConf, err := NewConf(c.Name, c.backends, c.sysVars, rawConfig)
+func (c *Conf) SaveRawText(filename, rawConfig, diff, user, message string, args ...string) error {
+	newConf, err := ParseRuleConf(c.Name, c.backends, c.sysVars)
 	if err != nil {
 		return err
 	}
-	currentDiff, err := c.RawDiff(rawConfig)
+	currentDiff, err := c.RawDiff(newConf.RawText)
 	if err != nil {
 		return fmt.Errorf("couldn't save config because failed to generate a diff: %v", err)
 	}
-	if currentDiff != diff {
+	if currentDiff != "" && currentDiff != diff {
 		return fmt.Errorf("couldn't save config file because the change and supplied diff do not match the current diff")
 	}
-	if err = c.SaveConf(newConf); err != nil {
+	if err = ioutil.WriteFile(filename, []byte(rawConfig), os.FileMode(int(0640))); err != nil {
 		return fmt.Errorf("couldn't save config file: %v", err)
 	}
 	if c.saveHook != nil {
@@ -39,10 +41,6 @@ func (c *Conf) SaveRawText(rawConfig, diff, user, message string, args ...string
 			}
 			return fmt.Errorf("failed to call save hook: %v. Restoring config: %v", err, restore)
 		}
-	}
-	err = c.reload()
-	if err != nil {
-		return err
 	}
 	return nil
 }
