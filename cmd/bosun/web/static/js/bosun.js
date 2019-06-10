@@ -907,9 +907,9 @@ var UsernameInputController = (function () {
     function UsernameInputController(auth) {
         this.auth = auth;
     }
+    UsernameInputController.$inject = ['authService'];
     return UsernameInputController;
 }());
-UsernameInputController.$inject = ['authService'];
 bosunApp.component("usernameInput", {
     controller: UsernameInputController,
     controllerAs: "ct",
@@ -1450,9 +1450,9 @@ var NotificationController = (function () {
             });
         };
     }
+    NotificationController.$inject = ['$http'];
     return NotificationController;
 }());
-NotificationController.$inject = ['$http'];
 bosunApp.component('notification', {
     bindings: {
         dat: "<"
@@ -1636,14 +1636,14 @@ bosunApp.directive('tsTab', function () {
                     return;
                 }
                 switch (evt.keyCode) {
-                    case 9:
+                    case 9:// tab
                         evt.preventDefault();
                         var v = ta.value;
                         var start = ta.selectionStart;
                         ta.value = v.substr(0, start) + "\t" + v.substr(start);
                         ta.selectionStart = ta.selectionEnd = start + 1;
                         return;
-                    case 13:
+                    case 13:// enter
                         if (ta.selectionStart != ta.selectionEnd) {
                             return;
                         }
@@ -3942,9 +3942,9 @@ var TokenListController = (function () {
         };
         this.load();
     }
+    TokenListController.$inject = ['$http', "authService"];
     return TokenListController;
 }());
-TokenListController.$inject = ['$http', "authService"];
 bosunApp.component('tokenList', {
     controller: TokenListController,
     controllerAs: "ct",
@@ -3989,9 +3989,9 @@ var NewTokenController = (function () {
     NewTokenController.prototype.encoded = function () {
         return encodeURIComponent(this.createdToken);
     };
+    NewTokenController.$inject = ['$http', 'authService'];
     return NewTokenController;
 }());
-NewTokenController.$inject = ['$http', 'authService'];
 bosunApp.component("newToken", {
     controller: NewTokenController,
     controllerAs: "ct",
