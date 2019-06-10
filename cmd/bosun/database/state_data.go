@@ -165,8 +165,26 @@ func (d *dataAccess) deleteIncidentReferences(conn redis.Conn, incident *models.
 	if incident.Open {
 		return errors.New("state_data: cannot delete open incidents")
 	}
+
+	incidentsWithKey, err := d.GetAllIncidentsByAlertKey(incident.AlertKey)
+	if err != nil {
+		return err
+	}
+
+	for _, incidentWithKey := range incidentsWithKey {
+		previousIds := incidentWithKey.PreviousIds
+		for i, v := range previousIds {
+			if v == incident.Id {
+				incidentWithKey.PreviousIds = append(previousIds[:i], previousIds[i+1:]...)
+				d.UpdateIncidentState(incidentWithKey)
+				break
+			}
+		}
+	}
+
 	command, args := d.LMCLEAR(incidentsForAlertKeyKey(incident.AlertKey), strconv.FormatInt(incident.Id, 10))
-	_, err := conn.Do(command, args...)
+
+	_, err = conn.Do(command, args...)
 	if err != nil {
 		return slog.Wrap(err)
 	}

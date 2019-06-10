@@ -1,11 +1,12 @@
 package dbtest
 
 import (
+	"testing"
+	"time"
+
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestNoCleanupIfDurationZero(t *testing.T) {
@@ -61,23 +62,34 @@ func TestCleanupRenderedTemplatesWithoutIncidentCleanup(t *testing.T) {
 }
 
 func TestCleanupIncidentCleanupRemovesReferences(t *testing.T) {
+
 	incidentBeyondRetention := buildIncident(0, time.Now().Add(-time.Hour*2))
-
 	testData.State().UpdateIncidentState(&incidentBeyondRetention)
-	testData.State().SetRenderedTemplates(incidentBeyondRetention.Id, &models.RenderedTemplates{Subject: "NotNil"})
 
-	incidents, _ := testData.State().GetAllIncidentsByAlertKey(models.AlertKey("TestAlertKey"))
-	assert.NotEmpty(t, incidents)
+	incidentsWithinRetention := []models.IncidentState{
+		buildIncident(0, time.Now()),
+		buildIncident(0, time.Now()),
+	}
+	incidentsWithinRetention[0].PreviousIds = []int64{incidentBeyondRetention.Id}
+
+	// Updating the incident state will assign an id
+	testData.State().UpdateIncidentState(&incidentsWithinRetention[0])
+	incidentsWithinRetention[1].PreviousIds = []int64{incidentBeyondRetention.Id, incidentsWithinRetention[0].Id}
+	testData.State().UpdateIncidentState(&incidentsWithinRetention[1])
+
 	assertIncidentExists(t, incidentBeyondRetention)
-	assertRenderedTemplateExists(t, incidentBeyondRetention)
 
 	config := database.NewRetentionConfig(time.Duration(0), time.Duration(time.Hour*1))
 	testData.State().CleanupOldIncidents(config)
 
-	incidents, _ = testData.State().GetAllIncidentsByAlertKey(models.AlertKey("TestAlertKey"))
-	assert.Empty(t, incidents)
 	assertIncidentRemoved(t, incidentBeyondRetention)
-	assertRenderedTemplateRemoved(t, incidentBeyondRetention)
+
+	// Check that the only references are refs to other incidents
+	incidentID2, _ := testData.State().GetIncidentState(2)
+	assert.Equal(t, 0, len(incidentID2.PreviousIds))
+	incidentID3, _ := testData.State().GetIncidentState(3)
+	assert.Equal(t, 1, len(incidentID3.PreviousIds))
+	assert.Equal(t, int64(2), incidentID3.PreviousIds[0])
 }
 
 func assertIncidentRemoved(t *testing.T, incident models.IncidentState) {
