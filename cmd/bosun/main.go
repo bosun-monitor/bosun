@@ -295,10 +295,7 @@ func main() {
 		for {
 			if isNeedCheck {
 				isNeedCheck = false
-				checkStartTime := time.Now()
-				slog.Infoln("prepare to start check alert:", checkStartTime)
 				sched.Run()
-				slog.Infoln("check alert completion, spend time:", time.Now().Sub(checkStartTime))
 			}
 			time.Sleep(1 * time.Minute)
 		}
