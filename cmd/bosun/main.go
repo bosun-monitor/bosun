@@ -84,6 +84,10 @@ func init() {
 			},
 		},
 	}
+	//check  async
+	checkChan = make(chan bool, 1000)
+	//reload  async
+	reloadAsyncChan = make(chan bool, 1000)
 }
 
 var (
@@ -98,6 +102,13 @@ var (
 	flagVersion  = flag.Bool("version", false, "Prints the version and exits")
 
 	mains []func() // Used to hook up syslog on *nix systems
+
+	//checks async
+	checkChan   chan bool
+	isNeedCheck bool
+	//reload  async
+	reloadAsyncChan chan bool
+	isNeedReload bool
 )
 
 func main() {
@@ -248,12 +259,14 @@ func main() {
 		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
 		oldSearch := oldSched.Search
-		sched.Close(true)
+		go func() {
+			sched.CloseAsync(true, oldSched)
+		}()
+
 		sched.Reset()
 		newSched := sched.DefaultSched
 		newSched.Search = oldSearch
 		slog.Infoln("schedule shutdown, loading new schedule")
-
 		// Load does not set the DataAccess or Search if it is already set
 		if err := sched.Load(sysProvider, newConf, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
 			slog.Fatal(err)
@@ -262,13 +275,13 @@ func main() {
 		go func() {
 			slog.Infoln("running new schedule")
 			if !*flagNoChecks {
-				sched.Run()
+				checkChan <- true
 			}
+
 		}()
 		slog.Infoln("config reload complete")
 		return nil
 	}
-
 	ruleProvider.SetReload(reload)
 
 	go func() {
@@ -276,9 +289,57 @@ func main() {
 			sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev,
 			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf(), startTime))
 	}()
+	//async reload
+	go func() {
+		for {
+			select {
+			case <-reloadAsyncChan:
+				isNeedReload = true
+			}
+		}
+	}()
+	go func() {
+		for {
+			if isNeedReload {
+				isNeedReload = false
+				if err := reload(); err != nil {
+					slog.Fatal(err)
+				}
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}()
+	//async reload end
+
+	//async check
+	go func() {
+		for {
+			select {
+			case <-checkChan:
+				isNeedCheck = true
+			}
+		}
+	}()
+	go func() {
+		for {
+			if isNeedCheck {
+				isNeedCheck = false
+				checkStartTime := time.Now()
+				slog.Infoln("prepare to start check alert:", checkStartTime)
+				sched.Run()
+				slog.Infoln("check alert completion, spend time:", time.Now().Sub(checkStartTime))
+			}
+			time.Sleep(1 * time.Minute)
+		}
+	}()
+	//async check end
+
 	go func() {
 		if !*flagNoChecks {
+			checkStartTime := time.Now()
+			slog.Infoln("prepare to start check alert when flagNoChecks is set false.", checkStartTime)
 			sched.Run()
+			slog.Infoln("check alert completion when flagNochecks is set. spend time:", time.Now().Sub(checkStartTime))
 		}
 	}()
 

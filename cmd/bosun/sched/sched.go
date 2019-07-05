@@ -506,6 +506,10 @@ func Close(reload bool) {
 	DefaultSched.Close(reload)
 }
 
+func CloseAsync(reload bool,s *Schedule) {
+	s.Close(reload)
+}
+
 func (s *Schedule) Close(reload bool) {
 	s.cancelChecks()
 	s.checksRunning.Wait()
