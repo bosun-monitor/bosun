@@ -284,6 +284,7 @@ func main() {
 			sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev,
 			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf(), startTime))
 	}()
+        //async check
 	go func() {
 		for {
 			select {
