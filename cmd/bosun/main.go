@@ -257,7 +257,6 @@ func main() {
 		go func() {
 			sched.CloseAsync(true, oldSched)
 		}()
-
 		sched.Reset()
 		newSched := sched.DefaultSched
 		newSched.Search = oldSearch
@@ -272,7 +271,6 @@ func main() {
 			if !*flagNoChecks {
 				checkChan <- true
 			}
-
 		}()
 		slog.Infoln("config reload complete")
 		return nil
@@ -309,10 +307,7 @@ func main() {
 
 	go func() {
 		if !*flagNoChecks {
-			checkStartTime := time.Now()
-			slog.Infoln("prepare to start check alert when flagNoChecks is set false.", checkStartTime)
 			sched.Run()
-			slog.Infoln("check alert completion when flagNochecks is set. spend time:", time.Now().Sub(checkStartTime))
 		}
 	}()
 
