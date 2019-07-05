@@ -86,8 +86,6 @@ func init() {
 	}
 	//check  async
 	checkChan = make(chan bool, 1000)
-	//reload  async
-	reloadAsyncChan = make(chan bool, 1000)
 }
 
 var (
@@ -106,9 +104,6 @@ var (
 	//checks async
 	checkChan   chan bool
 	isNeedCheck bool
-	//reload  async
-	reloadAsyncChan chan bool
-	isNeedReload bool
 )
 
 func main() {
@@ -289,29 +284,6 @@ func main() {
 			sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev,
 			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf(), startTime))
 	}()
-	//async reload
-	go func() {
-		for {
-			select {
-			case <-reloadAsyncChan:
-				isNeedReload = true
-			}
-		}
-	}()
-	go func() {
-		for {
-			if isNeedReload {
-				isNeedReload = false
-				if err := reload(); err != nil {
-					slog.Fatal(err)
-				}
-			}
-			time.Sleep(5 * time.Second)
-		}
-	}()
-	//async reload end
-
-	//async check
 	go func() {
 		for {
 			select {
