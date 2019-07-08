@@ -84,6 +84,8 @@ func init() {
 			},
 		},
 	}
+
+	checkChan = make(chan bool, 1000)
 }
 
 var (
@@ -98,6 +100,11 @@ var (
 	flagVersion  = flag.Bool("version", false, "Prints the version and exits")
 
 	mains []func() // Used to hook up syslog on *nix systems
+
+	checkChan   chan bool //When add a alert, checkChan is used to set 'isNeedCheck', indirect notification check
+        //When isNeedCheck is true, the checks appears. The Checks completed,
+        //set the isNeedCheck to false.Only checkChan has data, set the isNeedCheck to true.
+	isNeedCheck bool
 )
 
 func main() {
@@ -248,12 +255,13 @@ func main() {
 		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
 		oldSearch := oldSched.Search
-		sched.Close(true)
+		go func() {
+			sched.CloseAsync(true, oldSched)
+		}()
 		sched.Reset()
 		newSched := sched.DefaultSched
 		newSched.Search = oldSearch
 		slog.Infoln("schedule shutdown, loading new schedule")
-
 		// Load does not set the DataAccess or Search if it is already set
 		if err := sched.Load(sysProvider, newConf, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
 			slog.Fatal(err)
@@ -262,13 +270,12 @@ func main() {
 		go func() {
 			slog.Infoln("running new schedule")
 			if !*flagNoChecks {
-				sched.Run()
+				checkChan <- true
 			}
 		}()
 		slog.Infoln("config reload complete")
 		return nil
 	}
-
 	ruleProvider.SetReload(reload)
 
 	go func() {
@@ -276,6 +283,31 @@ func main() {
 			sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev,
 			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf(), startTime))
 	}()
+        //async check
+        //Not check all, Doing so reduces the number of checks,
+        //but does not affect real-time performance.
+        //eg: Now, checkChan'size is 10, after reading the first data,
+        //isNeedCheck is set to true, and 'sched.Run' goes to work.
+        //Finally, when checkChan is finished, check again.
+	go func() {
+		for {
+			select {
+			case <-checkChan:
+				isNeedCheck = true
+			}
+		}
+	}()
+	go func() {
+		for {
+			if isNeedCheck {
+				isNeedCheck = false
+				sched.Run()
+			}
+			time.Sleep(1 * time.Minute)
+		}
+	}()
+	//async check end
+
 	go func() {
 		if !*flagNoChecks {
 			sched.Run()
