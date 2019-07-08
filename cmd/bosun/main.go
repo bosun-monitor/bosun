@@ -101,8 +101,9 @@ var (
 
 	mains []func() // Used to hook up syslog on *nix systems
 
-	//checks async
-	checkChan   chan bool
+	checkChan   chan bool //When add a alert, checkChan is used to set 'isNeedCheck', indirect notification check.
+        //When isNeedCheck is true, the checks appears. The Checks completed,
+        //set the isNeedCheck to false.Only checkChan has data, set the isNeedCheck to true.
 	isNeedCheck bool
 )
 
@@ -283,6 +284,11 @@ func main() {
 			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf(), startTime))
 	}()
         //async check
+        //Not check all, Doing so reduces the number of checks,
+        //but does not affect real-time performance.
+        //eg: Now, checkChan'size is 10, after reading the first data,
+        //isNeedCheck is set to true, and 'sched.Run' goes to work.
+        //Finally, when checkChan is finished, check again.
 	go func() {
 		for {
 			select {
