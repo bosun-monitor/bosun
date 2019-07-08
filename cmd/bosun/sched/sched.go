@@ -506,7 +506,7 @@ func Close(reload bool) {
 	DefaultSched.Close(reload)
 }
 
-func CloseAsync(reload bool,s *Schedule) {
+func CloseAsync(reload bool, s *Schedule) {
 	s.Close(reload)
 }
 

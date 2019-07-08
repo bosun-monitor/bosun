@@ -84,7 +84,7 @@ func init() {
 			},
 		},
 	}
-	//check  async
+	
 	checkChan = make(chan bool, 1000)
 }
 
