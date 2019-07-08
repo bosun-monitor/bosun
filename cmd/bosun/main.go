@@ -303,7 +303,7 @@ func main() {
 				isNeedCheck = false
 				sched.Run()
 			}
-			time.Sleep(1 * time.Minute)
+			time.Sleep(5 * time.Second)
 		}
 	}()
 	//async check end
