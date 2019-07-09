@@ -887,7 +887,7 @@ var AuthService = (function () {
     AuthService.prototype.cleanRoles = function () {
         var _this = this;
         //fix admin role that has extra bits corresponding to future permissions.
-        //causes bit math to go crazy and overflow.
+        //causes bit math to go crazy and overflow. 
         //prevents easily  making tokens that grant unknown future perms too.
         _(this.roles.Roles).each(function (role) {
             var mask = 0;
@@ -3865,7 +3865,6 @@ var TokenListController = (function () {
         this.auth = auth;
         this["delete"] = function () {
             _this.status = "Deleting...";
-            _this.deleteTarget = "";
             _this.$http["delete"]("/api/tokens?hash=" + encodeURIComponent(_this.deleteTarget))
                 .then(function () {
                 _this.status = "";
