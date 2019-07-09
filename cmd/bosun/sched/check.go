@@ -560,7 +560,8 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) (cancelled bool) {
 	slog.Infof("check alert %v start with now set to %v", a.Name, r.Start.Format("2006-01-02 15:04:05.999999999"))
 	start := utcNow()
-	for _, ak := range s.findUnknownAlerts(r.Start, a.Name) {
+	unknowns := s.findUnknownAlerts(r.Start, a.Name)
+	for _, ak := range unknowns {
 		r.Events[ak] = &models.Event{Status: models.StUnknown}
 	}
 	var warns, crits models.AlertKeys
@@ -598,24 +599,64 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 		return true
 	}
 	unevalCount, unknownCount := markDependenciesUnevaluated(r.Events, deps, a.Name)
+
+	errors_count := 0
 	if err != nil {
 		slog.Errorf("Error checking alert %s: %s", a.Name, err.Error())
-		removeUnknownEvents(r.Events, a.Name)
+		errors_count = removeUnknownEvents(r.Events, a.Name)
 		s.markAlertError(a.Name, err)
 	} else {
 		s.markAlertSuccessful(a.Name)
 	}
+
+	untouched := make([]models.AlertKey, 0)
+	sm := 0
+
+	for ak, ev := range r.Events {
+		if ak.Name() != a.Name {
+			continue
+		}
+		sm++
+		if ev.Status == models.StUnknown {
+			untouched = append(untouched, ak)
+		}
+	}
+
+	// normalize counters if it is first check for alert
+	if sm == 0 {
+		sm++
+	}
+
+	if errors_count == 0 && err != nil {
+		errors_count++
+	}
+
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
-	slog.Infof("check alert %v done (%s): %v crits, %v warns, %v unevaluated, %v unknown", a.Name, time.Since(start), len(crits), len(warns), unevalCount, unknownCount)
+	slog.Infof(
+		"check alert %v done (%s): %v untouched_sum, %v crits, %v warns, %v unevaluated, %v unknown, %v untouched/unknown, %v errors",
+		a.Name, time.Since(start), sm, len(crits), len(warns), unevalCount, unknownCount,
+		len(untouched), errors_count,
+	)
+	if len(untouched) > 0 {
+		runEvery := s.SystemConf.GetDefaultRunEvery()
+		if a.RunEvery != 0 {
+			runEvery = a.RunEvery
+		}
+		t := s.SystemConf.GetCheckFrequency() * 2 * time.Duration(runEvery)
+		untouchedSecs := time.Now().UTC().Unix() - r.Start.UTC().Unix() - int64(t.Seconds())
+		slog.Infof("Keys untouched sinse %v (%v secs): %v", r.Start, untouchedSecs, untouched)
+	}
 	return false
 }
 
-func removeUnknownEvents(evs map[models.AlertKey]*models.Event, alert string) {
+func removeUnknownEvents(evs map[models.AlertKey]*models.Event, alert string) (count int) {
 	for k, v := range evs {
 		if v.Status == models.StUnknown && k.Name() == alert {
+			count++
 			delete(evs, k)
 		}
 	}
+	return
 }
 
 func filterDependencyResults(results *expr.Results) expr.ResultSlice {
