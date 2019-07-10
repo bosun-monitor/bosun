@@ -690,6 +690,9 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 			if err != nil {
 				return nil, err
 			}
+			if state == nil {
+				return nil, fmt.Errorf("alert key %v wasn't found", k)
+			}
 		}
 		rt, err := schedule.DataAccess.State().GetRenderedTemplates(state.Id)
 		if err != nil {
