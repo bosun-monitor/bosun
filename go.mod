@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/Azure/azure-sdk-for-go v21.1.0+incompatible
 	github.com/Azure/go-autorest v11.1.0+incompatible
-	github.com/BurntSushi/toml v0.0.0-20160102144748-5c4df71dfe9a
+	github.com/BurntSushi/toml v0.3.1
 	github.com/GROpenSourceDev/go-ntlm-auth v0.0.0-20160519083535-6314d66e1d8f
 	github.com/GaryBoone/GoStats v0.0.0-20130122001700-1993eafbef57
 	github.com/MiniProfiler/go v0.0.0-20160719195834-3296d396d472
@@ -16,7 +16,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f
 	github.com/ajstarks/svgo v0.0.0-20151117013546-fd2151ebabde
 	github.com/andybalholm/cascadia v0.0.0-20150730174459-3ad29d1ad1c4
-	github.com/aws/aws-sdk-go v1.1.33
+	github.com/aws/aws-sdk-go v1.19.6
 	github.com/aymerick/douceur v0.0.0-20150827151352-7176f1467381
 	github.com/boltdb/bolt v0.0.0-20151123030643-6e1ca38c6a73
 	github.com/bosun-monitor/statusio v0.0.0-20160516160816-ab1583139762
@@ -37,13 +37,13 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4
 	github.com/golang/protobuf v1.2.0
-	github.com/golang/snappy v0.0.0-20160529050041-d9eb7a3d35ec
+	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
 	github.com/google/cadvisor v0.0.0-20160212224345-e9739af18411
 	github.com/google/go-github v0.0.0-20151126072848-44b1ede22d71
 	github.com/google/go-querystring v0.0.0-20151028211038-2a60fc2ba6c1
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/css v0.0.0-20150317222238-a80e24ada269
-	github.com/gorilla/mux v0.0.0-20160920230813-757bef944d0f
+	github.com/gorilla/mux v1.6.2
 	github.com/gorilla/securecookie v0.0.0-20161003051601-fa5329f91370
 	github.com/influxdata/influxdb v1.6.3
 	github.com/influxdata/influxql v0.0.0-20180823200743-a7267bff5327
@@ -55,16 +55,16 @@ require (
 	github.com/kylebrandt/boolq v0.0.0-20160608164548-f869a7265c7e
 	github.com/kylebrandt/gohop v0.0.0-20160712175359-f6dbeb38f6df
 	github.com/llgcode/draw2d v0.0.0-20151105134336-9ffe0e7eb54c
-	github.com/mailru/easyjson v0.0.0-20180323154445-8b799c424f57
+	github.com/mailru/easyjson v0.0.0-20190312143242-1de009706dbe
 	github.com/mhenderson-so/azure-ea-billing v0.0.0-20160829175629-4fd1a790460c
 	github.com/mitchellh/go-homedir v1.0.0
 	github.com/mjibson/esc v0.1.0
 	github.com/olivere/elastic v0.0.0-20180523141205-33ad30f61610
-	github.com/pkg/errors v0.8.0
+	github.com/olivere/elastic/v7 v7.0.4
+	github.com/pkg/errors v0.8.1
 	github.com/pmezard/go-difflib v1.0.0
-	github.com/prometheus/client_golang v0.9.1
-	github.com/prometheus/common v0.1.0
-	github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a // indirect
+	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
+	github.com/prometheus/common v0.2.0
 	github.com/prometheus/prometheus v0.0.0-20190115191339-5358f76c5c28
 	github.com/ryanuber/go-glob v0.0.0-20160226084822-572520ed46db
 	github.com/siddontang/go v0.0.0-20150505004501-b151716326d7
@@ -78,15 +78,14 @@ require (
 	github.com/ugorji/go v0.0.0-20151120143108-ea9cd21fa0bc
 	github.com/vdobler/chart v0.0.0-20150914065344-293b01f8b75d
 	github.com/vmware/govmomi v0.0.0-20180228032728-a2138329bbd1
-	golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	golang.org/x/image v0.0.0-20150916112557-baddd3465a05
-	golang.org/x/net v0.0.0-20181217023233-e147a9138326
-	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
-	golang.org/x/sys v0.0.0-20181116152217-5ac8a444bdc5
-	google.golang.org/api v0.0.0-20180506000402-20530fd5d65a
-	google.golang.org/appengine v1.1.0
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a
+	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
+	google.golang.org/api v0.3.1
+	google.golang.org/appengine v1.4.0
 	google.golang.org/cloud v0.0.0-20160212013602-13a9796a2e30
-	google.golang.org/genproto v0.0.0-20180831171423-11092d34479b // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20141119150059-9eae18c3681a
 	gopkg.in/fsnotify.v1 v1.4.7
 	gopkg.in/ldap.v1 v1.0.0-20150224155422-0041a4127039
