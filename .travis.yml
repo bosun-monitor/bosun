@@ -3,6 +3,10 @@ sudo: false
 go:
   - 1.11.x
 
+cache:
+  directories:
+    - $GOPATH/pkg/mod
+
 notifications:
   email: false
 
