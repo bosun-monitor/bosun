@@ -1,7 +1,12 @@
 package conf
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"io/ioutil"
+	"strings"
+	"time"
 
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/slog"
@@ -12,8 +17,9 @@ func parseESConfig(sc *SystemConf) expr.ElasticHosts {
 	store := make(map[string]expr.ElasticConfig)
 	for hostPrefix, value := range sc.ElasticConf {
 		// build es config per cluster
+		version := getESVersion(hostPrefix, value)
 		var cfg expr.ElasticConfig
-		switch expr.ESVersion(value.Version) {
+		switch expr.ESVersion(version) {
 		case expr.ESV2:
 			cfg = parseESConfig2(value)
 		case expr.ESV5:
@@ -27,8 +33,7 @@ func parseESConfig(sc *SystemConf) expr.ElasticHosts {
 		default:
 			slog.Fatal(fmt.Errorf(`conf: [ElasticConf.%s]: invalid elastic version: %s (supported versions are: "v2", "v5", "v6" and "v7")`, hostPrefix, value.Version))
 		}
-
-		cfg.Version = expr.ESVersion(value.Version)
+		cfg.Version = expr.ESVersion(version)
 		store[hostPrefix] = cfg
 	}
 
@@ -58,4 +63,68 @@ func parseESAnnoteConfig(sc *SystemConf) expr.ElasticConfig {
 
 	cfg.Version = expr.ESVersion(sc.AnnotateConf.Version)
 	return cfg
+}
+
+// getESVersion queries ES version and use "Version" value defined in configuration
+// as the fallback value
+func getESVersion(hostPrefix string, esConf ElasticConf) string {
+	version := esConf.Version
+	if esConf.RuntimeVersionEnabled {
+		var err error
+		for _, h := range esConf.Hosts {
+			version, err = queryESVersion(esConf.RuntimeBasicAuthUsername, esConf.RuntimeBasicAuthPassword, h)
+			if err != nil {
+				slog.Error(fmt.Errorf("conf: [ElasticConf.%s]: invalid query elastic version result for host %s, error: %s", hostPrefix, h, err))
+			} else {
+				break
+			}
+		}
+	}
+	return version
+}
+
+// esVersionResp respresents an ES response
+// Only first level keys are defined to to make it more resilient to response struct changes
+type esVersionResp struct {
+  Name string
+  Cluster_name string
+  Cluster_uuid string
+  Version map[string]interface{}
+  Tagline string
+}
+
+// queryESVersion sends request and parses response
+func queryESVersion(username string, password string, url string) (string, error) {
+	client := &http.Client{
+		Timeout: time.Second * 3,
+	}
+	req, err := http.NewRequest("GET", url, nil)
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(username, password)
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var result esVersionResp
+	var version string
+	err = json.Unmarshal([]byte(body), &result)
+	if err != nil {
+		return "", err
+	}
+
+	if value, ok := result.Version["number"]; ok {
+		if val, ok := value.(string); ok {
+			nums := strings.Split(val, ".")
+			version = "v" + nums[0]
+			return version, nil
+		}
+	}
+	return "", fmt.Errorf("unable to parse version from ES response: %v", result.Version)
 }

@@ -129,6 +129,9 @@ type AnnotateConf struct {
 	SimpleClient  bool            // If true ES will connect over NewSimpleClient
 	ClientOptions ESClientOptions // ES client options
 	Index         string          // name of index / table
+	RuntimeVersionEnabled bool  // if true ES version is decided in runtime
+	RuntimeBasicAuthUsername string  // username used for runtime ES version detection
+	RuntimeBasicAuthPassword string  // password used for runtime ES version detection
 }
 
 // ESClientOptions: elastic search client options

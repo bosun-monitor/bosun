@@ -427,6 +427,25 @@ specify every host in the cluster. [This article
 on Sniffing](https://github.com/olivere/elastic/wiki/Sniffing) describes
 how this discovery functions.
 
+#### Version
+Version of the Elastic cluster. For different Elastic cluster versions,
+Bosun uses different versions of client and therefore this field is required.
+If "RuntimeVersionEnabled" field is false or not set, the value of this field
+decides which version of Elastic client Bosun uses.
+
+### RuntimeVersionEnabled
+When it's true, Elastic cluster version is parsed from simple HTTP query rather
+than "Version" value above. This field is useful during Elastic cluster migration.
+It's not suggested to always use this since it sends a lot of extra queries to Elastic
+cluster. Especially on "Rule Editor" page, when testing Elastic alert, for each
+duration, one HTTP query is sent.
+
+### RuntimeBasicAuthUsername
+User name used for sending HTTP query to get Elastic cluster version.
+
+### RuntimeBasicAuthPassword
+User password used for sending HTTP query to get Elastic cluster version.
+
 #### SimpleClient
 Boolean determining when setting true periodic health checks and
 sniffing will be disabled. This is useful when you want to query from a
