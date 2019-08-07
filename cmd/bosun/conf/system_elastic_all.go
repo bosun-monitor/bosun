@@ -3,8 +3,8 @@ package conf
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"io/ioutil"
+	"net/http"
 	"strings"
 	"time"
 
@@ -86,11 +86,11 @@ func getESVersion(hostPrefix string, esConf ElasticConf) string {
 // esVersionResp respresents an ES response
 // Only first level keys are defined to to make it more resilient to response struct changes
 type esVersionResp struct {
-  Name string
-  Cluster_name string
-  Cluster_uuid string
-  Version map[string]interface{}
-  Tagline string
+	Name         string
+	Cluster_name string
+	Cluster_uuid string
+	Version      map[string]interface{}
+	Tagline      string
 }
 
 // queryESVersion sends request and parses response
