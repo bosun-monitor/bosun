@@ -25,7 +25,7 @@ jobs:
       uses: svenstaro/upload-release-action@v1-release
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: $HOME/src/bosun.org/cmd/bosun/bosun
+        file: src/bosun.org/cmd/bosun/bosun
         asset_name: bosun
         tag: ${{ github.ref }}
         overwrite: true
