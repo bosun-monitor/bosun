@@ -22,11 +22,11 @@ jobs:
         cd ${GOPATH}/src/bosun.org/cmd/bosun && go build
         echo $HOME
     
-    #- name: Upload binaries to release
-    #  uses: svenstaro/upload-release-action@v1-release
-    #  with:
-    #    repo_token: ${{ secrets.GITHUB_TOKEN }}
-    #    file: /github/home/src/bosun.org/cmd/bosun/bosun
-    #    asset_name: bosun
-    #    tag: ${{ github.ref }}
-    #    overwrite: true
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: /home/runner/src/bosun.org/cmd/bosun/bosun
+        asset_name: bosun
+        tag: ${{ github.ref }}
+        overwrite: true
