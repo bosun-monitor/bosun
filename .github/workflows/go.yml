@@ -12,21 +12,39 @@ jobs:
       with:
         go-version: 1.12
       id: go
-
-    - name: Build Bosun
+      
+    - name: Make dirs
       run: |
         export GOPATH=$HOME
-        mkdir ${GOPATH}/src/
+        mkdir ${GOPATH}/src/        
+
+    - name: Clone Source
+      run: |
+        export GOPATH=$HOME
         cd ${GOPATH}/src/ && git clone --depth 1 https://github.com/langerma/bosun.git bosun.org
+
+    - name: Build bosun/tsdbrelay
+      run: |
+        export GOPATH=$HOME
         cd ${GOPATH}/src/bosun.org/cmd/bosun && go get
-        cd ${GOPATH}/src/bosun.org/cmd/bosun && go build
-        echo $HOME
+        cd ${GOPATH}/src/bosun.org/cmd/bosun && go build -o bosun
+        cd ${GOPATH}/src/bosun.org/cmd/tsdbrelay && go get
+        cd ${GOPATH}/src/bosun.org/cmd/tsdbrelay && go build -o tsdbrelay
     
-    - name: Upload binaries to release
+    - name: Upload bosun binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: /home/runner/src/bosun.org/cmd/bosun/bosun
         asset_name: bosun
+        tag: ${{ github.ref }}
+        overwrite: true
+
+    - name: Upload tsdbrelay binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: /home/runner/src/bosun.org/cmd/tsdbrelay/tsdbrelay
+        asset_name: tsdbrelay
         tag: ${{ github.ref }}
         overwrite: true
