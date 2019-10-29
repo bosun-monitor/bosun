@@ -730,7 +730,7 @@
 		},
 		{
 			"path": "github.com/olivere/elastic",
-			"revision": "60d62e5b2d1c728d7cbbeb7ed9a284303ea4acd4"
+			"revision": "60d62e5b2d1c728d7cbbeb7ed9a284303ea4acd4",
 			"revisionTime": "2018-05-27T21:42:20+02:00"
 		},
 		{
