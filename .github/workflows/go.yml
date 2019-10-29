@@ -15,7 +15,7 @@ jobs:
 
     - name: Build Bosun
       run: |
-        export GOPATH=$HOME
+        export GOPATH=/github/home
         mkdir ${GOPATH}/src/
         cd ${GOPATH}/src/ && git clone --depth 1 https://github.com/langerma/bosun.git bosun.org
         cd ${GOPATH}/src/bosun.org/cmd/bosun && go get
@@ -25,7 +25,7 @@ jobs:
       uses: svenstaro/upload-release-action@v1-release
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: src/bosun.org/cmd/bosun/bosun
+        file: /github/home/src/bosun.org/cmd/bosun/bosun
         asset_name: bosun
         tag: ${{ github.ref }}
         overwrite: true
