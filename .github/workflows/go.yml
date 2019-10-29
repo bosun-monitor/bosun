@@ -13,10 +13,19 @@ jobs:
         go-version: 1.12
       id: go
 
-    - name: go
+    - name: Build Bosun
       run: |
         export GOPATH=$HOME
         mkdir ${GOPATH}/src/
         cd ${GOPATH}/src/ && git clone --depth 1 https://github.com/langerma/bosun.git bosun.org
         cd ${GOPATH}/src/bosun.org/cmd/bosun && go get
         cd ${GOPATH}/src/bosun.org/cmd/bosun && go build
+    
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: $HOME/src/bosun.org/cmd/bosun/bosun
+        asset_name: bosun
+        tag: ${{ github.ref }}
+        overwrite: true
