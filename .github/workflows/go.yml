@@ -13,16 +13,10 @@ jobs:
         go-version: 1.12
       id: go
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v1
-
-    - name: Get dependencies
+    - name: go
       run: |
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
-
-    - name: Build
-      run: go build -v .
+        export GOPATH=$HOME
+        mkdir ${GOPATH}/src/
+        cd ${GOPATH}/src/ && clone --depth 1 https://github.com/langerma/bosun.git bosun.org
+        cd ${GOPATH}/src/bosun.org/cmd/bosun && go get
+        cd ${GOPATH}/src/bosun.org/cmd/bosun && go build
