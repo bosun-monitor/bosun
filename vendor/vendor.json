@@ -3,6 +3,54 @@
 	"ignore": "test lua lmdb",
 	"package": [
 		{
+			"path": "AUTHORS",
+			"revision": ""
+		},
+		{
+			"path": "CONTRIBUTING.md",
+			"revision": ""
+		},
+		{
+			"path": "LICENSE",
+			"revision": ""
+		},
+		{
+			"path": "README.md",
+			"revision": ""
+		},
+		{
+			"path": "_version",
+			"revision": ""
+		},
+		{
+			"path": "annotate",
+			"revision": ""
+		},
+		{
+			"path": "build",
+			"revision": ""
+		},
+		{
+			"path": "build.scollector.sh",
+			"revision": ""
+		},
+		{
+			"path": "build.tsdbrelay.sh",
+			"revision": ""
+		},
+		{
+			"path": "cmd",
+			"revision": ""
+		},
+		{
+			"path": "collect",
+			"revision": ""
+		},
+		{
+			"path": "docs",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "xeK+ux8fKSSJJVW04/TE9yQFfGs=",
 			"path": "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights",
 			"revision": "6d20bdbae88c06c36d72eb512295417693bfdf4e",
@@ -1500,9 +1548,10 @@
 			"revisionTime": "2015-02-24T15:54:22Z"
 		},
 		{
+			"checksumSHA1": "/YiQHZNINJw58VIv4CvCdB/1qq4=",
 			"path": "gopkg.in/olivere/elastic.v3",
-			"revision": "1ad75b5396674e9c783400e89106bc0c8da9d786",
-			"revisionTime": "2016-10-16T12:21:59+02:00"
+			"revision": "9d2a5d8180014aa3e7ee50af6883baac66e2e646",
+			"revisionTime": "2018-11-03T09:32:23Z"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/backoff",
@@ -1515,9 +1564,10 @@
 			"revisionTime": "2016-10-16T12:21:59+02:00"
 		},
 		{
+			"checksumSHA1": "d3aWQh/FxSvlqP/Rlyx2lGilink=",
 			"path": "gopkg.in/olivere/elastic.v5",
-			"revision": "2a08d39723b7f4df92b96e2dff891a60952714d6",
-			"revisionTime": "2017-09-26T22:05:24+02:00"
+			"revision": "f72acaba629a7ec879103d17b7426a31bc38e199",
+			"revisionTime": "2019-03-30T15:07:34Z"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v5/config",
@@ -1530,9 +1580,69 @@
 			"revisionTime": "2017-09-26T22:05:24+02:00"
 		},
 		{
+			"checksumSHA1": "CliSlM6DD1952k24iePopS5WSM4=",
+			"path": "gopkg.in/olivere/elastic.v6",
+			"revision": "8a3f2cdf773521f77a2b9517d131c6cf28be6ca1",
+			"revisionTime": "2019-03-30T15:35:16Z"
+		},
+		{
+			"checksumSHA1": "bMcz++KtILh5AWl1zWl8oi/QaQ8=",
+			"path": "gopkg.in/olivere/elastic.v7",
+			"revision": "60d62e5b2d1c728d7cbbeb7ed9a284303ea4acd4",
+			"revisionTime": "2019-04-10T20:10:18Z"
+		},
+		{
 			"path": "gopkg.in/yaml.v1",
 			"revision": "9f9df34309c04878acc86042b16630b0f696e1de",
 			"revisionTime": "2014-09-24T13:16:07-03:00"
+		},
+		{
+			"path": "graphite",
+			"revision": ""
+		},
+		{
+			"path": "metadata",
+			"revision": ""
+		},
+		{
+			"path": "mk_rpm_fpmdir.bosun-silence.txt",
+			"revision": ""
+		},
+		{
+			"path": "mk_rpm_fpmdir.scollector.txt",
+			"revision": ""
+		},
+		{
+			"path": "mk_rpm_fpmdir.tsdbrelay.txt",
+			"revision": ""
+		},
+		{
+			"path": "models",
+			"revision": ""
+		},
+		{
+			"path": "opentsdb",
+			"revision": ""
+		},
+		{
+			"path": "plugins",
+			"revision": ""
+		},
+		{
+			"path": "slog",
+			"revision": ""
+		},
+		{
+			"path": "snmp",
+			"revision": ""
+		},
+		{
+			"path": "util",
+			"revision": ""
+		},
+		{
+			"path": "vendor",
+			"revision": ""
 		}
 	],
 	"rootPath": "bosun.org"
