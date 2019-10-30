@@ -1,0 +1,76 @@
+name: Go
+on: [push]
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.12
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+      id: go
+      
+    - name: Make dirs
+      run: |
+        export GOPATH=$HOME
+        mkdir ${GOPATH}/src/        
+
+    - name: Clone Source
+      run: |
+        export GOPATH=$HOME
+        cd ${GOPATH}/src/ && git clone --depth 1 https://github.com/langerma/bosun.git bosun.org
+
+    - name: Build bosun/tsdbrelay linux amd64
+      run: |
+        export GOPATH=$HOME
+        cd ${GOPATH}/src/bosun.org/cmd/bosun && GOOS=linux GOARCH=amd64 go get
+        cd ${GOPATH}/src/bosun.org/cmd/bosun && GOOS=linux GOARCH=amd64 go build -o bosun-amd64
+        cd ${GOPATH}/src/bosun.org/cmd/tsdbrelay && GOOS=linux GOARCH=amd64 go get
+        cd ${GOPATH}/src/bosun.org/cmd/tsdbrelay && GOOS=linux GOARCH=amd64 go build -o tsdbrelay-amd64
+ 
+    - name: Build bosun/tsdbrelay linux arm64
+      run: |
+        export GOPATH=$HOME
+        cd ${GOPATH}/src/bosun.org/cmd/bosun && GOOS=linux GOARCH=arm64 go get
+        cd ${GOPATH}/src/bosun.org/cmd/bosun && GOOS=linux GOARCH=arm64 go build -o bosun-arm64
+        cd ${GOPATH}/src/bosun.org/cmd/tsdbrelay && GOOS=linux GOARCH=arm64 go get
+        cd ${GOPATH}/src/bosun.org/cmd/tsdbrelay && GOOS=linux GOARCH=arm64 go build -o tsdbrelay-arm64
+ 
+    - name: Upload bosun linux amd64 binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: /home/runner/src/bosun.org/cmd/bosun/bosun-amd64
+        asset_name: bosun-amd64
+        tag: ${{ github.ref }}
+        overwrite: true
+
+    - name: Upload tsdbrelay linux amd64 binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: /home/runner/src/bosun.org/cmd/tsdbrelay/tsdbrelay-amd64
+        asset_name: tsdbrelay-amd64
+        tag: ${{ github.ref }}
+        overwrite: true
+        
+    - name: Upload bosun linux arm64 binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: /home/runner/src/bosun.org/cmd/bosun/bosun-arm64
+        asset_name: bosun-arm64
+        tag: ${{ github.ref }}
+        overwrite: true
+
+    - name: Upload tsdbrelay linux arm64 binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: /home/runner/src/bosun.org/cmd/tsdbrelay/tsdbrelay-arm64
+        asset_name: tsdbrelay-arm64
+        tag: ${{ github.ref }}
+        overwrite: true
