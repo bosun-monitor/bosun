@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"bosun.org/cmd/bosun/expr"
-	elastic "github.com/olivere/elastic"
+	elastic "gopkg.in/olivere/elastic.v6"
 )
 
 func (c *Context) esQuery6(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {

@@ -4,11 +4,11 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/expr"
-	elastic "gopkg.in/olivere/elastic.v6"
+	elastic "gopkg.in/olivere/elastic.v7"
 )
 
 // ParseESConfig return expr.ElasticHost
-func parseESConfig6(value ElasticConf) expr.ElasticConfig {
+func parseESConfig7(value ElasticConf) expr.ElasticConfig {
 	var esConf expr.ElasticConfig
 	var options ESClientOptions
 	var opts []elastic.ClientOptionFunc

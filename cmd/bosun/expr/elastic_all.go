@@ -8,7 +8,8 @@ import (
 
 	"github.com/jinzhu/now"
 
-	elastic6 "github.com/olivere/elastic"
+	elastic7 "gopkg.in/olivere/elastic.v7"
+	elastic6 "gopkg.in/olivere/elastic.v6"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
 )
@@ -17,6 +18,7 @@ const (
 	ESV2 ESVersion = "v2"
 	ESV5 ESVersion = "v5"
 	ESV6 ESVersion = "v6"
+	ESV7 ESVersion = "v7"
 
 	// 2016-09-22T22:26:14.679270711Z
 	elasticRFC3339 = "date_optional_time"
@@ -50,6 +52,8 @@ func ESAll(e *State) (*Results, error) {
 				return elastic5.NewMatchAllQuery()
 			case ESV6:
 				return elastic6.NewMatchAllQuery()
+			case ESV7:
+				return elastic7.NewMatchAllQuery()
 			}
 			return nil
 		},
@@ -81,6 +85,12 @@ func ESAnd(e *State, esqueries ...ESQuery) (*Results, error) {
 					queries[i] = q.Query(ver).(elastic6.Query)
 				}
 				return elastic6.NewBoolQuery().Must(queries...)
+			case ESV7:
+				queries := make([]elastic7.Query, len(esqueries))
+				for i, q := range esqueries {
+					queries[i] = q.Query(ver).(elastic7.Query)
+				}
+				return elastic7.NewBoolQuery().Must(queries...)
 			}
 			return nil
 		},
@@ -100,6 +110,8 @@ func ESNot(e *State, query ESQuery) (*Results, error) {
 				return elastic5.NewBoolQuery().MustNot(query.Query(ver).(elastic5.Query))
 			case ESV6:
 				return elastic6.NewBoolQuery().MustNot(query.Query(ver).(elastic6.Query))
+			case ESV7:
+				return elastic7.NewBoolQuery().MustNot(query.Query(ver).(elastic7.Query))
 			}
 			return nil
 		},
@@ -131,6 +143,12 @@ func ESOr(e *State, esqueries ...ESQuery) (*Results, error) {
 					queries[i] = q.Query(ver).(elastic6.Query)
 				}
 				return elastic6.NewBoolQuery().Should(queries...).MinimumNumberShouldMatch(1)
+			case ESV7:
+				queries := make([]elastic7.Query, len(esqueries))
+				for i, q := range esqueries {
+					queries[i] = q.Query(ver).(elastic7.Query)
+				}
+				return elastic7.NewBoolQuery().Should(queries...).MinimumNumberShouldMatch(1)
 			}
 			return nil
 		},
@@ -150,6 +168,8 @@ func ESRegexp(e *State, key string, regex string) (*Results, error) {
 				return elastic5.NewRegexpQuery(key, regex)
 			case ESV6:
 				return elastic6.NewRegexpQuery(key, regex)
+			case ESV7:
+				return elastic7.NewRegexpQuery(key, regex)
 			}
 			return nil
 		},
@@ -182,6 +202,12 @@ func ESQueryString(e *State, key string, query string) (*Results, error) {
 					qs.Field(key)
 				}
 				return qs
+			case ESV7:
+				qs := elastic7.NewQueryStringQuery(query)
+				if key != "" {
+					qs.Field(key)
+				}
+				return qs
 			}
 			return nil
 		},
@@ -201,6 +227,8 @@ func ESExists(e *State, field string) (*Results, error) {
 				return elastic5.NewExistsQuery(field)
 			case ESV6:
 				return elastic6.NewExistsQuery(field)
+			case ESV7:
+				return elastic7.NewExistsQuery(field)
 			}
 			return nil
 		},
@@ -220,6 +248,8 @@ func ESGT(e *State, key string, gt float64) (*Results, error) {
 				return elastic5.NewRangeQuery(key).Gt(gt)
 			case ESV6:
 				return elastic6.NewRangeQuery(key).Gt(gt)
+			case ESV7:
+				return elastic7.NewRangeQuery(key).Gt(gt)
 			}
 			return nil
 		},
@@ -239,6 +269,8 @@ func ESGTE(e *State, key string, gte float64) (*Results, error) {
 				return elastic5.NewRangeQuery(key).Gte(gte)
 			case ESV6:
 				return elastic6.NewRangeQuery(key).Gte(gte)
+			case ESV7:
+				return elastic7.NewRangeQuery(key).Gte(gte)
 			}
 			return nil
 		},
@@ -258,6 +290,8 @@ func ESLT(e *State, key string, lt float64) (*Results, error) {
 				return elastic5.NewRangeQuery(key).Lt(lt)
 			case ESV6:
 				return elastic6.NewRangeQuery(key).Lt(lt)
+			case ESV7:
+				return elastic7.NewRangeQuery(key).Lt(lt)
 			}
 			return nil
 		},
@@ -277,6 +311,8 @@ func ESLTE(e *State, key string, lte float64) (*Results, error) {
 				return elastic5.NewRangeQuery(key).Lte(lte)
 			case ESV6:
 				return elastic6.NewRangeQuery(key).Lte(lte)
+			case ESV7:
+				return elastic7.NewRangeQuery(key).Lte(lte)
 			}
 			return nil
 		},
@@ -339,6 +375,8 @@ func createVersionedSimpleESClient(prefix string, cfg ElasticConfig) error {
 		esClients.m[prefix], err = elastic5.NewSimpleClient(elastic5.SetURL(cfg.Hosts...), elastic5.SetMaxRetries(10))
 	case ESV6:
 		esClients.m[prefix], err = elastic6.NewSimpleClient(elastic6.SetURL(cfg.Hosts...), elastic6.SetMaxRetries(10))
+	case ESV7:
+		esClients.m[prefix], err = elastic7.NewSimpleClient(elastic7.SetURL(cfg.Hosts...), elastic7.SetMaxRetries(10))
 	}
 	return err
 }
@@ -369,6 +407,14 @@ func createVersionedESClient(prefix string, cfg ElasticConfig) error {
 		} else {
 			// default behavior
 			esClients.m[prefix], err = elastic6.NewClient(elastic6.SetURL(cfg.Hosts...), elastic6.SetMaxRetries(10))
+		}
+	case ESV7:
+		if len(cfg.Hosts) == 0 {
+			// client option enabled
+			esClients.m[prefix], err = elastic7.NewClient(cfg.ClientOptionFuncs.([]elastic7.ClientOptionFunc)...)
+		} else {
+			// default behavior
+			esClients.m[prefix], err = elastic7.NewClient(elastic7.SetURL(cfg.Hosts...), elastic7.SetMaxRetries(10))
 		}
 	}
 	return err
@@ -433,6 +479,8 @@ func ESCount(prefix string, e *State, indexer ESIndexer, keystring string, filte
 		return ESDateHistogram5(prefix, e, indexer, keystring, filter.Query(ver).(elastic5.Query), interval, sduration, eduration, "", "", 0)
 	case ESV6:
 		return ESDateHistogram6(prefix, e, indexer, keystring, filter.Query(ver).(elastic6.Query), interval, sduration, eduration, "", "", 0)
+	case ESV7:
+		return ESDateHistogram7(prefix, e, indexer, keystring, filter.Query(ver).(elastic7.Query), interval, sduration, eduration, "", "", 0)
 	}
 	return nil, errors.New("unknown version")
 }
@@ -446,6 +494,8 @@ func ESStat(prefix string, e *State, indexer ESIndexer, keystring string, filter
 		return ESDateHistogram5(prefix, e, indexer, keystring, filter.Query(ver).(elastic5.Query), interval, sduration, eduration, field, rstat, 0)
 	case ESV6:
 		return ESDateHistogram6(prefix, e, indexer, keystring, filter.Query(ver).(elastic6.Query), interval, sduration, eduration, field, rstat, 0)
+	case ESV7:
+		return ESDateHistogram7(prefix, e, indexer, keystring, filter.Query(ver).(elastic7.Query), interval, sduration, eduration, field, rstat, 0)
 	}
 	return nil, errors.New("unknown version")
 }
