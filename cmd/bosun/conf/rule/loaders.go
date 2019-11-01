@@ -433,7 +433,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				}
 				n.AfterAction = v
 			} else if v != "" {
-				c.errorf("invalid action value %s. only ForceClose/Forget/Purge allowed", v)
+				c.errorf("invalid action value %s for afterAction. only ForceClose/Forget/Purge allowed", v)
 			}
 		case "unknownMinGroupSize":
 			i, err := strconv.Atoi(v)

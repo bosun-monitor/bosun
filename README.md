@@ -24,14 +24,14 @@ Bosun is a time series alerting framework developed by Stack Exchange. Scollecto
 
 3. 在 alert 中加入 `DelayCloseNormal`选项，用于在告警指标恢复至normal后，自动close
 
-   - 原来的流程里面，在告警发生之后，如果在发送gcsx2之前恢复正常，告警链会被正常终止，但因为这条告警如果没有手动ack，以后的新告警通知也不会发出。所以为了解决这个问题，引入`DelayCloseNormal=2m`这样的选项，表示在指标正常2分钟后，自动close该条告警，以免意外的丢失后面的告警。
+   - 原来的流程里面，在告警发生之后，如果在发送gcsx2之前恢复正常，告警链会被正常终止，但因为这条告警如果没有手动ack，以后的新告警通知也不会发出。所以为了解决这个问题，引入`DelayCloseNormal=2m`这样的选项，表示在指标正常2分钟后，自动close该条告警，以免意外的丢失后面的告警，也可以解决告警flaping的问题。
    - 选项的另一个用途，是结合`unknownIsNormal=true`使用，在该指标丢失之后，忽略并close （正常会有专门检查心跳的指标用于告警）
-   - `DelayCloseNormal`设置一般不少于`CheckFrequency`，因为只有每次check的时候才回去判断close normal
+   - `DelayCloseNormal`设置一般不少于`CheckFrequency`，因为只有每次check的时候才回去判断close normal。也一般设置小于notification chain之间的timeout时间，否则可能会发两条告警之后才close。
 
 4. 增加每天定时屏蔽告警的功能
 
    - 比如每天凌晨1点-7点有备份，会引起大量磁盘和网络IO，在web页面设置 `start time period `,`end time period `开启定时屏蔽
-   - 格式`01:00 +0800`, `07:00 +0800`，这种情况一般把 duration  设置比较大的值，如`10000d` 。start值可以比end值大，表示的是屏蔽 start~24:00, 00~end
+   - 格式`01:00 +0800`, `07:00 +0800（+0800表示的是东8区时间），`这种情况一般把 duration  设置比较大的值，如`10000d` 。start值可以比end值大，表示的是屏蔽 start~24:00, 00~end
 
 
 

@@ -326,7 +326,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 				err = s.ActionByAlertKey("bosun", "Auto force close was enabled", models.ActionForceClose, nil, ak)
 			} else if n.AfterAction == "Forget" {
 				incident.Open = false
-				slog.Infof("Auto Purge enabled for %s", ak)
+				slog.Infof("Auto Forget enabled for %s", ak)
 				err = s.ActionByAlertKey("bosun", "Auto forget close was enabled", models.ActionForget, nil, ak)
 			} else if n.AfterAction == "Purge" {
 				incident.Open = false
@@ -368,6 +368,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	// lock while we change notifications.
 	s.Lock("RunHistory")
+	slog.Infof("XXXX shouldNotify=%v, event.Status=%v, incident.WorstStatus=%v", shouldNotify, event.Status, incident.WorstStatus)
 	if shouldNotify {
 		incident.NeedAck = false
 		if err = s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
