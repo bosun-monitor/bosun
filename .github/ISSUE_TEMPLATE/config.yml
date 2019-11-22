@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: StackOverflow
+    url: https://stackoverflow.com/questions/tagged/bosun
+    about: Please ask and answer questions there.
+  - name: Contributing guidelines
+    url: https://github.com/bosun-monitor/bosun/blob/master/CONTRIBUTING.md
+    about: Please read the contributing guidelines for this project.
+  - name: Code Of Conduct
+    url: https://github.com/bosun-monitor/bosun/blob/master/CODE_OF_CONDUCT.md
+    about: This space is protected by our code of conduct.
