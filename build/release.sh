@@ -1,8 +1,15 @@
 #!/bin/sh
 set -e
 
+if [ -z "$1"  ]; then
+  echo "Usage: `basename $0` /path/to/bosun/repository"
+  exit 1
+fi
+
+BOSUN_PATH=$1
+
 TIME=`date +%Y%m%d%H%M%S`
-export GIT_SHA=`cd $GOPATH/src/bosun.org; git rev-parse HEAD`
+export GIT_SHA=`cd ${BOSUN_PATH}; git rev-parse HEAD`
 
 build()
 {
