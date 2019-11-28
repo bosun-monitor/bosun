@@ -7,3 +7,4 @@ cmd/scollector/scollector.toml
 cmd/scollector/scollector.exe
 cmd/bosun/bosun.toml
 cmd/scollector/scollector
+buildoutput

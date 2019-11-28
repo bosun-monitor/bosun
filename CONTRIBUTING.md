@@ -65,8 +65,7 @@ Use GitHub pull requests to submit code. General submission guidelines:
 
 1. Add/update unit tests for your new feature or fix 
 1. Use `gofmt -s -w` and `go vet bosun.org/...`. See `build/validate.sh` for the full list of validation checks that will be run by Travis CI on each commit.
-1. If using new third party packages, install party (`go get github.com/mjibson/party`) and run `party` in the root directory (`$GOPATH/src/bosun.org`) to vendor them and rewrite import paths.
-1. Squash all non-`_third_party` commits into one. `_third_party` changes should be squashed down separately and precede any code changes which require them. This may be done as the final step before merging.
+1. Add any new third party dependencies to the `go.mod` file
 1. The commit message should indicate what folder is being changed (example: `cmd/scollector: new xyz collector` or `docs: fix typo in window function`)
 1. Documentation changes should be made in the same branch as code changes using the `docs` folder. After the PR is approved is merged into the master branch it will show up on https://bosun.org (and is rendered using Github Pages).  
 
