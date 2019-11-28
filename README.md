@@ -12,7 +12,7 @@ bosun and scollector are found under the `cmd` directory. Run `go build` in the 
 
 Install:
 
-* `npm install typescript@<version> -g` to be able to compile the ts files to js files. The current version of typescript to install will be in the `.tavis.yml` file in the root of this repo.
+* `npm install typescript@<version> -g` to be able to compile the ts files to js files. The current version of typescript to install will be in the `.travis.yml` file in the root of this repo.
 * Run `go generate` in `cmd/bosun` when new static assets (like JS and CSS files) are added or changed.
 
 The `w.sh` script will automatically build and run bosun in a loop.
