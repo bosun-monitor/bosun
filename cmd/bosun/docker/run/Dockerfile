@@ -1,9 +1,9 @@
-FROM debian:wheezy
+FROM debian:stretch
 
 RUN apt-get update && apt-get install -y \
 	gnuplot \
 	make \
-	openjdk-7-jre-headless \
+	openjdk-8-jre-headless \
 	supervisor \
 	nano \
 	vim \
@@ -17,7 +17,7 @@ RUN mkdir -p /tsdb /hbase /bosun /scollector /data
 ENV TSDB /tsdb
 ENV HBASE /hbase/hbase
 ENV HBASE_HOME $HBASE
-ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV TSDBRELAY_OPTS -b localhost:8070 -t localhost:4242 -l 0.0.0.0:5252 -redis localhost:9565
 ENV TERM xterm
 
