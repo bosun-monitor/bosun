@@ -1,11 +1,11 @@
-FROM debian:wheezy
+FROM debian:stretch
 
 RUN apt-get update && apt-get install -y \
     automake \
     curl \
     git \
     make \
-    openjdk-7-jdk \
+    openjdk-8-jdk \
     python \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
@@ -24,7 +24,7 @@ RUN mkdir -p /hbase \
     | tar -xzC /hbase \
     && mv /hbase/hbase-$HBASEVER /hbase/hbase
 
-RUN curl -SL https://storage.googleapis.com/golang/go1.11.linux-amd64.tar.gz \
+RUN curl -SL https://storage.googleapis.com/golang/go1.13.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
 COPY bosun $GOPATH/src/bosun.org/
