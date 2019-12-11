@@ -192,10 +192,6 @@ Tests or sets a silence. Examine a request for details.
 
 Returns details about the given alert keys.
 
-### /api/templates
-
-Returns data about alerts, templates, and their relations.
-
 ## Configuration Endpoints
 
 ### /api/backup
