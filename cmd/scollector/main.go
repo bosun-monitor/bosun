@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bosun.org/host"
 	"bytes"
 	"encoding/json"
 	_ "expvar"
@@ -61,6 +62,23 @@ func (t *scollectorHTTPTransport) RoundTrip(req *http.Request) (*http.Response, 
 	return t.RoundTripper.RoundTrip(req)
 }
 
+func initHostManager(customHostname string, useFullHostName bool) {
+	var hm host.Manager
+	var err error
+
+	if customHostname != "" {
+		hm, err = host.NewManagerForHostname(customHostname, useFullHostName)
+	} else {
+		hm, err = host.NewManager(useFullHostName)
+	}
+
+	if err != nil {
+		slog.Fatalf("couldn't initialise host factory: %v", err)
+	}
+
+	util.SetHostManager(hm)
+}
+
 func main() {
 	flag.Parse()
 	if *flagToToml != "" {
@@ -118,14 +136,9 @@ func main() {
 		}()
 	}
 	collectors.AddTags = conf.Tags
-	util.FullHostname = conf.FullHost
-	util.Set()
-	if conf.Hostname != "" {
-		util.Hostname = conf.Hostname
-	}
-	if err := collect.SetHostname(util.Hostname); err != nil {
-		slog.Fatal(err)
-	}
+
+	initHostManager(conf.Hostname, conf.FullHost)
+
 	if conf.ColDir != "" {
 		collectors.InitPrograms(conf.ColDir)
 	}

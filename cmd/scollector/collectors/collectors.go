@@ -255,7 +255,7 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 
 	tags := t.Copy()
 	if host, present := tags["host"]; !present {
-		tags["host"] = util.Hostname
+		tags["host"] = util.GetHostManager().GetHostName()
 	} else if host == "" {
 		delete(tags, "host")
 	}

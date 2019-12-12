@@ -61,7 +61,12 @@ func c_vsphere(user, pwd, vHost string, cpuIntegrators map[string]tsIntegrator) 
 
 	// Data for Hosts (Hypervisors)
 	for _, host := range hostSystems {
-		name := util.Clean(host.Name)
+		name, err := util.GetHostManager().GetNameProcessor().FormatName(host.Name)
+		if err != nil {
+			slog.Errorf("Skipping vSphere hypervisor with an unformattable name of '%s': %v", host.Name, err)
+			continue
+		}
+
 		hostKeys[host.Self.Value] = name
 		tags := opentsdb.TagSet{"host": name}
 
@@ -118,10 +123,12 @@ func c_vsphere(user, pwd, vHost string, cpuIntegrators map[string]tsIntegrator) 
 
 	// Data for Virtual Machines
 	for _, vm := range vms {
-		name := util.Clean(vm.Name)
-		if name == "" {
-			slog.Errorf("Encounter virtual machine '%v' with empty name after cleaning, skipping", vm.Name)
+		name, err := util.GetHostManager().GetNameProcessor().FormatName(vm.Name)
+		if err != nil {
+			slog.Errorf("Skipping vSphere VM with an unformattable name of '%s': %v", vm.Name, err)
+			continue
 		}
+
 		tags := opentsdb.TagSet{"host": vHost, "guest": name}
 
 		// Identify VM Host (Hypervisor)
@@ -196,9 +203,9 @@ func c_vsphere(user, pwd, vHost string, cpuIntegrators map[string]tsIntegrator) 
 	}
 
 	for _, ds := range dataStores {
-		name := util.Clean(ds.Name)
-		if name == "" {
-			slog.Errorf("skipping vpshere datastore %s because cleaned name was empty", ds.Name)
+		name, err := util.GetHostManager().GetNameProcessor().FormatName(ds.Name)
+		if err != nil {
+			slog.Errorf("Skipping vSphere data source with an unformattable name of '%s': %v", ds.Name, err)
 			continue
 		}
 

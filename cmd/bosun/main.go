@@ -4,6 +4,7 @@ package main
 
 import (
 	"bosun.org/_version"
+	"bosun.org/host"
 	"flag"
 	"fmt"
 	"gopkg.in/fsnotify.v1"
@@ -47,7 +48,7 @@ func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", t.UserAgent)
 	}
-	req.Header.Add("X-Bosun-Server", util.Hostname)
+	req.Header.Add("X-Bosun-Server", util.GetHostManager().GetHostName())
 	return t.RoundTripper.RoundTrip(req)
 }
 
@@ -100,6 +101,23 @@ var (
 	mains []func() // Used to hook up syslog on *nix systems
 )
 
+func initHostManager(customHostname string) {
+	var hm host.Manager
+	var err error
+
+	if customHostname != "" {
+		hm, err = host.NewManagerForHostname(customHostname, false)
+	} else {
+		hm, err = host.NewManager(false)
+	}
+
+	if err != nil {
+		slog.Fatalf("couldn't initialise host factory: %v", err)
+	}
+
+	util.SetHostManager(hm)
+}
+
 func main() {
 	flag.Parse()
 	if *flagVersion {
@@ -113,6 +131,8 @@ func main() {
 	if err != nil {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
+
+	initHostManager(systemConf.Hostname)
 
 	// Check if ES version is set by getting configs on start-up.
 	// Because the current APIs don't return error so calling slog.Fatalf

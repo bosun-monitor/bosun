@@ -171,7 +171,7 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 		tags = make(opentsdb.TagSet)
 	}
 	if _, present := tags["host"]; setHost && !present {
-		tags["host"] = util.Hostname
+		tags["host"] = util.GetHostManager().GetHostName()
 	}
 	if err := tags.Clean(); err != nil {
 		slog.Error(err)
