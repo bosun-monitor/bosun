@@ -253,6 +253,24 @@ notification chat {
 
 They can also be accessed in templates with the [`V()` function](/definitions#vstring-string)
 
+### ClusterConf
+Enables clustering solution in Bosun. There is no required to have this section filled.
+Cluster would only have one ‘leader’ at a time, all other nodes are followers (so this is an implementation of a model with with 1 master and multiple standby nodes).
+‘Master’ node executes the checks and sends notifications, ‘follower’ nodes don’t do neither (they run with ‘no-checks’ and ‘quiet-mode’ options enabled).
+
+By default clustering is disabled. For enable clustering follow parameters in this section should be filled:
+- MetadataStorePath
+- RPCListen
+
+#### MetadataStorePath
+Path for store Raft cluster metadata. This path should be available for writing. This path will contain database `raft.db` and path `snapshots`. Basically all data in MetadataStorePath can be deleted without any problem. You can delete all files in MetadataStorePath but Bosun should be stopped before. If clustering is disabled all those data are mindless.
+
+#### RPCListen
+Host and port for serf listener (https://github.com/hashicorp/serf). It should by in format: "127.0.0.1:10000" or ":10000" for listen on any interfaces. Host should be the address that will be available for other nodes of the cluster (so shouldn’t be loopback address!). Port will be a primary port for cluster (you can define this port in Members parameter). There will also be another opened extra port for raft protocol (https://github.com/hashicorp/raft). Raft port will be RPCListen port increased by 1.
+
+#### Members
+Array of addresses for cluster members. Should be in format: `["10.0.0.1:10000", "10.0.0.2:10001"]`. You can define here only one node of cluster, but then this node should be available when current node required restart, or `raft.db` should be consistent and exists. Nodes are receiving cluster topology from cluster members based on this parameter.
+
 ### DBConf
 Defines what internal storage Bosun should use. There are currently two
 choices, a built-in redis-like server called ledis or redis. Redis is

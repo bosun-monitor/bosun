@@ -36,7 +36,7 @@ func TestRelay(t *testing.T) {
 	}
 	util.SetHostManager(hm)
 
-	schedule.Init("relay_test", &conf.SystemConf{}, new(rule.Conf), testData, nil, false, false)
+	schedule.Init("relay_test", &conf.SystemConf{}, new(rule.Conf), testData, nil, nil, false, false)
 	rs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 	}))

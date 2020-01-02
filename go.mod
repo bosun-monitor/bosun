@@ -50,6 +50,11 @@ require (
 	github.com/gorilla/css v0.0.0-20150317222238-a80e24ada269 // indirect
 	github.com/gorilla/mux v0.0.0-20160920230813-757bef944d0f
 	github.com/gorilla/securecookie v0.0.0-20161003051601-fa5329f91370 // indirect
+	github.com/hashicorp/logutils v1.0.0
+	github.com/hashicorp/memberlist v0.1.0
+	github.com/hashicorp/raft v1.1.1
+	github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea
+	github.com/hashicorp/serf v0.0.0-20161007004122-1d4fa605f6ff
 	github.com/influxdata/influxdb v1.6.3
 	github.com/influxdata/influxql v0.0.0-20180823200743-a7267bff5327
 	github.com/jinzhu/now v0.0.0-20151001141511-ce80572eb55a
@@ -77,7 +82,7 @@ require (
 	github.com/siddontang/goredis v0.0.0-20150324035039-760763f78400 // indirect
 	github.com/siddontang/ledisdb v0.0.0-20190202134119-8ceb77e66a92
 	github.com/siddontang/rdb v0.0.0-20150307021120-fc89ed2e418d // indirect
-	github.com/stretchr/testify v1.2.2
+	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v0.0.0-20150819051622-1a9d62f03ea9 // indirect
 	github.com/tatsushid/go-fastping v0.0.0-20150818125950-06cac0fecdc2
 	github.com/twinj/uuid v0.0.0-20151029044442-89173bcdda19
@@ -88,7 +93,7 @@ require (
 	golang.org/x/image v0.0.0-20150916112557-baddd3465a05 // indirect
 	golang.org/x/net v0.0.0-20181217023233-e147a9138326
 	golang.org/x/oauth2 v0.0.0-20160608215109-65a8d08c6292
-	golang.org/x/sys v0.0.0-20190204203706-41f3e6584952
+	golang.org/x/sys v0.0.0-20190523142557-0e01d883c5c5
 	google.golang.org/api v0.0.0-20180506000402-20530fd5d65a
 	google.golang.org/appengine v1.0.1-0.20161115221414-ca59ef35f409 // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20141119150059-9eae18c3681a // indirect

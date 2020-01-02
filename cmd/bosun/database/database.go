@@ -5,7 +5,6 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"runtime"
 	"strings"
 	"sync"
@@ -95,7 +94,7 @@ func StartLedis(dataDir string, bind string) (stop func(), err error) {
 	cfg.DataDir = dataDir
 	app, err := server.NewApp(cfg)
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
 		return func() {}, err
 	}
 	go app.Run()
