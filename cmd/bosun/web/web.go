@@ -120,8 +120,9 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	}
 
 	const (
-		GET  = http.MethodGet
-		POST = http.MethodPost
+		GET    = http.MethodGet
+		POST   = http.MethodPost
+		DELETE = http.MethodDelete
 	)
 
 	if tsdbHost != "" {
@@ -136,6 +137,13 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	handle("/api/config_test", JSON(ConfigTest), canViewConfig).Name("config_test").Methods(POST)
 	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
+
+	if schedule.RaftInstance != nil {
+		handle("/api/cluster/status", JSON(ClusterStatus), canViewConfig).Name("cluster_status").Methods(GET)
+		handle("/api/cluster/member", JSON(ClusterMemberRemove), canManageCluster).Name("cluster_member_remove").Methods(DELETE)
+		handle("/api/cluster/recover_cluster", JSON(ClusterRecover), canManageCluster).Name("cluster_recover").Methods(POST)
+		handle("/api/cluster/change_master", JSON(ClusterChangeMasterTo), canManageCluster).Name("cluster_change_master_to").Methods(POST)
+	}
 
 	if schedule.SystemConf.ReloadEnabled() {
 		handle("/api/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
@@ -162,7 +170,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/metadata/get", JSON(GetMetadata), canViewDash).Name("meta_get").Methods(GET)
 	handle("/api/metadata/metrics", JSON(MetadataMetrics), canViewDash).Name("meta_metrics").Methods(GET)
 	handle("/api/metadata/put", JSON(PutMetadata), canPutData).Name("meta_put").Methods(POST)
-	handle("/api/metadata/delete", JSON(DeleteMetadata), canPutData).Name("meta_delete").Methods(http.MethodDelete)
+	handle("/api/metadata/delete", JSON(DeleteMetadata), canPutData).Name("meta_delete").Methods(DELETE)
 	handle("/api/metric", JSON(UniqueMetrics), canViewDash).Name("meta_uniqe_metrics").Methods(GET)
 	handle("/api/metric/{tagk}", JSON(MetricsByTagKey), canViewDash).Name("meta_metrics_by_tag").Methods(GET)
 	handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair), canViewDash).Name("meta_metric_by_tag_pair").Methods(GET)

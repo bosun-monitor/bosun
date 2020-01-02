@@ -7,7 +7,6 @@ import (
 	"bosun.org/host"
 	"flag"
 	"fmt"
-	"gopkg.in/fsnotify.v1"
 	"net/http"
 	"net/http/httptest"
 	_ "net/http/pprof"
@@ -19,7 +18,11 @@ import (
 	"syscall"
 	"time"
 
+	version "bosun.org/_version"
+	"gopkg.in/fsnotify.v1"
+
 	"bosun.org/annotate/backend"
+	"bosun.org/cmd/bosun/cluster"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
@@ -132,7 +135,29 @@ func main() {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
 
+<<<<<<< HEAD
 	initHostManager(systemConf.Hostname)
+=======
+	var raftInstance *cluster.Raft
+	// If cluster eneble - init cluster
+	if systemConf.ClusterEnabled() {
+		*flagQuiet = true
+		*flagNoChecks = true
+		raftListen := systemConf.GetClusterBindAddress()
+		//serfEvents := make(chan serf.Event, 16)
+		var err error
+		raftInstance, err = cluster.StartCluster(
+			raftListen,
+			systemConf.GetClusterMetadataStorePath(),
+			systemConf.GetClusterMembers())
+		if err != nil {
+			slog.Fatalf("couldn't init bosun cluster: %v", err)
+		}
+		//raftCh := raftInstance.Instance.LeaderCh()
+
+		go raftInstance.Watch(flagQuiet, flagNoChecks)
+	}
+>>>>>>> First cluster implementation
 
 	// Check if ES version is set by getting configs on start-up.
 	// Because the current APIs don't return error so calling slog.Fatalf
@@ -142,7 +167,7 @@ func main() {
 
 	sysProvider, err := systemConf.GetSystemConfProvider()
 	if err != nil {
-		slog.Fatal(err)
+		slog.Fatalf("Error while get system conf provider: %v", err)
 	}
 	ruleConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends(), systemConf.GetRuleVars())
 	if err != nil {
@@ -169,7 +194,7 @@ func main() {
 
 	da, err := initDataAccess(sysProvider)
 	if err != nil {
-		slog.Fatal(err)
+		slog.Fatalf("Error while init database: %v", err)
 	}
 	if sysProvider.GetMaxRenderedTemplateAge() != 0 {
 		go da.State().CleanupOldRenderedTemplates(time.Hour * 24 * time.Duration(sysProvider.GetMaxRenderedTemplateAge()))
@@ -201,7 +226,7 @@ func main() {
 		}()
 		web.AnnotateBackend = annotateBackend
 	}
-	if err := sched.Load(sysProvider, ruleProvider, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
+	if err := sched.Load(sysProvider, ruleProvider, da, annotateBackend, raftInstance, *flagSkipLast, *flagQuiet); err != nil {
 		slog.Fatal(err)
 	}
 	if err := metadata.InitF(false, func(k metadata.Metakey, v interface{}) error { return sched.DefaultSched.PutMetadata(k, v) }); err != nil {
@@ -250,6 +275,7 @@ func main() {
 	}
 	var reload func() error
 	reloading := make(chan bool, 1) // a lock that we can give up acquiring
+
 	reload = func() error {
 		select {
 		case reloading <- true:
@@ -275,7 +301,7 @@ func main() {
 		slog.Infoln("schedule shutdown, loading new schedule")
 
 		// Load does not set the DataAccess or Search if it is already set
-		if err := sched.Load(sysProvider, newConf, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
+		if err := sched.Load(sysProvider, newConf, da, annotateBackend, raftInstance, *flagSkipLast, *flagQuiet); err != nil {
 			slog.Fatal(err)
 		}
 		web.ResetSchedule() // Signal web to point to the new DefaultSchedule
@@ -289,6 +315,15 @@ func main() {
 		return nil
 	}
 
+	if raftInstance != nil {
+		go func() {
+			for {
+
+				<-raftInstance.ReloadCluster
+				reload()
+			}
+		}()
+	}
 	ruleProvider.SetReload(reload)
 
 	go func() {
