@@ -18,7 +18,7 @@ require (
 	github.com/alicebob/gopher-json v0.0.0-20180125190556-5a6b3ba71ee6 // indirect
 	github.com/alicebob/miniredis v2.5.0+incompatible // indirect
 	github.com/andybalholm/cascadia v0.0.0-20150730174459-3ad29d1ad1c4 // indirect
-	github.com/aws/aws-sdk-go v1.1.33
+	github.com/aws/aws-sdk-go v1.25.25
 	github.com/aymerick/douceur v0.2.1-0.20150827151352-7176f1467381
 	github.com/bosun-monitor/statusio v0.0.0-20160516160816-ab1583139762
 	github.com/bradfitz/slice v0.0.0-20140430145140-a665b5dbaad5
@@ -33,22 +33,18 @@ require (
 	github.com/facebookgo/httpcontrol v0.0.0-20150708234001-ccde4420e1fe
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
-	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/garyburd/redigo v0.0.0-20151219232044-836b6e58b335
 	github.com/glendc/gopher-json v0.0.0-20170414221815-dc4743023d0c // indirect
 	github.com/gocarina/gocsv v0.0.0-20190927101021-3ecffd272576 // indirect
 	github.com/godbus/dbus v4.0.1-0.20160727174541-7a8c533d28e8+incompatible // indirect
 	github.com/golang/freetype v0.0.0-20150924013838-f29eb116deb3 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
-	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4
-	github.com/golang/protobuf v1.2.1-0.20190109072247-347cf4a86c1c // indirect
+	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/google/cadvisor v0.21.1-0.20160212224345-e9739af18411
 	github.com/google/go-github v0.0.0-20151126072848-44b1ede22d71
 	github.com/google/go-querystring v0.0.0-20151028211038-2a60fc2ba6c1 // indirect
-	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/css v0.0.0-20150317222238-a80e24ada269 // indirect
-	github.com/gorilla/mux v0.0.0-20160920230813-757bef944d0f
+	github.com/gorilla/mux v1.6.2
 	github.com/gorilla/securecookie v0.0.0-20161003051601-fa5329f91370 // indirect
 	github.com/influxdata/influxdb v1.6.3
 	github.com/influxdata/influxql v0.0.0-20180823200743-a7267bff5327
@@ -61,16 +57,15 @@ require (
 	github.com/kylebrandt/gohop v0.0.0-20160712175359-f6dbeb38f6df
 	github.com/llgcode/draw2d v0.0.0-20151105134336-9ffe0e7eb54c // indirect
 	github.com/llgcode/ps v0.0.0-20150911083025-f1443b32eedb // indirect
-	github.com/mailru/easyjson v0.0.0-20180323154445-8b799c424f57 // indirect
 	github.com/mhenderson-so/azure-ea-billing v0.0.0-20160829175629-4fd1a790460c
 	github.com/mitchellh/go-homedir v1.0.0 // indirect
 	github.com/mjibson/esc v0.1.0
 	github.com/olivere/elastic v6.1.23-0.20180523141205-33ad30f61610+incompatible
+	github.com/olivere/elastic/v7 v7.0.9
 	github.com/pelletier/go-toml v1.6.0 // indirect
-	github.com/pkg/errors v0.8.1-0.20170505043639-c605e284fe17 // indirect
 	github.com/pmezard/go-difflib v1.0.0
-	github.com/prometheus/client_golang v0.9.3-0.20190106165022-d2ead2588477
-	github.com/prometheus/common v0.1.0
+	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
+	github.com/prometheus/common v0.2.0
 	github.com/prometheus/prometheus v1.8.2-0.20190115164134-b639fe140c1f
 	github.com/ryanuber/go-glob v0.0.0-20160226084822-572520ed46db
 	github.com/siddontang/go v0.0.0-20150505004501-b151716326d7 // indirect
@@ -86,11 +81,10 @@ require (
 	github.com/vmware/govmomi v0.16.1-0.20180228032728-a2138329bbd1
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036 // indirect
 	golang.org/x/image v0.0.0-20150916112557-baddd3465a05 // indirect
-	golang.org/x/net v0.0.0-20181217023233-e147a9138326
-	golang.org/x/oauth2 v0.0.0-20160608215109-65a8d08c6292
-	golang.org/x/sys v0.0.0-20190204203706-41f3e6584952
-	google.golang.org/api v0.0.0-20180506000402-20530fd5d65a
-	google.golang.org/appengine v1.0.1-0.20161115221414-ca59ef35f409 // indirect
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
+	golang.org/x/sys v0.0.0-20190502145724-3ef323f4f1fd
+	google.golang.org/api v0.3.1
 	gopkg.in/asn1-ber.v1 v1.0.0-20141119150059-9eae18c3681a // indirect
 	gopkg.in/fsnotify.v1 v1.4.7
 	gopkg.in/ldap.v1 v1.0.0-20150224155422-0041a4127039 // indirect

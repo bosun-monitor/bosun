@@ -34,6 +34,7 @@ import (
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
 	elastic6 "github.com/olivere/elastic"
+	elastic7 "github.com/olivere/elastic/v7"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
 )
@@ -168,6 +169,8 @@ func main() {
 			annotateBackend = backend.NewElastic5([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic5.ClientOptionFunc))
 		case expr.ESV6:
 			annotateBackend = backend.NewElastic6([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic6.ClientOptionFunc))
+		case expr.ESV7:
+			annotateBackend = backend.NewElastic7([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic7.ClientOptionFunc))
 		}
 		go func() {
 			for {

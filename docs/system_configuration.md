@@ -502,7 +502,7 @@ Embeds the annotation service. This enables the ability to submit and
 edit annotations via the UI or API. It also enables the annotation
 related expression functions. Currently the only supported database for
 annotate is Elastic. It can be the same cluster as the one defined in
-`ElasticConf` or a different one.
+`ElasticConf` before Elastic 7.x.
 
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
