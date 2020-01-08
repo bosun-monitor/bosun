@@ -135,9 +135,25 @@ func main() {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
 
-<<<<<<< HEAD
 	initHostManager(systemConf.Hostname)
-=======
+	// Check if ES version is set by getting configs on start-up.
+	// Because the current APIs don't return error so calling slog.Fatalf
+	// inside these functions (for multiple-es support).
+	systemConf.GetElasticContext()
+	systemConf.GetAnnotateElasticHosts()
+
+	sysProvider, err := systemConf.GetSystemConfProvider()
+	if err != nil {
+		slog.Fatalf("Error while get system conf provider: %v", err)
+	}
+	ruleConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends(), systemConf.GetRuleVars())
+	if err != nil {
+		slog.Fatalf("couldn't read rules: %v", err)
+	}
+	if *flagTest {
+		os.Exit(0)
+	}
+
 	var raftInstance *cluster.Raft
 	// If cluster eneble - init cluster
 	if systemConf.ClusterEnabled() {
@@ -157,25 +173,7 @@ func main() {
 
 		go raftInstance.Watch(flagQuiet, flagNoChecks)
 	}
->>>>>>> First cluster implementation
 
-	// Check if ES version is set by getting configs on start-up.
-	// Because the current APIs don't return error so calling slog.Fatalf
-	// inside these functions (for multiple-es support).
-	systemConf.GetElasticContext()
-	systemConf.GetAnnotateElasticHosts()
-
-	sysProvider, err := systemConf.GetSystemConfProvider()
-	if err != nil {
-		slog.Fatalf("Error while get system conf provider: %v", err)
-	}
-	ruleConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends(), systemConf.GetRuleVars())
-	if err != nil {
-		slog.Fatalf("couldn't read rules: %v", err)
-	}
-	if *flagTest {
-		os.Exit(0)
-	}
 	var ruleProvider conf.RuleConfProvider = ruleConf
 
 	addrToSendTo := sysProvider.GetHTTPSListen()
