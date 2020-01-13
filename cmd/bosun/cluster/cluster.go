@@ -12,6 +12,7 @@ import (
 	"log"
 	"path/filepath"
 
+	"bosun.org/cmd/bosun/conf"
 	"bosun.org/slog"
 	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/memberlist"
@@ -135,7 +136,7 @@ func (cl clusterLog) Write(data []byte) (n int, err error) {
 	return len(data), nil
 }
 
-func StartCluster(listen, dbPath string, members []string) (raftInstance *Raft, err error) {
+func StartCluster(systemConf *conf.SystemConf) (raftInstance *Raft, err error) {
 	logFilter := &logutils.LevelFilter{
 		Levels:   []logutils.LogLevel{"DEBUG", "INFO", "WARN", "ERROR"},
 		MinLevel: logutils.LogLevel("INFO"),
@@ -143,9 +144,9 @@ func StartCluster(listen, dbPath string, members []string) (raftInstance *Raft, 
 	}
 	logger := log.New(logFilter, "[cluser]", 0)
 
-	serfListen := strings.Split(listen, ":")
+	serfListen := strings.Split(systemConf.GetClusterBindAddress(), ":")
 	if len(serfListen) != 2 {
-		return nil, errors.New("Incorrect serf listen address: " + listen)
+		return nil, errors.New("Incorrect serf listen address: " + systemConf.GetClusterBindAddress())
 	}
 	serfPort, err := strconv.Atoi(serfListen[1])
 	if err != nil {
@@ -161,7 +162,7 @@ func StartCluster(listen, dbPath string, members []string) (raftInstance *Raft, 
 	serfEvents := make(chan serf.Event)
 	// create hashicorp serf config
 	serfConfig := serf.DefaultConfig()
-	serfConfig.NodeName = listen
+	serfConfig.NodeName = systemConf.GetClusterBindAddress()
 	serfConfig.EventCh = serfEvents
 	serfConfig.MemberlistConfig = memberlistConfig
 	serfConfig.LogOutput = logFilter
@@ -171,15 +172,15 @@ func StartCluster(listen, dbPath string, members []string) (raftInstance *Raft, 
 		return nil, errors.New("Error while init serf listener: " + err.Error())
 	}
 
-	if len(members) > 0 {
-		if _, err := serfListener.Join(members, false); err != nil {
+	if len(systemConf.GetClusterMembers()) > 0 {
+		if _, err := serfListener.Join(systemConf.GetClusterMembers(), false); err != nil {
 			return nil, errors.New("Error join cluster: " + err.Error())
 		}
 	}
 
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		slog.Infoln("Create cluster metadata path", dbPath)
-		if err := os.MkdirAll(dbPath, 0755); err != nil {
+	if _, err := os.Stat(systemConf.GetClusterMetadataStorePath()); os.IsNotExist(err) {
+		slog.Infoln("Create cluster metadata path", systemConf.GetClusterMetadataStorePath())
+		if err := os.MkdirAll(systemConf.GetClusterMetadataStorePath(), 0755); err != nil {
 			return nil, errors.New("Error while create raft metadata path for cluster: " + err.Error())
 		}
 	}
@@ -190,15 +191,18 @@ func StartCluster(listen, dbPath string, members []string) (raftInstance *Raft, 
 	c := raft.DefaultConfig()
 	c.LogOutput = logFilter
 	c.LocalID = raft.ServerID(raftListen)
+	c.HeartbeatTimeout = systemConf.ClusterHeartbeatTimeout()
+	c.LeaderLeaseTimeout = systemConf.ClusterLeaderLeaseTimeout()
+	c.ElectionTimeout = systemConf.ClusterElectionTimeout()
 
 	raftInstance = &Raft{Config: c, logger: logger, Serf: serfListener, RestartWatch: make(chan bool), ReloadCluster: make(chan bool), serfEvents: serfEvents}
 
-	err = raftInstance.CreateRaftDb(dbPath)
+	err = raftInstance.CreateRaftDb(systemConf.GetClusterMetadataStorePath())
 	if err != nil {
 		return nil, errors.New("Error while init raft bold db for main cluster database: " + err.Error())
 	}
 
-	err = raftInstance.CreateSnapshotStore(dbPath)
+	err = raftInstance.CreateSnapshotStore(systemConf.GetClusterMetadataStorePath())
 	if err != nil {
 		return nil, errors.New("Error while init snapshots store path: " + err.Error())
 	}
@@ -215,7 +219,7 @@ func StartCluster(listen, dbPath string, members []string) (raftInstance *Raft, 
 	}
 
 	if !isBootstrapped(raftInstance) {
-		if err := bootstrapCluster(raftInstance, raftListen, members); err != nil {
+		if err := bootstrapCluster(raftInstance, raftListen, systemConf.GetClusterMembers()); err != nil {
 			return nil, errors.New("Error while bootstrap cluster: " + err.Error())
 		}
 	}

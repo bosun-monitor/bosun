@@ -159,13 +159,9 @@ func main() {
 	if systemConf.ClusterEnabled() {
 		*flagQuiet = true
 		*flagNoChecks = true
-		raftListen := systemConf.GetClusterBindAddress()
 		//serfEvents := make(chan serf.Event, 16)
 		var err error
-		raftInstance, err = cluster.StartCluster(
-			raftListen,
-			systemConf.GetClusterMetadataStorePath(),
-			systemConf.GetClusterMembers())
+		raftInstance, err = cluster.StartCluster(systemConf)
 		if err != nil {
 			slog.Fatalf("couldn't init bosun cluster: %v", err)
 		}
