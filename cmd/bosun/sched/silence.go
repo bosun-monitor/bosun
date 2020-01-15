@@ -6,19 +6,17 @@ import (
 
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	"bosun.org/slog"
 )
 
 type SilenceTester func(models.AlertKey) *models.Silence
 
 // Silenced returns a function that will determine if the given alert key is silenced at the current time.
 // A function is returned to avoid needing to enumerate all alert keys unneccesarily.
-func (s *Schedule) Silenced() SilenceTester {
+func (s *Schedule) Silenced() (SilenceTester, error) {
 	now := utcNow()
 	silences, err := s.DataAccess.Silence().GetActiveSilences()
 	if err != nil {
-		slog.Error("Error fetching silences.", err)
-		return nil
+		return nil, err
 	}
 	return func(ak models.AlertKey) *models.Silence {
 		var lastEnding *models.Silence
@@ -33,7 +31,7 @@ func (s *Schedule) Silenced() SilenceTester {
 			}
 		}
 		return lastEnding
-	}
+	}, nil
 }
 
 func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]bool, error) {

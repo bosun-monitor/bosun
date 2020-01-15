@@ -358,11 +358,18 @@ type StateGroups struct {
 
 func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
 	var silenced SilenceTester
-	T.Step("Silenced", func(miniprofiler.Timer) {
-		silenced = s.Silenced()
-	})
-	var groups map[StateTuple]States
 	var err error
+
+	T.Step("Silenced", func(miniprofiler.Timer) {
+		silenced, err = s.Silenced()
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var groups map[StateTuple]States
+
 	status := make(States)
 	t := StateGroups{
 		TimeAndDate: s.SystemConf.GetTimeAndDate(),
@@ -680,7 +687,7 @@ type IncidentStatus struct {
 func (s *Schedule) AlertSuccessful(name string) bool {
 	b, err := s.DataAccess.Errors().IsAlertFailing(name)
 	if err != nil {
-		slog.Error(err)
+		slog.Errorf("Error while check alert %s failed: %s", name, err)
 		b = true
 	}
 	return !b
@@ -689,7 +696,7 @@ func (s *Schedule) AlertSuccessful(name string) bool {
 func (s *Schedule) markAlertError(name string, e error) {
 	d := s.DataAccess.Errors()
 	if err := d.MarkAlertFailure(name, e.Error()); err != nil {
-		slog.Error(err)
+		slog.Errorf("Error while MarkAlertFailure: %s", err)
 		return
 	}
 
@@ -712,7 +719,7 @@ func (s *Schedule) getErrorCounts() (failing, total int) {
 	var err error
 	failing, total, err = s.DataAccess.Errors().GetFailingAlertCounts()
 	if err != nil {
-		slog.Error(err)
+		slog.Errorf("Error while GetFailingAlertCounts: %s", err)
 	}
 	return
 }
@@ -736,10 +743,14 @@ func (s *Schedule) GetCheckFrequency(alertName string) (time.Duration, error) {
 
 }
 
-func (s *Schedule) GetSilence(T miniprofiler.Timer, ak models.AlertKey) *models.Silence {
+func (s *Schedule) GetSilence(T miniprofiler.Timer, ak models.AlertKey) (*models.Silence, error) {
 	var silenced SilenceTester
+	var err error
 	T.Step("Silenced", func(miniprofiler.Timer) {
-		silenced = s.Silenced()
+		silenced, err = s.Silenced()
 	})
-	return silenced(ak)
+	if err != nil {
+		return nil, err
+	}
+	return silenced(ak), nil
 }

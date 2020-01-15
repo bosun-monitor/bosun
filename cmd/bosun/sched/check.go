@@ -84,7 +84,11 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 // RunHistory processes an event history and triggers notifications if needed.
 func (s *Schedule) RunHistory(r *RunHistory) {
 	checkNotify := false
-	silenced := s.Silenced()
+	silenced, err := s.Silenced()
+	if err != nil {
+		slog.Errorf("Error while get silenced: %s.", err)
+		return
+	}
 	for ak, event := range r.Events {
 		shouldNotify, err := s.runHistory(r, ak, event, silenced)
 		checkNotify = checkNotify || shouldNotify

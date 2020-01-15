@@ -24,7 +24,10 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	if err != nil {
 		return nil, err
 	}
-	silences := s.Silenced()
+	silences, err := s.Silenced()
+	if err != nil {
+		return nil, err
+	}
 	// These are all fetched by metric since that is how we store it in redis,
 	// so this makes for the fastest response
 	tagsByKey := func(metric, hostKey string) (map[string][]opentsdb.TagSet, error) {

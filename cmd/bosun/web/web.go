@@ -651,8 +651,10 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 		ExtStatus: ExtStatus{IncidentState: state, RenderedTemplates: rt, Subject: state.Subject},
 		IsActive:  state.IsActive(),
 	}
-	silence := schedule.GetSilence(t, state.AlertKey)
-	if silence != nil {
+	silence, err := schedule.GetSilence(t, state.AlertKey)
+	if err != nil {
+		slog.Errorf("Error while get silenced: %s", err)
+	} else if silence != nil {
 		st.Silence = silence
 		st.SilenceId = silence.ID()
 	}

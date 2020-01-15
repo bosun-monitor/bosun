@@ -16,9 +16,9 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, err
 	}
-	suppressor := schedule.Silenced()
-	if suppressor == nil {
-		return nil, fmt.Errorf("failed to get silences")
+	suppressor, err := schedule.Silenced()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get silences: %v", err)
 	}
 	summaries := []*sched.IncidentSummaryView{}
 	filterText := r.FormValue("filter")

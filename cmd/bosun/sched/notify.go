@@ -55,7 +55,11 @@ func (s *Schedule) Notify(st *models.IncidentState, rt *models.RenderedTemplates
 
 // CheckNotifications processes past notification events. It returns the next time a notification is needed.
 func (s *Schedule) CheckNotifications() time.Time {
-	silenced := s.Silenced()
+	silenced, err := s.Silenced()
+	if err != nil {
+		slog.Error("Error getting silenced", err)
+		return utcNow().Add(time.Minute)
+	}
 	s.Lock("CheckNotifications")
 	defer s.Unlock()
 	latestTime := utcNow()

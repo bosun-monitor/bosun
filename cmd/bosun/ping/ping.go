@@ -30,7 +30,7 @@ func PingHosts(search *search.Search, duration time.Duration) {
 	for range time.Tick(pingFreq) {
 		hosts, err := search.TagValuesByTagKey("host", duration)
 		if err != nil {
-			slog.Error(err)
+			slog.Errorf("Error while search TagValuesByTagKey host: %s", err)
 			continue
 		}
 		for _, host := range hosts {
