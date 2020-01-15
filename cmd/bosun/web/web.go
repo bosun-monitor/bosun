@@ -481,7 +481,7 @@ func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var h Health
 	var n NotificationStats
-	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.SystemConf.GetCheckFrequency()))
+	h.RuleCheck = schedule.IsRunning()
 	h.Quiet = schedule.GetQuiet()
 	h.UptimeSeconds = int64(time.Since(startTime).Seconds())
 	h.StartEpoch = startTime.Unix()

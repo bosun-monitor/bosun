@@ -46,6 +46,7 @@ type Schedule struct {
 
 	skipLast bool
 	quiet    bool
+	run      bool
 
 	//channel signals an alert has added notifications, and notifications should be processed.
 	nc chan interface{}
@@ -719,6 +720,10 @@ func (s *Schedule) getErrorCounts() (failing, total int) {
 
 func (s *Schedule) GetQuiet() bool {
 	return s.quiet
+}
+
+func (s *Schedule) IsRunning() bool {
+	return s.run
 }
 
 // GetCheckFrequency returns the duration between checks for the named alert. If the alert

@@ -14,6 +14,7 @@ func (s *Schedule) Run() error {
 	if s.RuleConf == nil || s.SystemConf == nil {
 		return fmt.Errorf("sched: nil configuration")
 	}
+	s.run = true
 	s.nc = make(chan interface{}, 1)
 	go s.dispatchNotifications()
 	type alertCh struct {
