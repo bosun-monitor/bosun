@@ -140,7 +140,6 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	if schedule.RaftInstance != nil {
 		handle("/api/cluster/status", JSON(ClusterStatus), canViewConfig).Name("cluster_status").Methods(GET)
-		handle("/api/cluster/member", JSON(ClusterMemberRemove), canManageCluster).Name("cluster_member_remove").Methods(DELETE)
 		handle("/api/cluster/recover_cluster", JSON(ClusterRecover), canManageCluster).Name("cluster_recover").Methods(POST)
 		handle("/api/cluster/change_master", JSON(ClusterChangeMasterTo), canManageCluster).Name("cluster_change_master_to").Methods(POST)
 	}
