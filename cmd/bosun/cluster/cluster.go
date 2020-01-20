@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +22,8 @@ import (
 	"github.com/hashicorp/serf/serf"
 )
 
+type MembersFileWatch func(*conf.SystemConf, *Raft)
+
 type Raft struct {
 	Instance      *raft.Raft
 	Config        *raft.Config
@@ -32,6 +35,7 @@ type Raft struct {
 	ReloadCluster chan bool
 	RestartWatch  chan bool
 	serfEvents    chan serf.Event
+	memberList    map[string]struct{}
 }
 
 func (r *Raft) CreateRaftDb(path string) error {
@@ -52,6 +56,29 @@ func (r *Raft) CreateRaftTransport(listen string) error {
 	t, err := raft.NewTCPTransportWithLogger(listen, nil, 3, 10*time.Second, r.logger)
 	r.Transport = t
 	return err
+}
+
+func (r *Raft) readMembersFile(cfg string) error {
+	members, err := readMembersFile(cfg)
+	if err != nil {
+		return err
+	}
+	membersMap := make(map[string]struct{}, 0)
+	for _, member := range members {
+		membersMap[member] = struct{}{}
+	}
+
+	if len(membersMap) != len(r.memberList) {
+		r.memberList = membersMap
+	} else {
+		for m := range membersMap {
+			if _, ok := r.memberList[m]; !ok {
+				r.memberList = membersMap
+				break
+			}
+		}
+	}
+	return nil
 }
 
 func (r *Raft) Watch(flagQuiet, flagNoChecks *bool) {
@@ -172,8 +199,17 @@ func StartCluster(systemConf *conf.SystemConf) (raftInstance *Raft, err error) {
 		return nil, errors.New("Error while init serf listener: " + err.Error())
 	}
 
-	if len(systemConf.GetClusterMembers()) > 0 {
-		if _, err := serfListener.Join(systemConf.GetClusterMembers(), false); err != nil {
+	var membersList []string
+	if systemConf.GetClusterMembersFile() != "" {
+		membersList, err = readMembersFile(systemConf.GetClusterMembersFile())
+		if err != nil {
+			return nil, errors.New("Error while read members list config file: " + err.Error())
+		}
+	} else if len(systemConf.GetClusterMembers()) > 0 {
+		membersList = systemConf.GetClusterMembers()
+	}
+	if len(membersList) > 0 {
+		if _, err := serfListener.Join(membersList, false); err != nil {
 			return nil, errors.New("Error join cluster: " + err.Error())
 		}
 	}
@@ -195,7 +231,14 @@ func StartCluster(systemConf *conf.SystemConf) (raftInstance *Raft, err error) {
 	c.LeaderLeaseTimeout = systemConf.ClusterLeaderLeaseTimeout()
 	c.ElectionTimeout = systemConf.ClusterElectionTimeout()
 
-	raftInstance = &Raft{Config: c, logger: logger, Serf: serfListener, RestartWatch: make(chan bool), ReloadCluster: make(chan bool), serfEvents: serfEvents}
+	raftInstance = &Raft{
+		Config:        c,
+		logger:        logger,
+		Serf:          serfListener,
+		RestartWatch:  make(chan bool),
+		ReloadCluster: make(chan bool),
+		serfEvents:    serfEvents,
+	}
 
 	err = raftInstance.CreateRaftDb(systemConf.GetClusterMetadataStorePath())
 	if err != nil {
@@ -236,6 +279,29 @@ func isBootstrapped(instance *Raft) bool {
 		return true
 	}
 	return false
+}
+
+func readMembersFile(cfg string) ([]string, error) {
+	membersList := make([]string, 0)
+	membersFile, err := os.Open(cfg)
+	if err != nil {
+		return nil, err
+	}
+	defer membersFile.Close()
+
+	scanner := bufio.NewScanner(membersFile)
+	for scanner.Scan() {
+		member := strings.TrimSpace(scanner.Text())
+		if member != "" && !strings.HasPrefix(member, "#") {
+			slog.Infof("Cluster configuration. Member initial list file: %s. Member: %s", cfg, member)
+			membersList = append(membersList, member)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return membersList, nil
 }
 
 func bootstrapCluster(instance *Raft, raftListen string, members []string) error {

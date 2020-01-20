@@ -248,6 +248,7 @@ type ClusterConf struct {
 	MetadataStorePath  string
 	RPCListen          string
 	Members            []string
+	MembersFile        string
 	HeartbeatTimeout   int64
 	ElectionTimeout    int64
 	LeaderLeaseTimeout int64
@@ -547,6 +548,10 @@ func (sc *SystemConf) GetClusterMetadataStorePath() string {
 
 func (sc *SystemConf) GetClusterMembers() []string {
 	return sc.ClusterConf.Members
+}
+
+func (sc *SystemConf) GetClusterMembersFile() string {
+	return sc.ClusterConf.MembersFile
 }
 
 // GetRuleVars user defined variables that will be available to the rule configuration

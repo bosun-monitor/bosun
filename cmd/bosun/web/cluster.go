@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"bosun.org/cmd/bosun/cluster"
 	"bosun.org/slog"
@@ -57,24 +56,6 @@ func ClusterStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request)
 	cs.Stats = schedule.RaftInstance.Instance.Stats()
 	cs.State = schedule.RaftInstance.Instance.State().String()
 	return cs, nil
-}
-
-func ClusterMemberRemove(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	var data struct {
-		Id raft.ServerID
-	}
-	j := json.NewDecoder(r.Body)
-	if err := j.Decode(&data); err != nil {
-		return nil, err
-	}
-
-	res := ClusterOpResult{Status: "ok"}
-	f := schedule.RaftInstance.Instance.RemoveServer(data.Id, schedule.RaftInstance.Instance.LastIndex(), 5*time.Second)
-	if f.Error() != nil {
-		res.Status = "error"
-		res.Error = f.Error().Error()
-	}
-	return res, nil
 }
 
 func ClusterChangeMasterTo(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
