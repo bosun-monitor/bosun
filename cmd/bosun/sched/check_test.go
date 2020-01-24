@@ -44,7 +44,7 @@ func TestCheckFlapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(&conf.SystemConf{}, c)
+	s, _ := initSched(&conf.SystemConf{}, c, utcNow())
 	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[models.AlertKey]*models.Event{
@@ -132,7 +132,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{}, c)
+	s, err := initSched(&conf.SystemConf{}, c, utcNow())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func TestDelayedClose(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(&conf.SystemConf{}, c)
+	s, _ := initSched(&conf.SystemConf{}, c, utcNow())
 	now := time.Now()
 	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
@@ -310,7 +310,7 @@ func TestIncidentIds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(&conf.SystemConf{}, c)
+	s, _ := initSched(&conf.SystemConf{}, c, utcNow())
 	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[models.AlertKey]*models.Event{
@@ -377,7 +377,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{}, c)
+	s, err := initSched(&conf.SystemConf{}, c, utcNow())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -424,7 +424,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c)
+	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c, utcNow())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -487,7 +487,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c)
+	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c, utcNow())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +555,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{}, c)
+	s, err := initSched(&conf.SystemConf{}, c, utcNow())
 	if err != nil {
 		t.Fatal(err)
 	}

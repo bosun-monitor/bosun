@@ -57,7 +57,8 @@ type Schedule struct {
 	pendingUnknowns map[notificationGroupKey][]*models.IncidentState
 
 	lastLogTimes map[models.AlertKey]time.Time
-	LastCheck    time.Time
+	LastCheck,
+	StartTime time.Time
 
 	ctx *checkContext
 
@@ -90,6 +91,7 @@ func (s *Schedule) Init(name string, systemConf conf.SystemConfProvider, ruleCon
 	s.pendingUnknowns = make(map[notificationGroupKey][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
 	s.LastCheck = utcNow()
+	s.StartTime = utcNow()
 	s.ctx = &checkContext{utcNow(), cache.New(name, 0)}
 	s.DataAccess = dataAccess
 	// Initialize the context and waitgroup used to gracefully shutdown bosun as well as reload

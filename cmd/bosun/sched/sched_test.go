@@ -15,7 +15,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
-	"bosun.org/cmd/bosun/database/test"
+	dbtest "bosun.org/cmd/bosun/database/test"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -62,14 +62,14 @@ func setup() func() {
 	return closer
 }
 
-func initSched(sc conf.SystemConfProvider, c conf.RuleConfProvider) (*Schedule, error) {
+func initSched(sc conf.SystemConfProvider, c conf.RuleConfProvider, startTime time.Time) (*Schedule, error) {
 	s := new(Schedule)
 	err := s.Init("test_schedule", sc, c, db, nil, nil, false, false)
+	s.StartTime = startTime // while init we set starting time to now(). Let's pretend we've been running for a while.
 	return s, err
 }
 
 func testSched(t *testing.T, st *schedTest) (s *Schedule) {
-	bosunStartupTime = time.Date(1900, 0, 0, 0, 0, 0, 0, time.UTC) //pretend we've been running for a while.
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req opentsdb.Request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -107,7 +107,7 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 
 	time.Sleep(time.Millisecond * 250)
 	sysConf := &conf.SystemConf{CheckFrequency: conf.Duration{Duration: time.Minute * 5}, DefaultRunEvery: 1, UnknownThreshold: 5, MinGroupSize: 5, OpenTSDBConf: conf.OpenTSDBConf{Host: u.Host, ResponseLimit: 1 << 20}}
-	s, _ = initSched(sysConf, c)
+	s, _ = initSched(sysConf, c, time.Date(1900, 0, 0, 0, 0, 0, 0, time.UTC)) //pretend we've been running for a while
 	for ak, time := range st.touched {
 		s.DataAccess.State().TouchAlertKey(ak, time)
 	}

@@ -62,7 +62,7 @@ func TestActionNotificationGrouping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{}, c)
+	s, err := initSched(&conf.SystemConf{}, c, utcNow())
 	if err != nil {
 		t.Fatal(err)
 	}
