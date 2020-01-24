@@ -523,11 +523,9 @@ func (s *Schedule) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, une
 	return unknown, uneval
 }
 
-var bosunStartupTime = utcNow()
-
 func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.AlertKey {
 	keys := []models.AlertKey{}
-	if utcNow().Sub(bosunStartupTime) < s.SystemConf.GetCheckFrequency() {
+	if utcNow().Sub(s.StartTime) < s.SystemConf.GetCheckFrequency() {
 		return keys
 	}
 	if !s.AlertSuccessful(alert) {
