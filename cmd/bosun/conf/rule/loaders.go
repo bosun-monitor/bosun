@@ -123,6 +123,19 @@ func isHTMLTemplate(name string) bool {
 
 var lookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
 
+func isConfigTrue(value string) bool {
+	switch strings.Trim(strings.ToLower(value), " \t\n") {
+	case
+		"",
+		"false",
+		"off",
+		"no",
+		"0":
+		return false
+	}
+	return true
+}
+
 func (c *Conf) loadAlert(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Alerts[name]; ok {
@@ -134,6 +147,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		CritNotification:  new(conf.Notifications),
 		WarnNotification:  new(conf.Notifications),
 		AlertTemplateKeys: map[string]*template.Template{},
+		CloseOnNormal:     true,
 	}
 	a.Text = s.RawText
 	a.Locator = newSectionLocator(s)
@@ -218,13 +232,15 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.MaxLogFrequency = d
 		case "unjoinedOk":
-			a.UnjoinedOK = true
+			a.UnjoinedOK = isConfigTrue(v)
 		case "ignoreUnknown":
-			a.IgnoreUnknown = true
+			a.IgnoreUnknown = isConfigTrue(v)
 		case "unknownIsNormal":
-			a.UnknownsNormal = true
+			a.UnknownsNormal = isConfigTrue(v)
+		case "closeOnNormal":
+			a.CloseOnNormal = isConfigTrue(v)
 		case "log":
-			a.Log = true
+			a.Log = isConfigTrue(v)
 		case "runEvery":
 			var err error
 			a.RunEvery, err = strconv.Atoi(v)
