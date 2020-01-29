@@ -223,6 +223,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.IgnoreUnknown = true
 		case "unknownIsNormal":
 			a.UnknownsNormal = true
+		case "closeOnNormal":
+			a.CloseOnNormal = true
 		case "log":
 			a.Log = true
 		case "runEvery":
