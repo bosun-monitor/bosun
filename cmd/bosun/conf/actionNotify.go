@@ -10,6 +10,7 @@ import (
 
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/models"
+	"bosun.org/opentsdb"
 )
 
 type defaultTemplates struct {
@@ -45,6 +46,35 @@ type ActionNotificationContext struct {
 	Message    string
 	ActionType models.ActionType
 	makeLink   func(string, *url.Values) string
+	rcp        RuleConfProvider
+}
+
+func (c ActionNotificationContext) Lookup(table, key string) (string, error) {
+	return c.LookupAll(table, key, c.States[0].IncidentState.AlertKey.Group())
+}
+
+func (c ActionNotificationContext) LookupAll(table, key string, group interface{}) (string, error) {
+	var t opentsdb.TagSet
+	switch v := group.(type) {
+	case string:
+		var err error
+		t, err = opentsdb.ParseTags(v)
+		if err != nil {
+			return "", err
+		}
+	case opentsdb.TagSet:
+		t = v
+	}
+	l := c.rcp.GetLookup(table)
+	if l == nil {
+		err := fmt.Errorf("unknown lookup table %v", table)
+		return "", err
+	}
+	if v, ok := l.ToExpr().Get(key, t); ok {
+		return v, nil
+	}
+	err := fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.States[0].IncidentState.AlertKey.Group())
+	return "", err
 }
 
 type ActionNotificationIncidentState struct {
@@ -102,6 +132,7 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, c System
 			Message:    message,
 			ActionType: at,
 			makeLink:   c.MakeLink,
+			rcp:        rcp,
 		}
 		err := tpl.Execute(buf, ctx)
 		if err != nil {
