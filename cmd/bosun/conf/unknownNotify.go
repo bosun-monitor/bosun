@@ -25,18 +25,6 @@ func (u *unknownContext) IncidentUnknownLink(i int64) string {
 	})
 }
 
-var defaultUnknownTemplate = &Template{
-	Body: template.Must(template.New("body").Parse(`
-		<p>Time: {{.Time}}
-		<p>Name: {{.Name}}
-		<p>Alerts:
-		{{range .Group}}
-			<br>{{.}}
-		{{end}}
-	`)),
-	Subject: template.Must(template.New("subject").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
-}
-
 var unknownDefaults defaultTemplates
 
 func init() {
