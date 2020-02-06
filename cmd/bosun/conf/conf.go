@@ -123,6 +123,7 @@ type RuleConfProvider interface {
 	GetNotification(string) *Notification
 
 	GetLookup(string) *Lookup
+	GetUnknownTemplate() *Template
 
 	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
 	Squelched(*Alert, opentsdb.TagSet) bool

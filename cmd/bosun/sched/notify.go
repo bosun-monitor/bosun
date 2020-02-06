@@ -208,19 +208,19 @@ func (s *Schedule) sendUnknownNotifications() {
 				if c >= threshold && threshold > 0 {
 					if !hitThreshold && len(groupSets) == c {
 						// If the threshold is hit but only 1 email remains, just send the normal unknown
-						n.NotifyUnknown(gk.template, s.SystemConf, name, group, ustates[ak])
+						n.NotifyUnknown(gk.template, s.SystemConf, s.RuleConf, name, group, ustates[ak])
 						break
 					}
 					hitThreshold = true
 					overThresholdSets[name] = group
 					multiUstates = append(multiUstates, ustates[ak])
 				} else {
-					n.NotifyUnknown(gk.template, s.SystemConf, name, group, ustates[ak])
+					n.NotifyUnknown(gk.template, s.SystemConf, s.RuleConf, name, group, ustates[ak])
 				}
 			}
 		}
 		if len(overThresholdSets) > 0 {
-			n.NotifyMultipleUnknowns(gk.template, s.SystemConf, overThresholdSets, multiUstates)
+			n.NotifyMultipleUnknowns(gk.template, s.SystemConf, s.RuleConf, overThresholdSets, multiUstates)
 		}
 	}
 	s.pendingUnknowns = make(map[notificationGroupKey][]*models.IncidentState)

@@ -784,6 +784,14 @@ func (c *Conf) GetLookup(s string) *conf.Lookup {
 	return c.Lookups[s]
 }
 
+func (c *Conf) GetUnknownTemplate() *conf.Template {
+	if (len(c.unknownTemplate) == 0) {
+		return nil;
+	}
+
+	return c.GetTemplate(c.unknownTemplate)
+}
+
 func (c *Conf) GetSquelches() conf.Squelches {
 	return c.Squelch
 }
