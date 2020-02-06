@@ -785,7 +785,7 @@ func (c *Conf) GetLookup(s string) *conf.Lookup {
 }
 
 func (c *Conf) GetUnknownTemplate() *conf.Template {
-	if (len(c.unknownTemplate) == 0) {
+	if len(c.unknownTemplate) == 0 {
 		return nil;
 	}
 
