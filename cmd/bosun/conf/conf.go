@@ -124,6 +124,9 @@ type RuleConfProvider interface {
 
 	GetLookup(string) *Lookup
 
+	GetUnknownTemplate() *Template
+	GetUnknownMultiTemplate() *Template
+
 	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
 	Squelched(*Alert, opentsdb.TagSet) bool
 	Expand(string, map[string]string, bool) string

@@ -16,27 +16,32 @@ type defaultTemplates struct {
 	body, subject *template.Template
 }
 
-var actionDefaults defaultTemplates
+var actionDefaults *Template
 
 func init() {
-	subject := `{{$first := index .States 0}}{{$count := len .States}}
-{{.User}} {{.ActionType}}
-{{if gt $count 1}} {{$count}} Alerts. 
-{{else}} Incident #{{$first.Id}} ({{$first.Subject}}) 
-{{end}}`
-	body := `{{$count := len .States}}{{.User}} {{.ActionType}} {{$count}} alert{{if gt $count 1}}s{{end}}: <br/>
-<strong>Message:</strong> {{.Message}} <br/>
-<strong>Incidents:</strong> <br/>
-<ul>
-	{{range .States}}
+    actionDefaults = &Template{
+        Body: template.Must(template.New("body").Parse(`
+          {{$count := len .States}}{{.User}} {{.ActionType}} {{$count}} alert{{if gt $count 1}}s{{end}}: <br/>
+          <strong>Message:</strong> {{.Message}} <br/>
+          <strong>Incidents:</strong> <br/>
+	<ul>
+		{{range .States}}
 		<li>
 			<a href="{{$.IncidentLink .Id}}">#{{.Id}}:</a> 
 			{{.Subject}}
 		</li>
+		{{end}}
+	</ul>
+    `)),
+    Subject: template.Must(template.New("subject").Parse(`
+	{{$first := index .States 0}}{{$count := len .States}}
+	{{.User}} {{.ActionType}}
+	{{if gt $count 1}} {{$count}} Alerts. 
+	{{else}} Incident #{{$first.Id}} ({{$first.Subject}}) 
 	{{end}}
-</ul>`
-	actionDefaults.subject = template.Must(template.New("subject").Parse(strings.Replace(subject, "\n", "", -1)))
-	actionDefaults.body = template.Must(template.New("body").Parse(body))
+    `)),
+  }
+
 }
 
 type ActionNotificationContext struct {

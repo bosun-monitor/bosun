@@ -25,23 +25,10 @@ func (u *unknownContext) IncidentUnknownLink(i int64) string {
 	})
 }
 
-var unknownDefaults defaultTemplates
-
 func init() {
-	subject := `{{.Name}}: {{.Group | len}} unknown alerts`
-	body := `
-	<p>Time: {{.Time}}
-	<p>Name: {{.Name}}
-	<p>Alerts:
-	{{range .Group}}
-		<br>{{.}}
-	{{end}}
-`
-	unknownDefaults.subject = template.Must(template.New("subject").Parse(subject))
-	unknownDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
-func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey, states *models.IncidentState) *PreparedNotifications {
+func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, rulesConfig RuleConfProvider, name string, aks []models.AlertKey, states *models.IncidentState) *PreparedNotifications {
 	ctx := &unknownContext{
 		Time:     time.Now().UTC(),
 		Name:     name,
@@ -96,15 +83,13 @@ func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name st
 		NotifyType:  2,
 	}
 
-	n.prepareFromTemplateKeys(pn, tks, render, unknownDefaults, details)
+	n.prepareFromTemplateKeys(pn, tks, render, rulesConfig.GetUnknownTemplate(), details)
 	return pn
 }
 
-func (n *Notification) NotifyUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey, states *models.IncidentState) {
-	go n.PrepareUnknown(t, c, name, aks, states).Send(c)
+func (n *Notification) NotifyUnknown(t *Template, c SystemConfProvider, rulesConfig RuleConfProvider, name string, aks []models.AlertKey, states *models.IncidentState) {
+	go n.PrepareUnknown(t, c, rulesConfig, name, aks, states).Send(c)
 }
-
-var unknownMultiDefaults defaultTemplates
 
 type unknownMultiContext struct {
 	Time      time.Time
@@ -114,28 +99,9 @@ type unknownMultiContext struct {
 }
 
 func init() {
-	subject := `{{.Groups | len}} unknown alert instances suppressed`
-	body := `
-	<p>Threshold of {{ .Threshold }} reached for unknown notifications. The following unknown
-	group emails were not sent.
-	<ul>
-	{{ range $group, $alertKeys := .Groups }}
-		<li>
-			{{ $group }}
-			<ul>
-				{{ range $ak := $alertKeys }}
-				<li>{{ $ak }}</li>
-				{{ end }}
-			</ul>
-		</li>
-	{{ end }}
-	</ul>
-	`
-	unknownMultiDefaults.subject = template.Must(template.New("subject").Parse(subject))
-	unknownMultiDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
-func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState) *PreparedNotifications {
+func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider, rulesConfig RuleConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState) *PreparedNotifications {
 	ctx := &unknownMultiContext{
 		Time:      time.Now().UTC(),
 		Threshold: c.GetUnknownThreshold(),
@@ -177,19 +143,19 @@ func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider
 		NotifyType:  3,
 	}
 
-	n.prepareFromTemplateKeys(pn, tks, render, unknownMultiDefaults, details)
+	n.prepareFromTemplateKeys(pn, tks, render, rulesConfig.GetUnknownMultiTemplate(), details)
 	return pn
 }
 
-func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState) {
-	n.PrepareMultipleUnknowns(t, c, groups, states).Send(c)
+func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider, rulesConfig RuleConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState) {
+	n.PrepareMultipleUnknowns(t, c, rulesConfig, groups, states).Send(c)
 }
 
 // code common to PrepareAction / PrepareUnknown / PrepareMultipleUnknowns
-func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks NotificationTemplateKeys, render func(string, *template.Template) (string, error), defaults defaultTemplates, alertDetails *NotificationDetails) {
+func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks NotificationTemplateKeys, render func(string, *template.Template) (string, error), defaults *Template, alertDetails *NotificationDetails) {
 	if len(n.Email) > 0 || n.Post != nil || tks.PostTemplate != "" {
-		body, _ := render(tks.BodyTemplate, defaults.body)
-		if subject, err := render(tks.EmailSubjectTemplate, defaults.subject); err == nil {
+		body, _ := render(tks.BodyTemplate, defaults.Body)
+		if subject, err := render(tks.EmailSubjectTemplate, defaults.Subject); err == nil {
 			pn.Email = n.PrepEmail(subject, body, "", nil)
 		}
 	}
@@ -210,7 +176,7 @@ func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks No
 		getURL = n.Get.String()
 	}
 	if postURL != "" {
-		body, _ := render(tks.BodyTemplate, defaults.subject)
+		body, _ := render(tks.BodyTemplate, defaults.Subject)
 		pn.HTTP = append(pn.HTTP, n.PrepHttp("POST", postURL, body, alertDetails))
 	}
 	if getURL != "" {
