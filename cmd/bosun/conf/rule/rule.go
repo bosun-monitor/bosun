@@ -197,6 +197,10 @@ func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]stri
 func (c *Conf) configureUnknownTemplates() {
 	if len(c.unknownTemplateName) > 0 {
 		c.unknownTemplate = c.GetTemplate(c.unknownTemplateName)
+		if c.unknownTemplate == nil {
+		  c.errorf("unknownTemplate not found")
+		}
+		
 	} else {
 
 		c.unknownTemplate = &conf.Template{
@@ -214,6 +218,9 @@ func (c *Conf) configureUnknownTemplates() {
 
 	if len(c.unknownMultiTemplateName) > 0 {
 		c.unknownMultiTemplate = c.GetTemplate(c.unknownMultiTemplateName)
+		if c.unknownMultiTemplate == nil {
+		  c.errorf("unknownMultiTemplate not found")
+		}
 	} else {
 
 		c.unknownMultiTemplate = &conf.Template{
