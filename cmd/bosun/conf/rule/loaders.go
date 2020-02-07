@@ -441,7 +441,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				// look for and trim suffix if there
 				// trim the templateKey and explicitly match actiontype
 				for s, t := range models.ActionShortNames {
-					for _, e := range []string{"Body", "Get", "EmailSubject"} {
+					for _, e := range []string{"Body", "Get", "Post", "EmailSubject"} {
 						if strings.Compare(strings.TrimPrefix(keyType, e), s) == 0 {
 							at = t
 							keyType = keyType[:len(keyType)-len(s)]
