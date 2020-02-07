@@ -19,8 +19,8 @@ type defaultTemplates struct {
 var actionDefaults *Template
 
 func init() {
-    actionDefaults = &Template{
-        Body: template.Must(template.New("body").Parse(`
+	    actionDefaults = &Template{
+			Body: template.Must(template.New("body").Parse(`
           {{$count := len .States}}{{.User}} {{.ActionType}} {{$count}} alert{{if gt $count 1}}s{{end}}: <br/>
           <strong>Message:</strong> {{.Message}} <br/>
           <strong>Incidents:</strong> <br/>
@@ -33,14 +33,14 @@ func init() {
 		{{end}}
 	</ul>
     `)),
-    Subject: template.Must(template.New("subject").Parse(`
+			Subject: template.Must(template.New("subject").Parse(`
 	{{$first := index .States 0}}{{$count := len .States}}
 	{{.User}} {{.ActionType}}
 	{{if gt $count 1}} {{$count}} Alerts. 
 	{{else}} Incident #{{$first.Id}} ({{$first.Subject}}) 
 	{{end}}
     `)),
-  }
+	}
 
 }
 

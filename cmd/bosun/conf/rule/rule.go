@@ -41,13 +41,13 @@ type Conf struct {
 
 	sysVars map[string]string
 
-	tree            *parse.Tree
-	node            parse.Node
+	tree                *parse.Tree
+	node                parse.Node
 	unknownTemplateName string
-	unknownTemplate *conf.Template
+	unknownTemplate     *conf.Template
 
 	unknownMultiTemplateName string
-	unknownMultiTemplate *conf.Template
+	unknownMultiTemplate     *conf.Template
 
 	bodies          *template.Template
 	subjects        *template.Template
