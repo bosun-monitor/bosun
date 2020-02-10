@@ -1,3 +1,4 @@
+.idea/
 cmd/bosun/dev.conf
 docs/.jekyll-metadata
 node_modules/
@@ -6,5 +7,6 @@ cmd/bosun/bosun
 cmd/scollector/scollector.toml
 cmd/scollector/scollector.exe
 cmd/bosun/bosun.toml
+cmd/bosun/bosunrules.conf
 cmd/scollector/scollector
 buildoutput

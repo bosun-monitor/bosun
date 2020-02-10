@@ -202,7 +202,7 @@ func setExternalTags(tags opentsdb.TagSet) {
 	if v, ok := tags["host"]; ok && v == "" {
 		delete(tags, "host")
 	} else if v == "" {
-		tags["host"] = util.Hostname
+		tags["host"] = util.GetHostManager().GetHostName()
 	}
 	for k, v := range AddTags {
 		if _, ok := tags[k]; !ok {

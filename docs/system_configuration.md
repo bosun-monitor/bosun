@@ -45,9 +45,15 @@ notifications.
 ## Keys
 
 ### Hostname
-The hostname that Bosun uses to construct its links. The common use case
-is in any [template functions](/definitions#template-functions) that
-construct links.
+Bosun records state in a Redis store and much of this state is associated with particular host names.  This works 
+well when Bosun is run on a dedicated machine however if it's run within a container orchestration platform, 
+where instance names can change very frequently then it can lead to a low quality recording of state and 
+excessive disk and memory use (as a new copy of this state is created every time the hostname changes).  To overcome 
+this issue you can define a custom hostname and this will mean that even when a container instance is recreated Bosun 
+will continue to use the previously known state.
+
+This setting will also be used during the construction of links in any 
+[template functions](/definitions#template-functions) that need them.
 
 Example:
 `Hostname = "bosun.example.com"`

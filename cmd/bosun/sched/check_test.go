@@ -1,6 +1,8 @@
 package sched
 
 import (
+	"bosun.org/host"
+	"bosun.org/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +18,12 @@ import (
 )
 
 func TestCheckFlapping(t *testing.T) {
+	hm, err := host.NewManager(false)
+	if err != nil {
+		t.Error(err)
+	}
+	util.SetHostManager(hm)
+
 	defer setup()()
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		template t {
