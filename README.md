@@ -1,14 +1,24 @@
-# bosun
+# User Survey
+As you may know, Skyscanner has recently taken ownership of the Bosun project from Stack Exchange.  One of the first things we need to do is understand how the system is being used by the wider community so we can plan where to take it into the future.
+
+We would be very grateful if you could take a few minutes to complete the following survey which will close on the 31st of March 2020.  Once the survey has closed we will carefully consider all responses and use them to help define our future roadmap.
+
+Thank you
+
+https://forms.office.com/Pages/ResponsePage.aspx?id=OuXPH7hLVUekG0mIdVPqsKRyqK07lL1PlMITW3lQwNpURjBJUkRSV0FZSDFXOVpFTUFaNzU0NlhKUS4u
+
+
+# Bosun
 
 Bosun is a time series alerting framework developed by Stack Exchange. Scollector is a metric collection agent. Learn more at [bosun.org](http://bosun.org).
 
 [![Build Status](https://travis-ci.org/bosun-monitor/bosun.svg?branch=master)](https://travis-ci.org/bosun-monitor/bosun/branches)
 
-## building
+## Building
 
 bosun and scollector are found under the `cmd` directory. Run `go build` in the corresponding directories to build each project.
 
-## developing
+## Developing
 
 Install:
 
