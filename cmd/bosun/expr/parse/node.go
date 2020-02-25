@@ -353,7 +353,7 @@ func newBinary(operator item, arg1, arg2 Node) *BinaryNode {
 }
 
 func (b *BinaryNode) String() string {
-	return fmt.Sprintf("%s %s %s", b.Args[0], b.Operator.val, b.Args[1])
+	return fmt.Sprintf("(%s %s %s)", b.Args[0], b.Operator.val, b.Args[1])
 }
 
 func (b *BinaryNode) StringAST() string {
