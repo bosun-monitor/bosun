@@ -100,15 +100,16 @@ const (
 var parseTests = []parseTest{
 	{"number", "1", noError, "1"},
 	{"function", `avg(q("test", "1m"))`, noError, `avg(q("test", "1m"))`},
-	{"addition", "1+2", noError, "(1 + 2)"},
-	{"expression", "1+2*3/4-5 && !2|| -4", noError, "((((1 + ((2 * 3) / 4)) - 5) && !2) || -4)"},
+	{"addition", "1+2", noError, "1 + 2"},
+	{"expression", "1+2*3/4-5 && !2|| -4", noError, "1 + 2 * 3 / 4 - 5 && !2 || -4"},
 	{"expression with func", `avg(q("q", "1m"))>=0.7&&avg(q("q", "1m"))!=3-0x8`, noError,
-		`((avg(q("q", "1m")) >= 0.7) && (avg(q("q", "1m")) != (3 - 0x8)))`},
-	{"func types", `avg(q("q", "1m"))>avg(q("q", "1m"))+avg(q("q", "1m"))`, noError, `(avg(q("q", "1m")) > (avg(q("q", "1m")) + avg(q("q", "1m"))))`},
-	{"series compare", `q("q", "1m")>0`, noError, `(q("q", "1m") > 0)`},
+		`avg(q("q", "1m")) >= 0.7 && avg(q("q", "1m")) != 3 - 0x8`},
+	{"func types", `avg(q("q", "1m"))>avg(q("q", "1m"))+avg(q("q", "1m"))`, noError,
+		`avg(q("q", "1m")) > avg(q("q", "1m")) + avg(q("q", "1m"))`},
+	{"series compare", `q("q", "1m")>0`, noError, `q("q", "1m") > 0`},
 	{"unary series", `!q("q", "1m")`, noError, `!q("q", "1m")`},
 	{"expr in func", `forecastlr(q("q", "1m"), -1)`, noError, `forecastlr(q("q", "1m"), -1)`},
-	{"nested func expr", `avg(q("q","1m")>0)`, noError, `avg((q("q", "1m") > 0))`},
+	{"nested func expr", `avg(q("q","1m")>0)`, noError, `avg(q("q", "1m") > 0)`},
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},
@@ -116,6 +117,15 @@ var parseTests = []parseTest{
 	{"bad type", `band("q", "1h", "1m", "8")`, hasError, ""},
 	{"wrong number args", `avg(q("q", "1m"), "1m", 1)`, hasError, ""},
 	{"2 series math", `band(q("q", "1m"))+band(q("q", "1m"))`, hasError, ""},
+	// Parentheses.
+	{"redundant parens", "(5)", noError, "5"},
+	{"redundant nested parens", "(((5)))", noError, "5"},
+	{"redundant unary parens", "-(5)", noError, "-5"},
+	{"necessary unary parens", "-(5 + 3)", noError, "-(5 + 3)"},
+	{"redundant assoc parens", "(10 - 5) - 2", noError, "10 - 5 - 2"},
+	{"necessary assoc parens", "10 - (5 - 2)", noError, "10 - (5 - 2)"},
+	{"redundant precedence parens", "10 + (5 * 2)", noError, "10 + 5 * 2"},
+	{"necessary precedence parens", "(10 + 5) * 2", noError, "(10 + 5) * 2"},
 }
 
 func TestParse(t *testing.T) {

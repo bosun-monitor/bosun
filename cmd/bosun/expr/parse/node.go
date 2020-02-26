@@ -352,8 +352,63 @@ func newBinary(operator item, arg1, arg2 Node) *BinaryNode {
 	return &BinaryNode{NodeType: NodeBinary, Pos: operator.pos, Args: [2]Node{arg1, arg2}, Operator: operator, OpStr: operator.val}
 }
 
+var binaryPrecedence = map[itemType]int{
+	itemPow: 1,
+
+	itemMult: 2,
+	itemDiv:  2,
+	itemMod:  2,
+
+	itemPlus:  3,
+	itemMinus: 3,
+
+	itemEq:        4,
+	itemNotEq:     4,
+	itemGreater:   4,
+	itemGreaterEq: 4,
+	itemLess:      4,
+	itemLessEq:    4,
+
+	itemAnd: 5,
+
+	itemOr: 6,
+}
+
+type operatorSide int
+
+const (
+	left operatorSide = iota
+	right
+)
+
+func (b *BinaryNode) doesChildNeedParens(child Node, childSide operatorSide) bool {
+	if child.Type() != NodeBinary {
+		return false
+	}
+	parentPrecedence := binaryPrecedence[b.Operator.typ]
+	childPrecedence := binaryPrecedence[child.(*BinaryNode).Operator.typ]
+	childOperatorBindsTighter := childPrecedence < parentPrecedence
+	childOperatorBindsWeaker := childPrecedence > parentPrecedence
+	if childOperatorBindsTighter {
+		return false
+	}
+	if childOperatorBindsWeaker {
+		return true
+	}
+	isLeftAssociative := true // Currently all Bosun binary operators are left associative
+	return (childSide == left) != isLeftAssociative
+}
+
 func (b *BinaryNode) String() string {
-	return fmt.Sprintf("(%s %s %s)", b.Args[0], b.Operator.val, b.Args[1])
+	leftChild := b.Args[0].String()
+	rightChild := b.Args[1].String()
+	if b.doesChildNeedParens(b.Args[0], left) {
+		leftChild = fmt.Sprintf("(%s)", leftChild)
+	}
+	if b.doesChildNeedParens(b.Args[1], right) {
+		rightChild = fmt.Sprintf("(%s)", rightChild)
+	}
+	return fmt.Sprintf("%s %s %s", leftChild, b.Operator.val, rightChild)
 }
 
 func (b *BinaryNode) StringAST() string {
@@ -423,7 +478,11 @@ func newUnary(operator item, arg Node) *UnaryNode {
 }
 
 func (u *UnaryNode) String() string {
-	return fmt.Sprintf("%s%s", u.Operator.val, u.Arg)
+	child := u.Arg.String()
+	if u.Arg.Type() == NodeBinary {
+		child = fmt.Sprintf("(%s)", child)
+	}
+	return fmt.Sprintf("%s%s", u.Operator.val, child)
 }
 
 func (u *UnaryNode) StringAST() string {
