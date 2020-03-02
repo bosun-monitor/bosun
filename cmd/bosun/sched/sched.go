@@ -334,17 +334,21 @@ func (s *Schedule) GetOpenStates() (States, error) {
 }
 
 type StateGroup struct {
-	Active        bool `json:",omitempty"`
-	Status        models.Status
-	CurrentStatus models.Status
-	Silenced      bool
-	IsError       bool                  `json:",omitempty"`
-	Subject       string                `json:",omitempty"`
-	Alert         string                `json:",omitempty"`
-	AlertKey      models.AlertKey       `json:",omitempty"`
-	Ago           string                `json:",omitempty"`
-	State         *models.IncidentState `json:",omitempty"`
-	Children      []*StateGroup         `json:",omitempty"`
+	Active          bool `json:",omitempty"`
+	Status          models.Status
+	CurrentStatus   models.Status
+	Silenced        bool
+	Unevaluated     bool
+	LastAlertStatus string                `json:",omitempty"`
+	PendingClose    bool                  `json:",omitempty"`
+	IsError         bool                  `json:",omitempty"`
+	Subject         string                `json:",omitempty"`
+	IncidentID      int64                 `json:",omitempty"`
+	Alert           string                `json:",omitempty"`
+	AlertKey        models.AlertKey       `json:",omitempty"`
+	Ago             string                `json:",omitempty"`
+	State           *models.IncidentState `json:",omitempty"`
+	Children        []*StateGroup         `json:",omitempty"`
 }
 
 type StateGroups struct {
@@ -356,7 +360,7 @@ type StateGroups struct {
 	FailingAlerts, UnclosedErrors int
 }
 
-func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
+func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string, short bool) (*StateGroups, error) {
 	var silenced SilenceTester
 	T.Step("Silenced", func(miniprofiler.Timer) {
 		silenced = s.Silenced()
@@ -430,17 +434,32 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 					}
 					for _, ak := range group {
 						st := status[ak]
-						g.Children = append(g.Children, &StateGroup{
+						pendingClose := false
+						for _, action := range st.Actions {
+							if action.Deadline != nil && !(action.Fullfilled || action.Cancelled) {
+								pendingClose = true
+								break
+							}
+						}
+						stg := &StateGroup{
 							Active:   tuple.Active,
 							Status:   tuple.Status,
 							Silenced: tuple.Silenced,
 							AlertKey: ak,
-							Alert:    ak.Name(),
 							Subject:  string(st.Subject),
 							Ago:      marshalTime(st.Last().Time),
-							State:    st,
 							IsError:  !s.AlertSuccessful(ak.Name()),
-						})
+						}
+						if short {
+							stg.IncidentID = st.Id
+							stg.LastAlertStatus = st.Last().Status.String()
+							stg.Unevaluated = st.Unevaluated
+							stg.PendingClose = pendingClose
+						} else {
+							stg.State = st
+							stg.Alert = ak.Name()
+						}
+						g.Children = append(g.Children, stg)
 					}
 					if len(g.Children) == 1 && g.Children[0].Subject != "" {
 						g.Subject = g.Children[0].Subject

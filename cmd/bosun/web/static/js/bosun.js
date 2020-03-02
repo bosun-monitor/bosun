@@ -119,16 +119,12 @@ var IncidentState = (function () {
         }
         this.NextId = is.NextId;
     }
-    IncidentState.prototype.IsPendingClose = function () {
-        for (var _i = 0, _a = this.Actions; _i < _a.length; _i++) {
-            var action = _a[_i];
-            if (action.Deadline != undefined && !(action.Fullfilled || action.Cancelled)) {
-                return true;
-            }
-        }
-        return false;
-    };
     return IncidentState;
+}());
+var AlertState = (function () {
+    function AlertState(sg) {
+    }
+    return AlertState;
 }());
 var StateGroup = (function () {
     function StateGroup(sg) {
@@ -137,13 +133,13 @@ var StateGroup = (function () {
         this.CurrentStatus = sg.CurrentStatus;
         this.Silenced = sg.Silenced;
         this.IsError = sg.IsError;
+        this.Unevaluated = sg.Unevaluated;
+        this.LastAlertStatus = sg.LastAlertStatus;
+        this.PendingClose = sg.PendingClose;
         this.Subject = sg.Subject;
-        this.Alert = sg.Alert;
         this.AlertKey = sg.AlertKey;
         this.Ago = sg.Ago;
-        if (sg.State) {
-            this.State = new IncidentState(sg.State);
-        }
+        this.IncidentID = sg.IncidentID;
         this.Children = new Array();
         if (sg.Children) {
             for (var _i = 0, _a = sg.Children; _i < _a.length; _i++) {
@@ -369,7 +365,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             var d = $q.defer();
             scheduleFilter = filter;
             $scope.animate();
-            var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
+            var p = $http.get('/api/alerts?v=short&filter=' + encodeURIComponent(filter || ""))
                 .success(function (data) {
                 $scope.schedule = new StateGroups(data);
                 $scope.timeanddate = data.TimeAndDate;
@@ -3716,13 +3712,13 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', function ($location, 
                             return;
                         }
                         if (group.AlertKey) {
-                            if (group.State.CurrentStatus != 'normal') {
+                            if (group.CurrentStatus != 'normal') {
                                 active = true;
                             }
                             keys.push(group.AlertKey);
                         }
                         angular.forEach(group.Children, function (child) {
-                            if (child.State.CurrentStatus != 'normal') {
+                            if (child.CurrentStatus != 'normal') {
                                 active = true;
                             }
                             keys.push(child.AlertKey);
@@ -3758,25 +3754,59 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                 var myIdx = attrs["tsGrp"];
                 scope.currentStatus = attrs["tsGrpstatus"];
                 scope.name = scope.child.AlertKey;
-                scope.state = scope.child.State;
+                scope.loaded = false;
+                scope.incidentId = scope.child.IncidentID;
+                scope.isPendingClose = scope.child.PendingClose;
                 scope.action = function (type) {
                     var key = encodeURIComponent(scope.name);
-                    var active = scope.state.CurrentStatus != 'normal';
+                    var active = scope.CurrentStatus != 'normal';
                     return '/action?type=' + type + '&key=' + key + '&active=' + active;
                 };
                 var loadedBody = false;
                 scope.toggle = function () {
                     scope.show = !scope.show;
                     if (scope.show && !loadedBody) {
-                        scope.state.Body = "loading...";
+                        scope.Body = "loading...";
                         loadedBody = true;
                         $http.get('/api/status?ak=' + scope.child.AlertKey)
                             .success(function (data) {
+                            scope.state = new IncidentState(data[scope.child.AlertKey]);
                             var body = data[scope.child.AlertKey].Body;
                             scope.state.Body = $sce.trustAsHtml(body);
+                            angular.forEach(scope.state.Events, function (v, k) {
+                                v.Time = moment(v.Time).utc();
+                            });
+                            scope.state.last = scope.state.Events[scope.state.Events.length - 1];
+                            if (scope.state.Actions && scope.state.Actions.length > 0) {
+                                scope.state.LastAction = scope.state.Actions[scope.state.Actions.length - 1];
+                            }
+                            scope.state.RuleUrl = '/config?' +
+                                'alert=' + encodeURIComponent(scope.state.Alert) +
+                                '&fromDate=' + encodeURIComponent(scope.state.last.Time.format("YYYY-MM-DD")) +
+                                '&fromTime=' + encodeURIComponent(scope.state.last.Time.format("HH:mm"));
+                            var groups = [];
+                            angular.forEach(scope.state.Group, function (v, k) {
+                                groups.push(k + "=" + v);
+                            });
+                            if (groups.length > 0) {
+                                scope.state.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
+                            }
                         })
                             .error(function (err) {
-                            scope.state.Body = "Error loading template body: " + err;
+                            scope.state = new IncidentState({});
+                            var e = "";
+                            if (err === undefined || err === null) {
+                                e = "connection error";
+                            }
+                            else if (err.error instanceof ErrorEvent) {
+                                e = err.error.message;
+                            }
+                            else {
+                                e = "status=" + err.status + " body=" + err.error;
+                            }
+                            scope.state.Error = "Error loading incident data: " + e;
+                        })["finally"](function () {
+                            scope.loaded = true;
                         });
                     }
                 };
@@ -3791,26 +3821,7 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                     }
                     return v.replace(/([,{}()])/g, '$1\u200b');
                 };
-                scope.state.Touched = moment(scope.state.Touched).utc();
-                angular.forEach(scope.state.Events, function (v, k) {
-                    v.Time = moment(v.Time).utc();
-                });
-                scope.state.last = scope.state.Events[scope.state.Events.length - 1];
-                if (scope.state.Actions && scope.state.Actions.length > 0) {
-                    scope.state.LastAction = scope.state.Actions[scope.state.Actions.length - 1];
-                }
-                scope.state.RuleUrl = '/config?' +
-                    'alert=' + encodeURIComponent(scope.state.Alert) +
-                    '&fromDate=' + encodeURIComponent(scope.state.last.Time.format("YYYY-MM-DD")) +
-                    '&fromTime=' + encodeURIComponent(scope.state.last.Time.format("HH:mm"));
-                var groups = [];
-                angular.forEach(scope.state.Group, function (v, k) {
-                    groups.push(k + "=" + v);
-                });
-                if (groups.length > 0) {
-                    scope.state.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
-                }
-                scope.state.Body = $sce.trustAsHtml(scope.state.Body);
+                scope.Touched = moment(scope.Touched).utc();
             }
         };
     }]);

@@ -613,7 +613,7 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 }
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.MarshalGroups(t, r.FormValue("filter"))
+	return schedule.MarshalGroups(t, r.FormValue("filter"), r.FormValue("v") == "short")
 }
 
 type ExtStatus struct {

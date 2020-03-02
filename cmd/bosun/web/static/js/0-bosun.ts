@@ -115,7 +115,7 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             'request': function (config) {
                 config.headers['X-Miniprofiler'] = 'true';
                 return config;
-            },
+			}
         };
     });
 }]);
@@ -247,7 +247,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             scheduleFilter = filter;
             $scope.animate();
 
-            var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
+            var p = $http.get('/api/alerts?v=short&filter=' + encodeURIComponent(filter || ""))
                 .success((data: any) => {
                     $scope.schedule = new StateGroups(data);
                     $scope.timeanddate = data.TimeAndDate;

@@ -142,7 +142,9 @@ class IncidentState {
     LastAbnormalTime: number; // Epoch
 
     PreviousIds: number[];
-    NextId: number;
+	NextId: number;
+
+	Error: string;
 
     constructor(is) {
         this.Id = is.Id;
@@ -182,45 +184,46 @@ class IncidentState {
         }
         this.NextId = is.NextId;
     }
+}
+
+class AlertState {
 
 
-    IsPendingClose(): boolean {
-        for (let action of this.Actions) {
-            if (action.Deadline != undefined && !(action.Fullfilled || action.Cancelled)) {
-                return true;
-            }
-        }
-        return false;
+    constructor(sg) {
+
+
     }
 }
 
 class StateGroup {
-    Active: boolean;
+	Active: boolean;
     Status: string;
     CurrentStatus: string;
     Silenced: boolean;
-    IsError: boolean;
+	IsError: boolean;
+	IncidentID: number;
+	Unevaluated: boolean;
+	LastAlertStatus: string;
+	PendingClose: boolean;
     Subject: string;
-    Alert: string;
-    AlertKey: string;
+	AlertKey: string;
     Ago: string;
-    State: IncidentState;
     Children: StateGroup[];
 
     constructor(sg) {
-        this.Active = sg.Active;
+		this.Active = sg.Active;
         this.Status = sg.Status;
         this.CurrentStatus = sg.CurrentStatus;
         this.Silenced = sg.Silenced;
-        this.IsError = sg.IsError;
+		this.IsError = sg.IsError;
+		this.Unevaluated = sg.Unevaluated;
+		this.LastAlertStatus = sg.LastAlertStatus;
+		this.PendingClose = sg.PendingClose;
         this.Subject = sg.Subject;
-        this.Alert = sg.Alert;
         this.AlertKey = sg.AlertKey;
-        this.Ago = sg.Ago;
-        if (sg.State) {
-            this.State = new IncidentState(sg.State);
-        }
-        this.Children = new Array<StateGroup>();
+		this.Ago = sg.Ago;
+		this.IncidentID = sg.IncidentID;
+		this.Children = new Array<StateGroup>();
         if (sg.Children) {
             for (let c of sg.Children) {
                 this.Children.push(new StateGroup(c));
