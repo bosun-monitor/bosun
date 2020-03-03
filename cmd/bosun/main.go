@@ -3,7 +3,6 @@ package main
 //go:generate go run ../../build/generate/generate.go
 
 import (
-	"bosun.org/_version"
 	"bosun.org/host"
 	"flag"
 	"fmt"
