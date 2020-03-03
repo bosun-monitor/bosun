@@ -73,7 +73,7 @@ require (
 	github.com/mjibson/esc v0.1.0
 	github.com/olivere/elastic v6.1.23-0.20180523141205-33ad30f61610+incompatible
 	github.com/pelletier/go-toml v1.6.0 // indirect
-	github.com/pkg/errors v0.8.1-0.20170505043639-c605e284fe17
+	github.com/pkg/errors v0.8.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/client_golang v0.9.3-0.20190106165022-d2ead2588477
 	github.com/prometheus/common v0.1.0
