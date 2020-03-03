@@ -19,7 +19,10 @@ func validateManager(m Manager, expectedHostname string, t *testing.T) {
 }
 
 func TestNewManager(t *testing.T) {
-	m, err := NewManager(false)
+	// we should save fqdn for NewManager since os.Hostname will return /proc/sys/kernel/hostname and it can be fqdn
+	// underhood NewManager will use same call, but if we don't save fqdn we are trying to split that name
+	// In that can this test will fail anyway
+	m, err := NewManager(true)
 	if err != nil {
 		t.Error(err)
 	}
