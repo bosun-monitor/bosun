@@ -307,7 +307,7 @@ func (p *PreparedEmail) Send(c SystemConfProvider) error {
 	for _, a := range p.Attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
-	e.Headers.Add("X-Bosun-Server", util.Hostname)
+	e.Headers.Add("X-Bosun-Server", util.GetHostManager().GetHostName())
 	if err := sendEmail(e, c.GetSMTPHost(), c.GetSMTPUsername(), c.GetSMTPPassword()); err != nil {
 		collect.Add("email.sent_failed", nil, 1)
 		slog.Errorf("failed to send alert %v to %v %v\n", p.AK, e.To, err)

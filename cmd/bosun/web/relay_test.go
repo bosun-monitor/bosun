@@ -1,6 +1,8 @@
 package web
 
 import (
+	"bosun.org/host"
+	"bosun.org/util"
 	"bytes"
 	"compress/gzip"
 	"net/http"
@@ -28,6 +30,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestRelay(t *testing.T) {
+	hm, err := host.NewManager(false)
+	if err != nil {
+		t.Error(err)
+	}
+	util.SetHostManager(hm)
+
 	schedule.Init("relay_test", &conf.SystemConf{}, new(rule.Conf), testData, nil, false, false)
 	rs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bosun.org/host"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -26,7 +27,18 @@ var (
 	flagForget   = flag.String("f", "", "Set to 'true' to forget anything that goes unknown during the silence. Used when decommissioning something.")
 )
 
+func initHostManager() {
+	hm, err := host.NewManager(false)
+	if err != nil {
+		log.Fatalf("couldn't initialise host factory: %v", err)
+	}
+
+	util.SetHostManager(hm)
+}
+
 func main() {
+	initHostManager()
+
 	flag.Parse()
 	un := *flagUser
 	if un == "" {
@@ -52,7 +64,7 @@ func main() {
 			}
 		}
 		if !flagTagsIsPresent {
-			*flagTags = "host=" + util.Hostname
+			*flagTags = "host=" + util.GetHostManager().GetHostName()
 		}
 	}
 	now := time.Now().UTC()

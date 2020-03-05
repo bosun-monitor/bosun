@@ -1,6 +1,8 @@
 package search
 
 import (
+	"bosun.org/host"
+	"bosun.org/util"
 	"os"
 	"reflect"
 	"testing"
@@ -13,6 +15,12 @@ import (
 var testSearch *Search
 
 func TestMain(m *testing.M) {
+	hm, err := host.NewManager(false)
+	if err != nil {
+		panic(err)
+	}
+	util.SetHostManager(hm)
+
 	testData, closeF := dbtest.StartTestRedis(9990)
 	testSearch = NewSearch(testData, false)
 	status := m.Run()

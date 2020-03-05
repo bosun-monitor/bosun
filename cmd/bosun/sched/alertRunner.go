@@ -49,6 +49,7 @@ func (s *Schedule) Run() error {
 	for {
 		select {
 		case <-s.runnerContext.Done():
+			slog.Infoln("Stopping main scheduler routine")
 			return nil
 		default:
 		}
