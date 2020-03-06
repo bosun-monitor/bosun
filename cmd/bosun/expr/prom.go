@@ -430,7 +430,7 @@ func timePromRequest(e *State, prefix, query string, start, end time.Time, step 
 	cacheKeyBytes, _ := json.MarshalIndent(cacheKey, "", "  ")
 	e.Timer.StepCustomTiming("prom", fmt.Sprintf("query (%v)", prefix), query, func() {
 		getFn := func() (interface{}, error) {
-			res, err := client.QueryRange(context.Background(), query, r)
+			res, _, err := client.QueryRange(context.Background(), query, r)
 			if err != nil {
 				return nil, err
 			}
@@ -495,7 +495,7 @@ func PromMetricList(prefix string, e *State) (r *Results, err error) {
 	getFn := func() (interface{}, error) {
 		var metrics promModels.LabelValues
 		e.Timer.StepCustomTiming("prom", "metriclist", "", func() {
-			metrics, err = client.LabelValues(context.Background(), "__name__")
+			metrics, _, err = client.LabelValues(context.Background(), "__name__")
 		})
 		if err != nil {
 			return nil, err
@@ -530,7 +530,7 @@ func PromTagInfo(prefix string, e *State, metric, sdur, edur string) (r *Results
 	getFn := func() (interface{}, error) {
 		var res promModels.Value
 		e.Timer.StepCustomTiming("prom", "taginfo", metric, func() {
-			res, err = client.QueryRange(context.Background(), metric, qRange)
+			res, _, err = client.QueryRange(context.Background(), metric, qRange)
 		})
 		if err != nil {
 			return nil, err
