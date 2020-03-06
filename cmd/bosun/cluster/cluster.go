@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"log"
 	"path/filepath"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/slog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -27,7 +27,7 @@ type MembersFileWatch func(*conf.SystemConf, *Raft)
 type Raft struct {
 	Instance      *raft.Raft
 	Config        *raft.Config
-	logger        *log.Logger
+	logger        hclog.Logger
 	Db            *raftboltdb.BoltStore
 	Snapshots     *raft.FileSnapshotStore
 	Transport     *raft.NetworkTransport
@@ -87,6 +87,9 @@ func (r *Raft) Watch(flagQuiet, flagNoChecks *bool) {
 		select {
 		case <-r.RestartWatch:
 			raftCh = r.Instance.LeaderCh()
+		// 2020/03/04 12:55:11 info: cluster.go:162: 2020-03-04T12:55:11.349+0100 [WARN]  raft: Failed to contact quorum of nodes, stepping down
+		//2020/03/04 12:55:11 info: cluster.go:162: 2020-03-04T12:55:11.349+0100 [INFO]  raft: Node at 10.190.189.12:8072 [Follower] entering Follower state (Leader: "")
+
 		case isLeader := <-raftCh:
 			if isLeader {
 				slog.Infoln("Node was selected as an leader")
@@ -169,7 +172,10 @@ func StartCluster(systemConf *conf.SystemConf) (raftInstance *Raft, err error) {
 		MinLevel: logutils.LogLevel("INFO"),
 		Writer:   clusterLog{},
 	}
-	logger := log.New(logFilter, "[cluser]", 0)
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:  "bosun",
+		Level: hclog.LevelFromString("INFO"),
+	})
 
 	serfListen := strings.Split(systemConf.GetClusterBindAddress(), ":")
 	if len(serfListen) != 2 {
