@@ -10,6 +10,7 @@ import (
 type manager struct {
 	nameProcessor name.Processor
 	host          Host
+	realHost      Host
 }
 
 // Manager is an interface for types which manage hosts
@@ -23,13 +24,14 @@ type Manager interface {
 	GetNameProcessor() name.Processor
 	GetHost() Host
 	GetHostName() string
+	GetRealHostName() string
 }
 
-var hostname = os.Hostname
+var hostnameMethod = os.Hostname
 
 // NewManager constructs a new Manager for a host which is named by the operating system
 func NewManager(preserveFullHostName bool) (Manager, error) {
-	n, err := hostname()
+	n, err := hostnameMethod()
 	// Prob better to return an error but this is established behavior not worth introducing a breaking change for
 	if err != nil {
 		n = "unknown"
@@ -54,7 +56,16 @@ func NewManagerForHostname(hostname string, preserveFullHostName bool) (Manager,
 		return nil, errors.Wrap(err, "Failed to construct host")
 	}
 
-	f := &manager{nameProcessor: processor, host: host}
+	hn, err := hostnameMethod()
+	if err != nil {
+		return nil, errors.Wrap(err, "Error while get real host name")
+	}
+	realHost, err := NewHost(hn, processor)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to construct host")
+	}
+
+	f := &manager{nameProcessor: processor, host: host, realHost: realHost}
 
 	return f, nil
 }
@@ -72,4 +83,9 @@ func (m *manager) GetHost() Host {
 // GetHostName returns the name of the managed host - is simply more convenient than calling m.GetHost().GetName()
 func (m *manager) GetHostName() string {
 	return m.host.GetName()
+}
+
+// GetHostName returns the name of the managed host - is simply more convenient than calling m.GetHost().GetName()
+func (m *manager) GetRealHostName() string {
+	return m.realHost.GetName()
 }

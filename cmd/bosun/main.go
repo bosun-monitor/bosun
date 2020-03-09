@@ -3,11 +3,8 @@ package main
 //go:generate go run ../../build/generate/generate.go
 
 import (
-	"bosun.org/_version"
-	"bosun.org/host"
 	"flag"
 	"fmt"
-	"gopkg.in/fsnotify.v1"
 	"net/http"
 	"net/http/httptest"
 	_ "net/http/pprof"
@@ -18,6 +15,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	version "bosun.org/_version"
+	"bosun.org/host"
+	"gopkg.in/fsnotify.v1"
 
 	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/conf"
@@ -48,7 +49,7 @@ func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", t.UserAgent)
 	}
-	req.Header.Add("X-Bosun-Server", util.GetHostManager().GetHostName())
+	req.Header.Add("X-Bosun-Server", util.GetHostManager().GetRealHostName())
 	return t.RoundTripper.RoundTrip(req)
 }
 
