@@ -1,9 +1,10 @@
 package host
 
 import (
+	"os"
+
 	"bosun.org/name"
 	"github.com/pkg/errors"
-	"os"
 )
 
 type manager struct {
@@ -24,9 +25,11 @@ type Manager interface {
 	GetHostName() string
 }
 
+var hostname = os.Hostname
+
 // NewManager constructs a new Manager for a host which is named by the operating system
 func NewManager(preserveFullHostName bool) (Manager, error) {
-	n, err := os.Hostname()
+	n, err := hostname()
 	// Prob better to return an error but this is established behavior not worth introducing a breaking change for
 	if err != nil {
 		n = "unknown"
