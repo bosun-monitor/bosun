@@ -134,7 +134,7 @@ Action notifications are a little different than alert notifications. They are r
 - `{{.Message}}` is the message they entered.
 - `{{.ActionType}}` is the type of action.
 
-If multiple actions are performed at once, they are grouped together by default. You can disable this, and send a notification for each individual alert key by setting `geoupActions = false` in the notification. You can get the first incident from `States` with `{{$first := index .States 0}}` if this is the case.
+If multiple actions are performed at once, they are grouped together by default. You can disable this, and send a notification for each individual alert key by setting `groupActions = false` in the notification. You can get the first incident from `States` with `{{$first := index .States 0}}` if this is the case.
 
 You can choose whether a notification sends action notifications or not on a per-action basis using the `runOnActions` key. You may set it to `all` or `none`, or to any comma separated list of action types from `Ack`, `Close`, `Forget`, `ForceClose`, `Purge`, `Note`, `DelayedClose`, or `CancelClose`.
 
