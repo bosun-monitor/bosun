@@ -169,7 +169,7 @@ notification slack {
 
 ## Unknown Notifications
 
-When an alert goes "unknown", it will send a special notification to let you know. Similar to actions, these notifications are rendered on-demand, with a special context. Bosun attempts to group these appropriately to reduce spam. The context has:
+When an alert goes "unknown", it will send a special notification through `critNotification` to let you know. Similar to actions, these notifications are rendered on-demand, with a special context. Bosun attempts to group these appropriately to reduce spam. The context has:
 
 - `{{.Time}}`, a timestamp of when the unknown event occurred.
 - `{{.Name}}`, bosun's description of the tags or alert name for the grouping.
