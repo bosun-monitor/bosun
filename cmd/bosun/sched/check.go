@@ -525,19 +525,23 @@ func (s *Schedule) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, une
 
 func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.AlertKey {
 	keys := []models.AlertKey{}
-	if utcNow().Sub(s.StartTime) < s.SystemConf.GetCheckFrequency() {
-		return keys
-	}
+
 	if !s.AlertSuccessful(alert) {
 		return keys
 	}
 	a := s.RuleConf.GetAlert(alert)
+
+	runEvery := s.SystemConf.GetDefaultRunEvery()
+	if a.RunEvery != 0 {
+		runEvery = a.RunEvery
+	}
+
+	if utcNow().Sub(s.StartTime) < (s.SystemConf.GetCheckFrequency() * time.Duration(runEvery)) {
+		return keys
+	}
+
 	t := a.Unknown
 	if t == 0 {
-		runEvery := s.SystemConf.GetDefaultRunEvery()
-		if a.RunEvery != 0 {
-			runEvery = a.RunEvery
-		}
 		t = s.SystemConf.GetCheckFrequency() * 2 * time.Duration(runEvery)
 	}
 	maxTouched := now.UTC().Unix() - int64(t.Seconds())
