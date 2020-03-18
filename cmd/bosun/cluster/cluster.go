@@ -87,9 +87,6 @@ func (r *Raft) Watch(flagQuiet, flagNoChecks *bool) {
 		select {
 		case <-r.RestartWatch:
 			raftCh = r.Instance.LeaderCh()
-		// 2020/03/04 12:55:11 info: cluster.go:162: 2020-03-04T12:55:11.349+0100 [WARN]  raft: Failed to contact quorum of nodes, stepping down
-		//2020/03/04 12:55:11 info: cluster.go:162: 2020-03-04T12:55:11.349+0100 [INFO]  raft: Node at 10.190.189.12:8072 [Follower] entering Follower state (Leader: "")
-
 		case isLeader := <-raftCh:
 			if isLeader {
 				slog.Infoln("Node was selected as an leader")
@@ -242,7 +239,7 @@ func StartCluster(systemConf *conf.SystemConf) (raftInstance *Raft, err error) {
 		logger:        logger,
 		Serf:          serfListener,
 		RestartWatch:  make(chan bool),
-		ReloadCluster: make(chan bool),
+		ReloadCluster: make(chan bool, 10),
 		serfEvents:    serfEvents,
 	}
 
