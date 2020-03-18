@@ -3,7 +3,6 @@ package main
 //go:generate go run ../../build/generate/generate.go
 
 import (
-	"bosun.org/host"
 	"flag"
 	"fmt"
 	"net/http"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"bosun.org/host"
 
 	version "bosun.org/_version"
 	"gopkg.in/fsnotify.v1"
