@@ -7,6 +7,7 @@ import (
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/slog"
+	"github.com/hashicorp/raft"
 )
 
 // Run should be called once (and only once) to start all schedule activity.
@@ -57,6 +58,9 @@ func (s *Schedule) Run() error {
 		s.LastCheck = utcNow()
 		for _, a := range chs {
 			if (i+a.shift)%a.modulo != 0 {
+				continue
+			}
+			if s.RaftInstance.Instance.State() != raft.Leader {
 				continue
 			}
 			// Put on channel. If that fails, the alert is backed up pretty bad.

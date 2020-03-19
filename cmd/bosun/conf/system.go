@@ -252,6 +252,7 @@ type ClusterConf struct {
 	HeartbeatTimeout   int64
 	ElectionTimeout    int64
 	LeaderLeaseTimeout int64
+	SnapshotInterval   int64
 }
 
 // SMTPConf contains information for the mail server for which bosun will
@@ -516,6 +517,15 @@ func (sc *SystemConf) ClusterElectionTimeout() time.Duration {
 		return 1000 * time.Millisecond
 	}
 	return time.Duration(sc.ClusterConf.ElectionTimeout) * time.Millisecond
+}
+
+// ClusterSnapshotInterval returns interval for make raft db snapshots.
+// By default value is 10 minutes.
+func (sc *SystemConf) ClusterSnapshotInterval() time.Duration {
+	if sc.ClusterConf.SnapshotInterval <= 0 {
+		return 24 * time.Hour
+	}
+	return time.Duration(sc.ClusterConf.SnapshotInterval) * time.Second
 }
 
 // ClusterHeartbeatTimeout returns timeout for heartbeat new leader.

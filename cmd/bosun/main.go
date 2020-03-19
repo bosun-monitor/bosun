@@ -3,6 +3,7 @@ package main
 //go:generate go run ../../build/generate/generate.go
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 
 	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/cluster"
+	"bosun.org/cmd/bosun/cluster/fsm"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
@@ -37,6 +39,7 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
+	"github.com/hashicorp/raft"
 	elastic6 "github.com/olivere/elastic"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
@@ -155,18 +158,6 @@ func main() {
 	}
 
 	var raftInstance *cluster.Raft
-	// If cluster eneble - init cluster
-	if systemConf.ClusterEnabled() {
-		*flagQuiet = true
-		*flagNoChecks = true
-		var err error
-		raftInstance, err = cluster.StartCluster(systemConf)
-		if err != nil {
-			slog.Fatalf("couldn't init bosun cluster: %v", err)
-		}
-
-		go raftInstance.Watch(flagQuiet, flagNoChecks)
-	}
 
 	var ruleProvider conf.RuleConfProvider = ruleConf
 
@@ -218,6 +209,122 @@ func main() {
 		}()
 		web.AnnotateBackend = annotateBackend
 	}
+
+	var cmdHook conf.SaveHook
+	if hookPath := sysProvider.GetCommandHookPath(); hookPath != "" {
+		cmdHook, err = conf.MakeSaveCommandHook(hookPath)
+		if err != nil {
+			slog.Fatal(err)
+		}
+		ruleProvider.SetSaveHook(cmdHook)
+	}
+	var (
+		reload         func() error
+		reloadSchedule func(*rule.Conf) error
+		setRuleConfig  func(*rule.Conf)
+	)
+	reloading := make(chan bool, 1) // a lock that we can give up acquiring
+
+	setRuleConfig = func(newConf *rule.Conf) {
+		// We are calling that function only for recover snapshots in fsm.Recovery()
+		// So it is often happens before run scheduler.
+		// In that way we should just change ruleProvider for future usage
+		// and son't restart a schedule
+		newConf.SetSaveHook(cmdHook)
+		newConf.SetReload(reload)
+		ruleProvider = newConf
+		if !sched.DefaultSched.StartTime.IsZero() {
+			// We should definetly restart schedule if it's running
+			reloadSchedule(newConf)
+		}
+	}
+
+	reloadSchedule = func(newConf *rule.Conf) error {
+		select {
+		case reloading <- true:
+			// Got lock
+		default:
+			return fmt.Errorf("not reloading, reload in progress")
+		}
+		defer func() {
+			<-reloading
+		}()
+		newConf.SetSaveHook(cmdHook)
+		newConf.SetReload(reload)
+		oldSched := sched.DefaultSched
+		oldSearch := oldSched.Search
+		sched.Close(true)
+		sched.Reset()
+		newSched := sched.DefaultSched
+		newSched.Search = oldSearch
+
+		slog.Infoln("schedule shutdown, loading new schedule")
+
+		// Load does not set the DataAccess or Search if it is already set
+		if err := sched.Load(sysProvider, newConf, da, annotateBackend, raftInstance, *flagSkipLast, *flagQuiet); err != nil {
+			slog.Fatal(err)
+		}
+		web.ResetSchedule() // Signal web to point to the new DefaultSchedule
+		go func() {
+			slog.Infoln("running new schedule")
+			if !*flagNoChecks {
+				sched.Run()
+			}
+		}()
+		slog.Infoln("config reload complete")
+
+		if systemConf.ClusterEnabled() {
+			// make snapshot with changes
+			go func() {
+				slog.Infoln("Making snap")
+				snap := raftInstance.Instance.Snapshot()
+				if snap.Error() != nil {
+					slog.Errorf("Error while create snapshot: %v", err)
+					return
+				}
+				slog.Infoln("snapshot was created")
+				if err := raftInstance.Snapshots.ReapSnapshots(); err != nil {
+					slog.Errorf("Error while reap old snapshots: %v", err)
+				}
+			}()
+		}
+		return nil
+	}
+
+	reload = func() error {
+		if raftInstance != nil && raftInstance.Instance.State() != raft.Leader {
+			return errors.New("Current node isn't a leader. Please send reload command to leader node")
+		}
+
+		newConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), sysProvider.EnabledBackends(), sysProvider.GetRuleVars())
+		if err != nil {
+			return err
+		}
+		if raftInstance != nil {
+			err = raftInstance.Apply(&fsm.ClusterCommand{
+				fsm.ACTION_APPLY_RULES,
+				newConf.RawText,
+			}, 5*time.Minute)
+			if err != nil {
+				return err
+			}
+		} else {
+			return reloadSchedule(newConf)
+		}
+		return nil
+	}
+
+	// If cluster eneble - init cluster
+	if systemConf.ClusterEnabled() {
+		var err error
+		raftInstance, err = cluster.StartCluster(systemConf, setRuleConfig, reloadSchedule)
+		if err != nil {
+			slog.Fatalf("couldn't init bosun cluster: %v", err)
+		}
+
+		go raftInstance.Watch()
+	}
+
 	if err := sched.Load(sysProvider, ruleProvider, da, annotateBackend, raftInstance, *flagSkipLast, *flagQuiet); err != nil {
 		slog.Fatal(err)
 	}
@@ -257,65 +364,7 @@ func main() {
 			slog.Fatalf("InternetProxy error: %s", err)
 		}
 	}
-	var cmdHook conf.SaveHook
-	if hookPath := sysProvider.GetCommandHookPath(); hookPath != "" {
-		cmdHook, err = conf.MakeSaveCommandHook(hookPath)
-		if err != nil {
-			slog.Fatal(err)
-		}
-		ruleProvider.SetSaveHook(cmdHook)
-	}
-	var reload func() error
-	reloading := make(chan bool, 1) // a lock that we can give up acquiring
 
-	reload = func() error {
-		select {
-		case reloading <- true:
-			// Got lock
-		default:
-			return fmt.Errorf("not reloading, reload in progress")
-		}
-		defer func() {
-			<-reloading
-		}()
-		newConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), sysProvider.EnabledBackends(), sysProvider.GetRuleVars())
-		if err != nil {
-			return err
-		}
-		newConf.SetSaveHook(cmdHook)
-		newConf.SetReload(reload)
-		oldSched := sched.DefaultSched
-		oldSearch := oldSched.Search
-		sched.Close(true)
-		sched.Reset()
-		newSched := sched.DefaultSched
-		newSched.Search = oldSearch
-		slog.Infoln("schedule shutdown, loading new schedule")
-
-		// Load does not set the DataAccess or Search if it is already set
-		if err := sched.Load(sysProvider, newConf, da, annotateBackend, raftInstance, *flagSkipLast, *flagQuiet); err != nil {
-			slog.Fatal(err)
-		}
-		web.ResetSchedule() // Signal web to point to the new DefaultSchedule
-		go func() {
-			slog.Infoln("running new schedule")
-			if !*flagNoChecks {
-				sched.Run()
-			}
-		}()
-		slog.Infoln("config reload complete")
-		return nil
-	}
-
-	if raftInstance != nil {
-		go func() {
-			for {
-
-				<-raftInstance.ReloadCluster
-				reload()
-			}
-		}()
-	}
 	ruleProvider.SetReload(reload)
 
 	go func() {

@@ -2,9 +2,9 @@ package cluster
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +12,9 @@ import (
 
 	"path/filepath"
 
+	"bosun.org/cmd/bosun/cluster/fsm"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/slog"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/logutils"
@@ -25,17 +27,26 @@ import (
 type MembersFileWatch func(*conf.SystemConf, *Raft)
 
 type Raft struct {
-	Instance      *raft.Raft
-	Config        *raft.Config
-	logger        hclog.Logger
-	Db            *raftboltdb.BoltStore
-	Snapshots     *raft.FileSnapshotStore
-	Transport     *raft.NetworkTransport
-	Serf          *serf.Serf
-	ReloadCluster chan bool
-	RestartWatch  chan bool
-	serfEvents    chan serf.Event
-	memberList    map[string]struct{}
+	Instance   *raft.Raft
+	Config     *raft.Config
+	logger     hclog.Logger
+	Db         *raftboltdb.BoltStore
+	Snapshots  *raft.FileSnapshotStore
+	Transport  *raft.NetworkTransport
+	Serf       *serf.Serf
+	Fsm        *fsm.FSM
+	serfEvents chan serf.Event
+	memberList map[string]struct{}
+}
+
+func (r *Raft) Apply(cmd *fsm.ClusterCommand, timeout time.Duration) error {
+	data, err := json.Marshal(cmd)
+	if err != nil {
+		return err
+	}
+
+	f := r.Instance.Apply(data, timeout)
+	return f.Error()
 }
 
 func (r *Raft) CreateRaftDb(path string) error {
@@ -81,26 +92,9 @@ func (r *Raft) readMembersFile(cfg string) error {
 	return nil
 }
 
-func (r *Raft) Watch(flagQuiet, flagNoChecks *bool) {
-	raftCh := r.Instance.LeaderCh()
+func (r *Raft) Watch() {
 	for {
 		select {
-		case <-r.RestartWatch:
-			raftCh = r.Instance.LeaderCh()
-		case isLeader := <-raftCh:
-			if isLeader {
-				slog.Infoln("Node was selected as an leader")
-				*flagQuiet = false
-				*flagNoChecks = false
-				r.ReloadCluster <- true
-				slog.Infoln("Reloading service for disable read only mode")
-			} else {
-				slog.Infoln("Node was selected as an follower")
-				*flagQuiet = true
-				*flagNoChecks = true
-				r.ReloadCluster <- true
-				slog.Infoln("Reloading service for enable read only mode")
-			}
 		case ev := <-r.serfEvents:
 			slog.Infof("Received cluster event: %#v.", ev)
 
@@ -113,14 +107,14 @@ func (r *Raft) Watch(flagQuiet, flagNoChecks *bool) {
 						if leader.Error() == nil {
 							f := r.Instance.AddVoter(raft.ServerID(changedPeer), raft.ServerAddress(changedPeer), 0, 0)
 							if f.Error() != nil {
-								slog.Fatalf("error adding voter: %s", f.Error())
+								slog.Errorf("error adding voter: %s", f.Error())
 							}
 						}
 					} else if memberEvent.EventType() == serf.EventMemberLeave || memberEvent.EventType() == serf.EventMemberFailed || memberEvent.EventType() == serf.EventMemberReap {
 						if leader.Error() == nil {
 							f := r.Instance.RemoveServer(raft.ServerID(changedPeer), 0, 0)
 							if f.Error() != nil {
-								slog.Fatalf("error removing server: %s", f.Error())
+								slog.Errorf("error removing server: %s", f.Error())
 							}
 						}
 					}
@@ -128,31 +122,6 @@ func (r *Raft) Watch(flagQuiet, flagNoChecks *bool) {
 			}
 		}
 	}
-}
-
-type FSM struct {
-}
-
-type snapshot struct{}
-
-func (s snapshot) Persist(sink raft.SnapshotSink) error {
-	return nil
-}
-
-func (s snapshot) Release() {
-	return
-}
-
-func (f *FSM) Apply(*raft.Log) interface{} {
-	return nil
-}
-
-func (f *FSM) Snapshot() (raft.FSMSnapshot, error) {
-	return snapshot{}, nil
-}
-
-func (f *FSM) Restore(io.ReadCloser) error {
-	return nil
 }
 
 type clusterLog struct{}
@@ -163,7 +132,7 @@ func (cl clusterLog) Write(data []byte) (n int, err error) {
 	return len(data), nil
 }
 
-func StartCluster(systemConf *conf.SystemConf) (raftInstance *Raft, err error) {
+func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), clusterReload func(*rule.Conf) error) (raftInstance *Raft, err error) {
 	logFilter := &logutils.LevelFilter{
 		Levels:   []logutils.LogLevel{"DEBUG", "INFO", "WARN", "ERROR"},
 		MinLevel: logutils.LogLevel("INFO"),
@@ -233,14 +202,21 @@ func StartCluster(systemConf *conf.SystemConf) (raftInstance *Raft, err error) {
 	c.HeartbeatTimeout = systemConf.ClusterHeartbeatTimeout()
 	c.LeaderLeaseTimeout = systemConf.ClusterLeaderLeaseTimeout()
 	c.ElectionTimeout = systemConf.ClusterElectionTimeout()
+	c.SnapshotInterval = systemConf.ClusterSnapshotInterval()
+	c.TrailingLogs = 1
+	c.SnapshotThreshold = 1
+
+	sysProvider, err := systemConf.GetSystemConfProvider()
+	if err != nil {
+		slog.Fatalf("Error while get system conf provider: %v", err)
+	}
 
 	raftInstance = &Raft{
-		Config:        c,
-		logger:        logger,
-		Serf:          serfListener,
-		RestartWatch:  make(chan bool),
-		ReloadCluster: make(chan bool, 10),
-		serfEvents:    serfEvents,
+		Config:     c,
+		logger:     logger,
+		Serf:       serfListener,
+		serfEvents: serfEvents,
+		Fsm:        &fsm.FSM{Reload: clusterReload, SysProvider: sysProvider, SetRules: setRules},
 	}
 
 	err = raftInstance.CreateRaftDb(systemConf.GetClusterMetadataStorePath())
@@ -259,7 +235,7 @@ func StartCluster(systemConf *conf.SystemConf) (raftInstance *Raft, err error) {
 		return nil, errors.New("Error while init Raft transport: " + err.Error())
 	}
 
-	raftInstance.Instance, err = raft.NewRaft(c, &FSM{}, raftInstance.Db, raftInstance.Db, raftInstance.Snapshots, raftInstance.Transport)
+	raftInstance.Instance, err = raft.NewRaft(c, raftInstance.Fsm, raftInstance.Db, raftInstance.Db, raftInstance.Snapshots, raftInstance.Transport)
 	if err != nil {
 		return nil, errors.New("Error while create raft instance: " + err.Error())
 	}

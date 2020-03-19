@@ -6,6 +6,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/models"
 	"bosun.org/slog"
+	"github.com/hashicorp/raft"
 )
 
 // dispatchNotifications triggers notification checks at 2x the the system configuration's
@@ -92,34 +93,38 @@ func (s *Schedule) CheckNotifications() time.Time {
 				s.QueueNotification(ak, n, t.Add(time.Minute))
 				continue
 			}
-			st, err := s.DataAccess.State().GetLatestIncident(ak)
-			if err != nil {
-				slog.Error(err)
-				continue
-			}
-			if st == nil {
-				continue
-			}
-			rt, err := s.DataAccess.State().GetRenderedTemplates(st.Id)
-			if err != nil {
-				slog.Error(err)
-				continue
-			}
-			if s.Notify(st, rt, n) {
-				_, err = s.DataAccess.State().UpdateIncidentState(st)
+			if s.RaftInstance.Instance.State() == raft.Leader {
+				st, err := s.DataAccess.State().GetLatestIncident(ak)
 				if err != nil {
 					slog.Error(err)
 					continue
 				}
+				if st == nil {
+					continue
+				}
+				rt, err := s.DataAccess.State().GetRenderedTemplates(st.Id)
+				if err != nil {
+					slog.Error(err)
+					continue
+				}
+				if s.Notify(st, rt, n) {
+					_, err = s.DataAccess.State().UpdateIncidentState(st)
+					if err != nil {
+						slog.Error(err)
+						continue
+					}
+				}
 			}
 		}
 	}
-	s.sendNotifications(silenced)
-	s.pendingNotifications = nil
-	err = s.DataAccess.Notifications().ClearNotificationsBefore(latestTime)
-	if err != nil {
-		slog.Error("Error clearing notifications", err)
-		return utcNow().Add(time.Minute)
+	if s.RaftInstance.Instance.State() == raft.Leader {
+		s.sendNotifications(silenced)
+		s.pendingNotifications = nil
+		err = s.DataAccess.Notifications().ClearNotificationsBefore(latestTime)
+		if err != nil {
+			slog.Error("Error clearing notifications", err)
+			return utcNow().Add(time.Minute)
+		}
 	}
 	timeout, err := s.DataAccess.Notifications().GetNextNotificationTime()
 	if err != nil {

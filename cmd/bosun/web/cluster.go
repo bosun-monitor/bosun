@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"bosun.org/cmd/bosun/cluster"
+	"bosun.org/cmd/bosun/cluster/fsm"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/hashicorp/raft"
@@ -96,7 +96,7 @@ func ClusterRecover(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	schedule.RaftInstance.Instance.Shutdown()
 
 	slog.Infof("Start to recover cluster with configuration: %#v", configuration)
-	if err := raft.RecoverCluster(schedule.RaftInstance.Config, &cluster.FSM{},
+	if err := raft.RecoverCluster(schedule.RaftInstance.Config, &fsm.FSM{},
 		schedule.RaftInstance.Db, schedule.RaftInstance.Db, schedule.RaftInstance.Snapshots,
 		schedule.RaftInstance.Transport, configuration); err != nil {
 		return nil, fmt.Errorf("recovery failed: %v", err)
@@ -104,7 +104,7 @@ func ClusterRecover(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 
 	var err error
 	schedule.RaftInstance.Instance, err = raft.NewRaft(
-		schedule.RaftInstance.Config, &cluster.FSM{}, schedule.RaftInstance.Db,
+		schedule.RaftInstance.Config, &fsm.FSM{}, schedule.RaftInstance.Db,
 		schedule.RaftInstance.Db, schedule.RaftInstance.Snapshots, schedule.RaftInstance.Transport)
 
 	for _, member := range schedule.RaftInstance.Serf.Members() {
@@ -113,7 +113,5 @@ func ClusterRecover(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 			slog.Errorf("Error while remove serf member %s: %#v", member.Name, err)
 		}
 	}
-	schedule.RaftInstance.RestartWatch <- true
-
 	return nil, err
 }

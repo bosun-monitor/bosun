@@ -19,7 +19,7 @@ require (
 	github.com/alicebob/miniredis v2.5.0+incompatible // indirect
 	github.com/andybalholm/cascadia v0.0.0-20150730174459-3ad29d1ad1c4 // indirect
 	github.com/armon/go-metrics v0.3.3 // indirect
-	github.com/aws/aws-sdk-go v1.1.33
+	github.com/aws/aws-sdk-go v1.29.28
 	github.com/aymerick/douceur v0.2.1-0.20150827151352-7176f1467381
 	github.com/bosun-monitor/statusio v0.0.0-20160516160816-ab1583139762
 	github.com/bradfitz/slice v0.0.0-20140430145140-a665b5dbaad5
@@ -78,7 +78,7 @@ require (
 	github.com/mjibson/esc v0.1.0
 	github.com/olivere/elastic v6.1.23-0.20180523141205-33ad30f61610+incompatible
 	github.com/pelletier/go-toml v1.6.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/client_golang v1.4.0
 	github.com/prometheus/common v0.9.1
@@ -97,11 +97,11 @@ require (
 	github.com/vmware/govmomi v0.16.1-0.20180228032728-a2138329bbd1
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036 // indirect
 	golang.org/x/image v0.0.0-20150916112557-baddd3465a05 // indirect
-	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/oauth2 v0.0.0-20160608215109-65a8d08c6292
 	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527
 	google.golang.org/api v0.0.0-20180506000402-20530fd5d65a
-	google.golang.org/appengine v1.0.1-0.20161115221414-ca59ef35f409 // indirect
+	google.golang.org/appengine v1.0.1-0.20161115221414-ca59ef35f409
 	google.golang.org/genproto v0.0.0-20180831171423-11092d34479b // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20141119150059-9eae18c3681a // indirect
 	gopkg.in/fsnotify.v1 v1.4.7
