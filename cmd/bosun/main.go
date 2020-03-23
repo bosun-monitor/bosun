@@ -33,6 +33,7 @@ import (
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
 	"bosun.org/collect"
+	promstat "bosun.org/collect/prometheus"
 	"bosun.org/graphite"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -279,6 +280,7 @@ func main() {
 				slog.Infoln("Making snap")
 				snap := raftInstance.Instance.Snapshot()
 				if snap.Error() != nil {
+					promstat.ClusterSnapshotsErrors.Inc()
 					slog.Errorf("Error while create snapshot: %v", err)
 					return
 				}
@@ -314,6 +316,8 @@ func main() {
 		return nil
 	}
 
+	promstat.Init()
+
 	// If cluster eneble - init cluster
 	if systemConf.ClusterEnabled() {
 		var err error
@@ -321,6 +325,8 @@ func main() {
 		if err != nil {
 			slog.Fatalf("couldn't init bosun cluster: %v", err)
 		}
+
+		promstat.ClusterState.Set(1)
 
 		go raftInstance.Watch()
 	}
@@ -370,7 +376,8 @@ func main() {
 	go func() {
 		slog.Fatal(web.Listen(sysProvider.GetHTTPListen(), sysProvider.GetHTTPSListen(),
 			sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev,
-			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf(), startTime))
+			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf(), startTime,
+			raftInstance, sysProvider.GetPrometheusPath()))
 	}()
 	go func() {
 		if !*flagNoChecks {

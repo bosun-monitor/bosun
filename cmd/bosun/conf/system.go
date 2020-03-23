@@ -67,6 +67,8 @@ type SystemConf struct {
 	AzureMonitorConf map[string]AzureMonitorConf
 	PromConf         map[string]PromConf
 
+	PrometheusPath string
+
 	AnnotateConf AnnotateConf
 
 	AuthConf *AuthConf
@@ -644,6 +646,14 @@ func (sc *SystemConf) ReloadEnabled() bool {
 // GetCommandHookPath returns the path of a command that should be run on every save
 func (sc *SystemConf) GetCommandHookPath() string {
 	return sc.CommandHookPath
+}
+
+// GetPrometheusPath returns url path for expose prometheus metrics
+func (sc *SystemConf) GetPrometheusPath() string {
+	if sc.PrometheusPath == "" {
+		return "/metrics"
+	}
+	return sc.PrometheusPath
 }
 
 // GetRuleFilePath returns the path to the file containing contains rules

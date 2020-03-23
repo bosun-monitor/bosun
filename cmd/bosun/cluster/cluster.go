@@ -15,6 +15,7 @@ import (
 	"bosun.org/cmd/bosun/cluster/fsm"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
+	promstat "bosun.org/collect/prometheus"
 	"bosun.org/slog"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/logutils"
@@ -25,6 +26,10 @@ import (
 )
 
 type MembersFileWatch func(*conf.SystemConf, *Raft)
+
+type RaftClusterState interface {
+	GetClusterStat()
+}
 
 type Raft struct {
 	Instance   *raft.Raft
@@ -37,6 +42,42 @@ type Raft struct {
 	Fsm        *fsm.FSM
 	serfEvents chan serf.Event
 	memberList map[string]struct{}
+}
+
+func (r *Raft) GetClusterStat() {
+	if r == nil {
+		promstat.ClusterMemberMode.Set(-1)
+		return
+	} else {
+		promstat.ClusterMemberMode.Set(float64(r.Instance.State()))
+	}
+	promstat.ClusterLastContact.Set(float64(r.Instance.LastContact().Unix()))
+	promstat.ClusterAppliedIndex.Set(float64(r.Instance.AppliedIndex()))
+
+	future := r.Instance.GetConfiguration()
+	if err := future.Error(); err != nil {
+		slog.Error("could not get configuration for stats", "error", err)
+	} else {
+		configuration := future.Configuration()
+		promstat.ClusterLatestConfigurationIndex.Set(float64(future.Index()))
+
+		// This is a legacy metric that we've seen people use in the wild.
+		hasUs := false
+		numPeers := float64(0)
+		for _, server := range configuration.Servers {
+			if server.Suffrage == raft.Voter {
+				if server.ID == r.Config.LocalID {
+					hasUs = true
+				} else {
+					numPeers++
+				}
+			}
+		}
+		if !hasUs {
+			numPeers = 0
+		}
+		promstat.ClusterPeersCount.Set(numPeers)
+	}
 }
 
 func (r *Raft) Apply(cmd *fsm.ClusterCommand, timeout time.Duration) error {
@@ -95,6 +136,8 @@ func (r *Raft) readMembersFile(cfg string) error {
 func (r *Raft) Watch() {
 	for {
 		select {
+		case <-r.Instance.LeaderCh():
+			promstat.ClusterFailovers.Inc()
 		case ev := <-r.serfEvents:
 			slog.Infof("Received cluster event: %#v.", ev)
 

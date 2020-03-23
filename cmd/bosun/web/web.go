@@ -19,6 +19,7 @@ import (
 	version "bosun.org/_version"
 	"bosun.org/annotate/backend"
 	"bosun.org/annotate/web"
+	"bosun.org/cmd/bosun/cluster"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
@@ -35,6 +36,8 @@ import (
 	"github.com/captncraig/easyauth"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -75,7 +78,16 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
-func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error, authConfig *conf.AuthConf, st time.Time) error {
+func Listen(
+	httpAddr, httpsAddr, certFile, keyFile string,
+	devMode bool,
+	tsdbHost string,
+	reloadFunc func() error,
+	authConfig *conf.AuthConf,
+	st time.Time,
+	raft cluster.RaftClusterState,
+	prometheusPath string,
+) error {
 	startTime = st
 	if devMode {
 		slog.Infoln("using local web assets")
@@ -215,6 +227,17 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	//use default mux for pprof
 	router.PathPrefix("/debug/pprof").Handler(http.DefaultServeMux)
+
+	// Prometheus metrics
+	router.HandleFunc(prometheusPath, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raft.GetClusterStat()
+		promhttp.HandlerFor(
+			prometheus.DefaultGatherer,
+			promhttp.HandlerOpts{
+				EnableOpenMetrics: true,
+			},
+		).ServeHTTP(w, r)
+	}))
 
 	router.PathPrefix("/api").HandlerFunc(http.NotFound)
 	//MUST BE LAST!

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
+	promstat "bosun.org/collect/prometheus"
 	"bosun.org/models"
 	"bosun.org/slog"
 	"github.com/hashicorp/raft"
@@ -168,6 +169,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 				}
 				continue
 			} else {
+				promstat.BosunNotificationsSent.Inc()
 				s.notify(st.IncidentState, st.RenderedTemplates, n)
 			}
 			if n.Next != nil {

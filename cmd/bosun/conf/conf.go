@@ -64,6 +64,8 @@ type SystemConfProvider interface {
 	ReloadEnabled() bool
 	GetCommandHookPath() string
 
+	GetPrometheusPath() string
+
 	SetTSDBHost(tsdbHost string)
 	GetTSDBHost() string
 

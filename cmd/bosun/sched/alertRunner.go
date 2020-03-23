@@ -6,6 +6,7 @@ import (
 
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
+	promstat "bosun.org/collect/prometheus"
 	"bosun.org/slog"
 	"github.com/hashicorp/raft"
 )
@@ -68,6 +69,7 @@ func (s *Schedule) Run() error {
 			// Master scheduler will never block here.
 			select {
 			case a.ch <- ctx:
+				promstat.BosunChecksExecuted.Inc()
 			default:
 			}
 		}
