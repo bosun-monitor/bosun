@@ -29,6 +29,7 @@ type MembersFileWatch func(*conf.SystemConf, *Raft)
 
 type RaftClusterState interface {
 	GetClusterStat()
+	IsEnabled() bool
 }
 
 type Raft struct {
@@ -42,6 +43,21 @@ type Raft struct {
 	Fsm        *fsm.FSM
 	serfEvents chan serf.Event
 	memberList map[string]struct{}
+}
+
+func (r *Raft) IsEnabled() bool {
+	if r == nil {
+		return false
+	}
+	return true
+}
+
+func (r *Raft) IsLeader() bool {
+	if r == nil {
+		return true
+	}
+
+	return r.Instance.State() == raft.Leader
 }
 
 func (r *Raft) GetClusterStat() {

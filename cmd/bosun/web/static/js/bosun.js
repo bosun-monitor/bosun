@@ -77,6 +77,50 @@ var Action = (function () {
     }
     return Action;
 }());
+var ClusterNode = (function () {
+    function ClusterNode(cn) {
+        this.Address = cn.Address;
+        this.State = cn.State;
+        this.Id = cn.Id;
+    }
+    return ClusterNode;
+}());
+var ClusterStats = (function () {
+    function ClusterStats(cs) {
+        this.AppliedIndex = cs.AppliedIndex;
+        this.CommitIndex = cs.CommitIndex;
+        this.FsmPending = cs.FsmPending;
+        this.LastContact = cs.LastContact;
+        this.LastLogIndex = cs.LastLogIndex;
+        this.LastLogTerm = cs.LastLogTerm;
+        this.LastSnapshotIndex = cs.LastSnapshotIndex;
+        this.LastSnapshotTerm = cs.LastSnapshotTerm;
+        this.LatestConfigurationIndex = cs.LatestConfigurationIndex;
+        this.NumPeers = cs.NumPeers;
+        this.ProtocolVersion = cs.ProtocolVersion;
+        this.ProtocolVersionMax = cs.ProtocolVersionMax;
+        this.ProtocolVersionMin = cs.ProtocolVersionMin;
+        this.SnapshotVersionMax = cs.SnapshotVersionMax;
+        this.SnapshotVersionMin = cs.SnapshotVersionMin;
+        this.State = cs.State;
+        this.Term = cs.Term;
+    }
+    return ClusterStats;
+}());
+var ClusterState = (function () {
+    function ClusterState(cs) {
+        this.Nodes = new Array();
+        this.State = cs.State;
+        this.Stats = new ClusterStats(cs.Stats);
+        if (cs.Nodes) {
+            for (var _i = 0, _a = cs.Nodes; _i < _a.length; _i++) {
+                var peer = _a[_i];
+                this.Nodes.push(new ClusterNode(peer));
+            }
+        }
+    }
+    return ClusterState;
+}());
 // See models/incident.go
 var IncidentState = (function () {
     function IncidentState(is) {
@@ -281,6 +325,11 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             title: 'New Access Token',
             template: "<new-token></new-token>"
         });
+        when('/cluster', {
+            title: 'Cluster',
+            templateUrl: 'partials/cluster.html',
+            controller: 'ClusterCtrl'
+        });
         $routeProvider.otherwise({
             redirectTo: '/'
         });
@@ -322,6 +371,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
             $scope.exampleExpression = settings.ExampleExpression;
             $scope.tokensEnabled = settings.TokensEnabled;
+            $scope.clusterEnabled = settings.ClusterEnabled;
             $scope.auth = AuthService;
             AuthService.Init(settings.AuthEnabled, settings.Username, settings.Roles, settings.Permissions);
         };
@@ -914,6 +964,58 @@ bosunApp.component("usernameInput", {
     controller: UsernameInputController,
     controllerAs: "ct",
     template: '<input type="text"class="form-control"  ng-disabled="ct.auth.Enabled()" ng-model="ct.auth.Username" ng-model-options="{ getterSetter: true }">'
+});
+bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$route', '$sce', 'linkService', function ($scope, $http, $location, $route, $sce, linkService) {
+        $http.get('/api/cluster/status')
+            .success(function (data) {
+            $scope.cluster = data;
+            if (data.State != "Leader") {
+                $scope.warning = "You can not manage cluster from follover node. Please do management from leader node";
+            }
+        })
+            .error(function (error) {
+            $scope.error = error;
+        });
+        $scope.clusterPanelClass = function (state) {
+            switch (state) {
+                case "Leader": return "panel-success";
+                case "Follower": return "panel-info";
+                case "Candidate": return "panel-warning";
+                default: return "panel-default";
+            }
+        };
+        $scope.promotePeer = function (id, address) {
+            console.log("promote new peer", id);
+            $http.post('/api/cluster/change_master', { "address": address, "id": id })
+                .success(function (data) {
+                if (data.status === "error") {
+                    $scope.error = data.error;
+                }
+                else {
+                    for (var i = 0; i < 10; i++) {
+                        $http.get('/api/cluster/status')
+                            .success(function (data) {
+                            $scope.cluster = data;
+                            if (data.State != "Leader") {
+                                $scope.warning = "You can not manage cluster from follover node. Please do management from leader node";
+                            }
+                        })
+                            .error(function (error) {
+                            $scope.error = error;
+                        });
+                    }
+                }
+            })
+                .error(function (error) {
+                $scope.error = error;
+            });
+        };
+    }]);
+bosunApp.directive('tsPromote', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/promote.html'
+    };
 });
 /// <reference path="0-bosun.ts" />
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {

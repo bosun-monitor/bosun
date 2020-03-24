@@ -106,6 +106,11 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
     when('/tokens/new', {
         title: 'New Access Token',
         template: `<new-token></new-token>`,
+	})
+	when('/cluster', {
+        title: 'Cluster',
+        templateUrl: 'partials/cluster.html',
+        controller: 'ClusterCtrl',
     })
     $routeProvider.otherwise({
         redirectTo: '/',
@@ -177,6 +182,7 @@ interface IBosunScope extends RootScope {
     init: any;
     auth: IAuthService;
     tokensEnabled: boolean;
+    clusterEnabled: boolean;
 }
 
 bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', 'authService',
@@ -201,6 +207,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
             $scope.exampleExpression = settings.ExampleExpression;
             $scope.tokensEnabled = settings.TokensEnabled;
+            $scope.clusterEnabled = settings.ClusterEnabled;
             $scope.auth = AuthService;
             AuthService.Init(settings.AuthEnabled, settings.Username, settings.Roles, settings.Permissions)
         }

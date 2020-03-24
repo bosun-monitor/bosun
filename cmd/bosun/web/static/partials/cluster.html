@@ -1,0 +1,70 @@
+<div class="row" ng-show="loading">
+	<div class="col-lg-12">
+		<div class="alert alert-info" ng-bind="loading"></div>
+	</div>
+</div>
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<div class="alert alert-danger" ng-bind="error"></div>
+	</div>
+</div>
+
+<div class="row" ng-show="warning">
+	<div class="col-lg-12">
+		<div class="alert alert-warning" ng-bind="warning"></div>
+	</div>
+</div>
+
+<style>
+	.panel-heading{border-radius:3px;}
+	.Candidate-box{box-shadow: 5px 0 0 0 #8A6D3B inset;}
+	.Leader-box{box-shadow: 5px 0 0 0 #3C763D inset;}
+	.Follower-box{box-shadow: 5px 0 0 0 #31708f inset;}
+</style>
+
+<div class="row" ng-show="cluster">
+	<h3 class="pull-left">Cluster peers</h3>
+</div>
+
+<div class="panel" ng-class="clusterPanelClass(peer.State)" ng-repeat="peer in cluster.Nodes">
+	<div class="panel-heading" ng-class="peer.State+'-box'">
+	<div class="row">
+		<div class="col-sm-6">
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>NodeID:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<span ng-bind="peer.Id" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>State:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<span ng-bind="peer.State" />
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-6">
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Address:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<span ng-bind="peer.Address" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Actions:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<ts-promote></ts-promote>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+</div>

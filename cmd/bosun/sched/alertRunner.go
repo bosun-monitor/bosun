@@ -8,7 +8,6 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	promstat "bosun.org/collect/prometheus"
 	"bosun.org/slog"
-	"github.com/hashicorp/raft"
 )
 
 // Run should be called once (and only once) to start all schedule activity.
@@ -61,7 +60,7 @@ func (s *Schedule) Run() error {
 			if (i+a.shift)%a.modulo != 0 {
 				continue
 			}
-			if s.RaftInstance.Instance.State() != raft.Leader {
+			if !s.RaftInstance.IsLeader() {
 				continue
 			}
 			// Put on channel. If that fails, the alert is backed up pretty bad.

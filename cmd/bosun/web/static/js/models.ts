@@ -112,6 +112,74 @@ class Action {
     }
 }
 
+class ClusterNode {
+	Address: string;
+	State: string;
+	Id: string;
+
+	constructor(cn) {
+		this.Address = cn.Address;
+		this.State = cn.State;
+		this.Id = cn.Id;
+    }
+}
+
+class ClusterStats {
+	AppliedIndex: string
+    CommitIndex: string;
+    FsmPending: string;
+    LastContact: string;
+    LastLogIndex: string;
+    LastLogTerm: string;
+    LastSnapshotIndex: string;
+    LastSnapshotTerm: string;
+    LatestConfigurationIndex: string;
+    NumPeers: string;
+    ProtocolVersion: string;
+    ProtocolVersionMax: string;
+    ProtocolVersionMin: string;
+    SnapshotVersionMax: string;
+    SnapshotVersionMin: string;
+    State: string;
+    Term: string;
+
+	constructor(cs) {
+		this.AppliedIndex = cs.AppliedIndex;
+		this.CommitIndex = cs.CommitIndex;
+		this.FsmPending = cs.FsmPending;
+		this.LastContact = cs.LastContact;
+		this.LastLogIndex = cs.LastLogIndex;
+		this.LastLogTerm = cs.LastLogTerm;
+		this.LastSnapshotIndex = cs.LastSnapshotIndex;
+		this.LastSnapshotTerm = cs.LastSnapshotTerm;
+		this.LatestConfigurationIndex = cs.LatestConfigurationIndex;
+		this.NumPeers = cs.NumPeers;
+		this.ProtocolVersion = cs.ProtocolVersion;
+		this.ProtocolVersionMax = cs.ProtocolVersionMax;
+		this.ProtocolVersionMin = cs.ProtocolVersionMin;
+		this.SnapshotVersionMax = cs.SnapshotVersionMax;
+		this.SnapshotVersionMin = cs.SnapshotVersionMin;
+		this.State = cs.State;
+		this.Term = cs.Term;
+    }
+}
+
+class ClusterState {
+	Nodes: ClusterNode[];
+	State: string;
+	Stats: ClusterStats;
+
+    constructor(cs) {
+		this.Nodes = new Array<ClusterNode>();
+		this.State = cs.State;
+		this.Stats = new ClusterStats(cs.Stats);
+        if (cs.Nodes) {
+            for (let peer of cs.Nodes) {
+                this.Nodes.push(new ClusterNode(peer))
+            }
+        }
+    }
+}
 
 // See models/incident.go
 class IncidentState {

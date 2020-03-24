@@ -29,6 +29,7 @@ type ClusterStat struct {
 
 type ClusterNode struct {
 	Address raft.ServerAddress
+	Id      raft.ServerID
 	State   string
 }
 
@@ -51,7 +52,7 @@ func ClusterStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request)
 		if server.Address == leaderAddress {
 			state = "Leader"
 		}
-		cs.Nodes = append(cs.Nodes, ClusterNode{Address: server.Address, State: state})
+		cs.Nodes = append(cs.Nodes, ClusterNode{Address: server.Address, State: state, Id: server.ID})
 	}
 	cs.Stats = schedule.RaftInstance.Instance.Stats()
 	cs.State = schedule.RaftInstance.Instance.State().String()

@@ -50,9 +50,10 @@ var (
 	AnnotateBackend backend.Backend
 	reload          func() error
 
-	tokensEnabled bool
-	authEnabled   bool
-	startTime     time.Time
+	tokensEnabled  bool
+	clusterEnabled bool
+	authEnabled    bool
+	startTime      time.Time
 )
 
 const (
@@ -117,6 +118,8 @@ func Listen(
 	}
 
 	baseChain := alice.New(miniProfilerMiddleware, endpointStatsMiddleware, gziphandler.GzipHandler)
+
+	clusterEnabled = raft.IsEnabled()
 
 	auth, tokens, err := buildAuth(authConfig)
 	if err != nil {
@@ -352,11 +355,12 @@ type appSetings struct {
 	Version           opentsdb.Version
 	ExampleExpression string
 
-	AuthEnabled   bool
-	TokensEnabled bool
-	Username      string
-	Permissions   easyauth.Role
-	Roles         *roleMetadata
+	AuthEnabled    bool
+	TokensEnabled  bool
+	ClusterEnabled bool
+	Username       string
+	Permissions    easyauth.Role
+	Roles          *roleMetadata
 }
 
 type indexVariables struct {
@@ -390,6 +394,7 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		Version:           openTSDBVersion,
 		AuthEnabled:       authEnabled,
 		TokensEnabled:     tokensEnabled,
+		ClusterEnabled:    clusterEnabled,
 		Roles:             roleDefs,
 		ExampleExpression: schedule.SystemConf.GetExampleExpression(),
 	}

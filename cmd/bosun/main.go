@@ -304,8 +304,8 @@ func main() {
 		}
 		if raftInstance != nil {
 			err = raftInstance.Apply(&fsm.ClusterCommand{
-				fsm.ACTION_APPLY_RULES,
-				newConf.RawText,
+				Cmd:  fsm.ACTION_APPLY_RULES,
+				Data: newConf.RawText,
 			}, 5*time.Minute)
 			if err != nil {
 				return err

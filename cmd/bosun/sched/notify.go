@@ -7,7 +7,6 @@ import (
 	promstat "bosun.org/collect/prometheus"
 	"bosun.org/models"
 	"bosun.org/slog"
-	"github.com/hashicorp/raft"
 )
 
 // dispatchNotifications triggers notification checks at 2x the the system configuration's
@@ -94,7 +93,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 				s.QueueNotification(ak, n, t.Add(time.Minute))
 				continue
 			}
-			if s.RaftInstance.Instance.State() == raft.Leader {
+			if s.RaftInstance.IsLeader() {
 				st, err := s.DataAccess.State().GetLatestIncident(ak)
 				if err != nil {
 					slog.Error(err)
@@ -118,7 +117,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 			}
 		}
 	}
-	if s.RaftInstance.Instance.State() == raft.Leader {
+	if s.RaftInstance.IsLeader() {
 		s.sendNotifications(silenced)
 		s.pendingNotifications = nil
 		err = s.DataAccess.Notifications().ClearNotificationsBefore(latestTime)
