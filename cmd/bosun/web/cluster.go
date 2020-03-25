@@ -61,6 +61,7 @@ func ClusterStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request)
 
 func ClusterChangeMasterTo(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data struct {
+		Id      string
 		Address string
 	}
 	j := json.NewDecoder(r.Body)
@@ -68,8 +69,12 @@ func ClusterChangeMasterTo(t miniprofiler.Timer, w http.ResponseWriter, r *http.
 		return nil, err
 	}
 
+	if data.Id == "" {
+		data.Id = data.Address
+	}
+
 	res := ClusterOpResult{Status: "ok"}
-	f := schedule.RaftInstance.Instance.LeadershipTransferToServer(raft.ServerID(data.Address), raft.ServerAddress(data.Address))
+	f := schedule.RaftInstance.Instance.LeadershipTransferToServer(raft.ServerID(data.Id), raft.ServerAddress(data.Address))
 	if f.Error() != nil {
 		res.Status = "error"
 		res.Error = f.Error().Error()

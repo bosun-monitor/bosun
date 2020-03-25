@@ -255,6 +255,7 @@ type ClusterConf struct {
 	ElectionTimeout    int64
 	LeaderLeaseTimeout int64
 	SnapshotInterval   int64
+	NodeID             string
 }
 
 // SMTPConf contains information for the mail server for which bosun will
@@ -519,6 +520,10 @@ func (sc *SystemConf) ClusterElectionTimeout() time.Duration {
 		return 1000 * time.Millisecond
 	}
 	return time.Duration(sc.ClusterConf.ElectionTimeout) * time.Millisecond
+}
+
+func (sc *SystemConf) GetClusterNodeID() string {
+	return sc.ClusterConf.NodeID
 }
 
 // ClusterSnapshotInterval returns interval for make raft db snapshots.

@@ -164,14 +164,14 @@ func (r *Raft) Watch() {
 					slog.Infof("Received cluster event %s: %#v. member: %s", memberEvent.EventType().String(), ev, changedPeer)
 					if memberEvent.EventType() == serf.EventMemberJoin {
 						if leader.Error() == nil {
-							f := r.Instance.AddVoter(raft.ServerID(changedPeer), raft.ServerAddress(changedPeer), 0, 0)
+							f := r.Instance.AddVoter(raft.ServerID(member.Name), raft.ServerAddress(changedPeer), 0, 0)
 							if f.Error() != nil {
 								slog.Errorf("error adding voter: %s", f.Error())
 							}
 						}
 					} else if memberEvent.EventType() == serf.EventMemberLeave || memberEvent.EventType() == serf.EventMemberFailed || memberEvent.EventType() == serf.EventMemberReap {
 						if leader.Error() == nil {
-							f := r.Instance.RemoveServer(raft.ServerID(changedPeer), 0, 0)
+							f := r.Instance.RemoveServer(raft.ServerID(member.Name), 0, 0)
 							if f.Error() != nil {
 								slog.Errorf("error removing server: %s", f.Error())
 							}
@@ -202,6 +202,11 @@ func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), cluste
 		Level: hclog.LevelFromString("INFO"),
 	})
 
+	nodeID := systemConf.GetClusterNodeID()
+	if nodeID == "" {
+		nodeID = systemConf.GetClusterBindAddress()
+	}
+
 	serfListen := strings.Split(systemConf.GetClusterBindAddress(), ":")
 	if len(serfListen) != 2 {
 		return nil, errors.New("Incorrect serf listen address: " + systemConf.GetClusterBindAddress())
@@ -220,7 +225,7 @@ func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), cluste
 	serfEvents := make(chan serf.Event)
 	// create hashicorp serf config
 	serfConfig := serf.DefaultConfig()
-	serfConfig.NodeName = systemConf.GetClusterBindAddress()
+	serfConfig.NodeName = nodeID
 	serfConfig.EventCh = serfEvents
 	serfConfig.MemberlistConfig = memberlistConfig
 	serfConfig.LogOutput = logFilter
@@ -240,7 +245,7 @@ func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), cluste
 		membersList = systemConf.GetClusterMembers()
 	}
 	if len(membersList) > 0 {
-		if _, err := serfListener.Join(membersList, false); err != nil {
+		if _, err := serfListener.Join(membersList, true); err != nil {
 			return nil, errors.New("Error join cluster: " + err.Error())
 		}
 	}
@@ -257,7 +262,7 @@ func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), cluste
 
 	c := raft.DefaultConfig()
 	c.LogOutput = logFilter
-	c.LocalID = raft.ServerID(raftListen)
+	c.LocalID = raft.ServerID(nodeID)
 	c.HeartbeatTimeout = systemConf.ClusterHeartbeatTimeout()
 	c.LeaderLeaseTimeout = systemConf.ClusterLeaderLeaseTimeout()
 	c.ElectionTimeout = systemConf.ClusterElectionTimeout()
@@ -300,7 +305,7 @@ func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), cluste
 	}
 
 	if !isBootstrapped(raftInstance) {
-		if err := bootstrapCluster(raftInstance, raftListen, systemConf.GetClusterMembers()); err != nil {
+		if err := bootstrapCluster(raftInstance, nodeID, raftListen, systemConf.GetClusterMembers()); err != nil {
 			return nil, errors.New("Error while bootstrap cluster: " + err.Error())
 		}
 	}
@@ -342,26 +347,15 @@ func readMembersFile(cfg string) ([]string, error) {
 	return membersList, nil
 }
 
-func bootstrapCluster(instance *Raft, raftListen string, members []string) error {
+func bootstrapCluster(instance *Raft, nodeID, raftListen string, members []string) error {
 	bootstrapConfig := raft.Configuration{
 		Servers: []raft.Server{
 			{
 				Suffrage: raft.Voter,
-				ID:       raft.ServerID(raftListen),
+				ID:       raft.ServerID(nodeID),
 				Address:  raft.ServerAddress(raftListen),
 			},
 		},
-	}
-	// Add known peers to bootstrap
-	for _, node := range members {
-		if node == raftListen {
-			continue
-		}
-		bootstrapConfig.Servers = append(bootstrapConfig.Servers, raft.Server{
-			Suffrage: raft.Voter,
-			ID:       raft.ServerID(node),
-			Address:  raft.ServerAddress(node),
-		})
 	}
 
 	f := instance.Instance.BootstrapCluster(bootstrapConfig)
