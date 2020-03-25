@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"sync"
 
@@ -43,9 +44,7 @@ func (fsm *FSM) Apply(l *raft.Log) interface{} {
 
 	fsm.Rules = a.Data
 
-	fsm.handleAction(&a)
-
-	return nil
+	return fsm.handleAction(&a)
 }
 
 func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
@@ -80,18 +79,25 @@ func (fsm *FSM) Restore(snap io.ReadCloser) error {
 	return nil
 }
 
-func (fsm *FSM) handleAction(a *ClusterCommand) {
+func (fsm *FSM) handleAction(a *ClusterCommand) error {
 	switch a.Cmd {
 	case ACTION_APPLY_CONFIG:
-		slog.Infoln("Skip ro apply new config: not supported")
+		slog.Warning("Skip ro apply new config: not supported")
+		return fmt.Errorf("APPLY_CONFIG command isn't supported yet")
 	case ACTION_APPLY_RULES:
 		slog.Infoln("Apply new rules")
 		c, err := rule.NewConf(fsm.SysProvider.GetRuleFilePath(), fsm.SysProvider.EnabledBackends(), fsm.SysProvider.GetRuleVars(), fsm.Rules)
 		if err != nil {
 			slog.Errorf("Error while reload cluster rule config. Error while parse config: %v", err)
+			return err
 		}
 		if err := fsm.Reload(c); err != nil {
 			slog.Errorf("Error while reload cluster rule config: %v", err)
+			return err
 		}
+		return nil
+	default:
+		slog.Warningf("Unknown raft command: %v", a)
+		return fmt.Errorf("Unknown raft command")
 	}
 }
