@@ -44,7 +44,11 @@ func (fsm *FSM) Apply(l *raft.Log) interface{} {
 
 	fsm.Rules = a.Data
 
-	return fsm.handleAction(&a)
+	err := fsm.handleAction(&a)
+	if err != nil {
+		promstat.ClusterApplyLogErrors.Inc()
+	}
+	return err
 }
 
 func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {

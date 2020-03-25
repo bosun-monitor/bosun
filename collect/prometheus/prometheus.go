@@ -45,6 +45,11 @@ var (
 		Help: "Cluster snapshots errors",
 	})
 
+	ClusterApplyLogErrors = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "cluster_apply_log_errors",
+		Help: "Cluster apply log errors",
+	})
+
 	ClusterFailovers = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "cluster_failover_count",
 		Help: "Amount of cluster failovers",
@@ -70,6 +75,7 @@ func Init() {
 		ClusterAppliedIndex,
 		ClusterSnapshots,
 		ClusterSnapshotsErrors,
+		ClusterApplyLogErrors,
 		ClusterFailovers,
 		BosunChecksExecuted,
 		BosunNotificationsSent,
