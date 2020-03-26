@@ -4,15 +4,13 @@ interface IClusterScope extends ng.IScope {
 	cluster: ClusterState;
 	clusterPanelClass: any;
 	promotePeer: any;
+	loading: boolean;
 }
 
 bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$route', '$sce', 'linkService', function ($scope: IClusterScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService, linkService: ILinkService) {
 	$http.get('/api/cluster/status')
 		.success((data: any) => {
 			$scope.cluster = data;
-			if (data.State != "Leader") {
-				$scope.warning = "You can not manage cluster from follover node. Please do management from leader node";
-			}
 		})
 		.error((error) => {
 			$scope.error = error;
@@ -28,6 +26,7 @@ bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$ro
 
 	$scope.promotePeer = (id: string, address: string) => {
 		console.log("promote new peer", id)
+		$scope.loading = true;
 		$http.post('/api/cluster/change_master', {"address": address, "id": id})
 		.success((data: any) => {
 			if (data.status === "error") {
@@ -37,13 +36,14 @@ bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$ro
 				$http.get('/api/cluster/status')
 				.success((data: any) => {
 					$scope.cluster = data;
-					if (data.State != "Leader") {
-						$scope.warning = "You can not manage cluster from follover node. Please do management from leader node";
-					}
 				})
 				.error((error) => {
 					$scope.error = error;
-				});
+				})
+				.finally(() => {
+					$scope.loading = false;
+				})
+				;
 				}
 			}
 		})

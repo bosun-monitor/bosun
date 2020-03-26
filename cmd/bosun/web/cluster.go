@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
+	"bosun.org/cmd/bosun/cluster"
 	"bosun.org/cmd/bosun/cluster/fsm"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
@@ -74,11 +76,45 @@ func ClusterChangeMasterTo(t miniprofiler.Timer, w http.ResponseWriter, r *http.
 	}
 
 	res := ClusterOpResult{Status: "ok"}
-	f := schedule.RaftInstance.Instance.LeadershipTransferToServer(raft.ServerID(data.Id), raft.ServerAddress(data.Address))
-	if f.Error() != nil {
-		res.Status = "error"
-		res.Error = f.Error().Error()
+	lead := schedule.RaftInstance.Instance.Leader()
+
+	if schedule.RaftInstance.Instance.State() == raft.Leader {
+		f := schedule.RaftInstance.Instance.LeadershipTransferToServer(raft.ServerID(data.Id), raft.ServerAddress(data.Address))
+		if f.Error() != nil {
+			res.Status = "error"
+			res.Error = f.Error().Error()
+		}
+	} else {
+		data := cluster.EventChangeMaster{
+			Id:      data.Id,
+			Address: data.Address,
+			Source:  string(schedule.RaftInstance.Config.LocalID),
+		}
+		raw, err := json.Marshal(data)
+		if err != nil {
+			res.Status = "error"
+			res.Error = err.Error()
+			return res, nil
+		}
+		if err := schedule.RaftInstance.Serf.UserEvent(
+			cluster.SERF_EVENT_CHANGE_MASTER,
+			raw,
+			false,
+		); err != nil {
+			res.Status = "error"
+			res.Error = err.Error()
+		}
+
 	}
+	e := "Timeout was reached (10s). It is possible that something went wrong"
+	for i := 0; i < 10; i++ {
+		if schedule.RaftInstance.Instance.Leader() != lead {
+			e = ""
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	res.Error = e
 	return res, nil
 }
 

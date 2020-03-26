@@ -32,6 +32,16 @@ type RaftClusterState interface {
 	IsEnabled() bool
 }
 
+const (
+	SERF_EVENT_CHANGE_MASTER = "change_master"
+)
+
+type EventChangeMaster struct {
+	Id      string
+	Address string
+	Source  string
+}
+
 type Raft struct {
 	Instance   *raft.Raft
 	Config     *raft.Config
@@ -177,6 +187,30 @@ func (r *Raft) Watch() {
 							}
 						}
 					}
+				}
+			} else if ev.EventType() == serf.EventUser {
+				query := ev.(serf.UserEvent)
+				if query.Name == SERF_EVENT_CHANGE_MASTER && r.Instance.State() == raft.Leader {
+					var eventChangeMaster EventChangeMaster
+					err := json.Unmarshal(query.Payload, &eventChangeMaster)
+					if err != nil {
+						slog.Errorf("Invalid serf user event change_master payload: %v: %v", string(query.Payload), err)
+						continue
+					}
+					leader := r.Instance.VerifyLeader()
+
+					if leader.Error() == nil {
+						f := r.Instance.LeadershipTransferToServer(raft.ServerID(eventChangeMaster.Id), raft.ServerAddress(eventChangeMaster.Address))
+						if f.Error() != nil {
+							slog.Errorf("error while change leader to node: id %s, address: %s, err: %s", eventChangeMaster.Id, eventChangeMaster.Address, f.Error())
+						} else {
+							slog.Infof("leader was changed by change_master user event to node: id %s, address: %s", eventChangeMaster.Id, eventChangeMaster.Address)
+						}
+					} else {
+						slog.Errorf("error while check leader: %v", leader.Error())
+					}
+				} else {
+					slog.Errorf("Invalid serf user event: %v", query)
 				}
 			}
 		}

@@ -969,9 +969,6 @@ bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$ro
         $http.get('/api/cluster/status')
             .success(function (data) {
             $scope.cluster = data;
-            if (data.State != "Leader") {
-                $scope.warning = "You can not manage cluster from follover node. Please do management from leader node";
-            }
         })
             .error(function (error) {
             $scope.error = error;
@@ -986,6 +983,7 @@ bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$ro
         };
         $scope.promotePeer = function (id, address) {
             console.log("promote new peer", id);
+            $scope.loading = true;
             $http.post('/api/cluster/change_master', { "address": address, "id": id })
                 .success(function (data) {
                 if (data.status === "error") {
@@ -996,12 +994,11 @@ bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$ro
                         $http.get('/api/cluster/status')
                             .success(function (data) {
                             $scope.cluster = data;
-                            if (data.State != "Leader") {
-                                $scope.warning = "You can not manage cluster from follover node. Please do management from leader node";
-                            }
                         })
                             .error(function (error) {
                             $scope.error = error;
+                        })["finally"](function () {
+                            $scope.loading = false;
                         });
                     }
                 }
