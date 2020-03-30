@@ -46,6 +46,7 @@ func (s *Schedule) Run() error {
 		// the shifts for a given period range 0..(period - 1)
 		circular_shifts[re] = (circular_shifts[re] + 1) % re
 	}
+	isLeader := false
 	i := 0
 	for {
 		select {
@@ -56,15 +57,19 @@ func (s *Schedule) Run() error {
 		}
 		ctx := &checkContext{utcNow(), cache.New("alerts", 0)}
 		s.LastCheck = utcNow()
+
 		for _, a := range chs {
 			if (i+a.shift)%a.modulo != 0 {
 				continue
 			}
 			if !s.RaftInstance.IsLeader() {
+				isLeader = false
+				continue
+			} else if !isLeader {
 				// we are setting sheduler start time to now
 				// to prevent unknowns after failover
 				s.StartTime = utcNow()
-				continue
+				isLeader = true
 			}
 			// Put on channel. If that fails, the alert is backed up pretty bad.
 			// Because channel is buffered size 1, it will continue as soon as it finishes.
