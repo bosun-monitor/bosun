@@ -61,6 +61,9 @@ func (s *Schedule) Run() error {
 				continue
 			}
 			if !s.RaftInstance.IsLeader() {
+				// we are setting sheduler start time to now
+				// to prevent unknowns after failover
+				s.StartTime = utcNow()
 				continue
 			}
 			// Put on channel. If that fails, the alert is backed up pretty bad.
