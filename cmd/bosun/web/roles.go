@@ -28,7 +28,7 @@ const (
 	fullyOpen  easyauth.Role = 0
 	roleReader               = canViewDash | canViewConfig | canViewAnnotations
 	roleAdmin                = 0xFFFFFFFF
-	roleWriter               = roleAdmin ^ canManageTokens ^ canOverwriteUsername
+	roleWriter               = roleAdmin ^ canManageTokens ^ canOverwriteUsername ^ canManageCluster
 )
 
 var roleDefs = &roleMetadata{

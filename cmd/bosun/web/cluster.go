@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -36,6 +37,9 @@ type ClusterNode struct {
 }
 
 func ClusterStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	if !schedule.RaftInstance.IsEnabled() {
+		return nil, errors.New("Cluster isn't enabled")
+	}
 	var cs ClusterStat
 	cs.Nodes = make([]ClusterNode, 0)
 

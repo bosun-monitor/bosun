@@ -1,1 +1,1 @@
-<a class="btn btn-primary btn-xs" ng-disabled="peer.State != 'Follower'" ng-click="promotePeer(peer.Id,peer.Address)">Promote</a>
+<a class="btn btn-primary btn-xs" ng-disabled="peer.State != 'Follower' || !clusterEnabled || !auth.HasPermission('Manage Cluster')" ng-click="promotePeer(peer.Id,peer.Address)">Promote</a>

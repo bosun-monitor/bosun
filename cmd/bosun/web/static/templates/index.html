@@ -125,7 +125,7 @@
 						<li ng-class="active('config')"><a href="/config">Rule Editor</a></li>
 						<li ng-class="active('silence')"><a href="/silence">Silence</a></li>
 						<li ng-show="annotateEnabled" ng-class="active('annotation')" ng-cloak><a href="/annotation">Submit Annotation</a></li>
-						<li ng-if="clusterEnabled && auth.HasPermission('Manage Cluster')"><a href="/cluster">Cluster</a></li>
+						<li ng-if="clusterEnabled"><a href="/cluster">Cluster</a></li>
 					</ul>
 					<ul class="nav navbar-nav navbar-right">
 						<li ng-if="quiet" class="navbar-text alert-danger" ng-cloak>Quiet Mode Enabled</li>
