@@ -56,6 +56,8 @@ type SystemConfProvider interface {
 	GetUnknownThreshold() int
 	GetMinGroupSize() int
 
+	ClusterDontSyncRules() bool
+
 	GetShortURLKey() string
 	GetInternetProxy() string
 

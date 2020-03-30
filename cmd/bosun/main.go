@@ -274,7 +274,7 @@ func main() {
 		}()
 		slog.Infoln("config reload complete")
 
-		if systemConf.ClusterEnabled() {
+		if systemConf.ClusterEnabled() && !systemConf.ClusterDontSyncRules() {
 			// make snapshot with changes
 			go func() {
 				slog.Infoln("Making snap")
@@ -294,7 +294,7 @@ func main() {
 	}
 
 	reload = func() error {
-		if raftInstance != nil && raftInstance.Instance.State() != raft.Leader {
+		if !sysProvider.ClusterDontSyncRules() && raftInstance != nil && raftInstance.Instance.State() != raft.Leader {
 			return errors.New("Current node isn't a leader. Please send reload command to leader node")
 		}
 
@@ -302,7 +302,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if raftInstance != nil {
+		if !sysProvider.ClusterDontSyncRules() && raftInstance != nil {
 			err = raftInstance.Apply(&fsm.ClusterCommand{
 				Cmd:  fsm.ACTION_APPLY_RULES,
 				Data: newConf.RawText,
@@ -318,7 +318,7 @@ func main() {
 
 	promstat.Init()
 
-	// If cluster eneble - init cluster
+	// If cluster enable - init cluster
 	if systemConf.ClusterEnabled() {
 		var err error
 		raftInstance, err = cluster.StartCluster(systemConf, setRuleConfig, reloadSchedule)

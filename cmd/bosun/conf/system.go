@@ -256,6 +256,7 @@ type ClusterConf struct {
 	LeaderLeaseTimeout int64
 	SnapshotInterval   int64
 	NodeID             string
+	DontSyncRules      bool
 }
 
 // SMTPConf contains information for the mail server for which bosun will
@@ -542,6 +543,13 @@ func (sc *SystemConf) ClusterHeartbeatTimeout() time.Duration {
 		return 1000 * time.Millisecond
 	}
 	return time.Duration(sc.ClusterConf.HeartbeatTimeout) * time.Millisecond
+}
+
+// ClusterDontSyncRules returns if rules shouldn't be synced within cluster
+// If it is true cluster don't manage rules config at all. In that case you should take care
+// about keeping rules config in synced state by yourself
+func (sc *SystemConf) ClusterDontSyncRules() bool {
+	return sc.ClusterConf.DontSyncRules
 }
 
 // ClusterLeaderLeaseTimeout returns timeout for lease old leader.
