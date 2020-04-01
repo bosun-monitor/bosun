@@ -231,9 +231,19 @@ func main() {
 		// So it is often happens before run scheduler.
 		// In that way we should just change ruleProvider for future usage
 		// and son't restart a schedule
-		newConf.SetSaveHook(cmdHook)
-		newConf.SetReload(reload)
-		ruleProvider = newConf
+
+		if systemConf.ClusterDontSyncRules() {
+			newConf, err = rule.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends(), systemConf.GetRuleVars())
+			if err != nil {
+				slog.Fatalf("couldn't read rules: %v", err)
+				return
+			}
+		} else {
+			newConf.SetSaveHook(cmdHook)
+			newConf.SetReload(reload)
+			ruleProvider = newConf
+		}
+
 		if !sched.DefaultSched.StartTime.IsZero() {
 			// We should definetly restart schedule if it's running
 			reloadSchedule(newConf)
@@ -267,9 +277,11 @@ func main() {
 		}
 		web.ResetSchedule() // Signal web to point to the new DefaultSchedule
 		go func() {
-			slog.Infoln("running new schedule")
+			slog.Infoln("running new schedule", *flagNoChecks)
 			if !*flagNoChecks {
-				sched.Run()
+				if err := sched.Run(); err != nil {
+					slog.Errorf("error while running new schedule: %v", err)
+				}
 			}
 		}()
 		slog.Infoln("config reload complete")

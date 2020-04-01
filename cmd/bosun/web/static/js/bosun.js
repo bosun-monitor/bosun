@@ -972,6 +972,8 @@ bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$ro
         })
             .error(function (error) {
             $scope.error = error;
+        })["finally"](function () {
+            $scope.loading = false;
         });
         $scope.clusterPanelClass = function (state) {
             switch (state) {
@@ -1005,6 +1007,8 @@ bosunControllers.controller('ClusterCtrl', ['$scope', '$http', '$location', '$ro
             })
                 .error(function (error) {
                 $scope.error = error;
+            })["finally"](function () {
+                $scope.loading = false;
             });
         };
     }]);

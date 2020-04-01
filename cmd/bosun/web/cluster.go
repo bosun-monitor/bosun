@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/cluster"
-	"bosun.org/cmd/bosun/cluster/fsm"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/hashicorp/raft"
@@ -20,7 +19,8 @@ type ClusterOpResult struct {
 }
 
 type ClusterMember struct {
-	Address  string
+	Address  raft.ServerAddress
+	Id       raft.ServerID
 	Suffrage raft.ServerSuffrage
 }
 
@@ -136,21 +136,24 @@ func ClusterRecover(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 
 	for _, member := range data.Members {
 		configuration.Servers = append(configuration.Servers, raft.Server{
-			Suffrage: member.Suffrage, Address: raft.ServerAddress(member.Address), ID: raft.ServerID(member.Address)})
+			Suffrage: member.Suffrage, Address: member.Address, ID: member.Id})
 	}
 
-	schedule.RaftInstance.Instance.Shutdown()
-
-	slog.Infof("Start to recover cluster with configuration: %#v", configuration)
-	if err := raft.RecoverCluster(schedule.RaftInstance.Config, &fsm.FSM{},
+	if s := schedule.RaftInstance.Instance.Shutdown(); s.Error() != nil {
+		return s.Error().Error, fmt.Errorf("error while shutdown raft: %v", s.Error())
+	}
+	slog.Infof("Start to recover cluster with configuration: {%#v}", configuration)
+	if err := raft.RecoverCluster(schedule.RaftInstance.Config, schedule.RaftInstance.Fsm,
 		schedule.RaftInstance.Db, schedule.RaftInstance.Db, schedule.RaftInstance.Snapshots,
 		schedule.RaftInstance.Transport, configuration); err != nil {
-		return nil, fmt.Errorf("recovery failed: %v", err)
+		slog.Errorf("Error while recover cluster: %v", err)
+		return err.Error(), fmt.Errorf("recovery failed: %v", err)
 	}
 
+	slog.Infof("Start to recover raft configuration")
 	var err error
 	schedule.RaftInstance.Instance, err = raft.NewRaft(
-		schedule.RaftInstance.Config, &fsm.FSM{}, schedule.RaftInstance.Db,
+		schedule.RaftInstance.Config, schedule.RaftInstance.Fsm, schedule.RaftInstance.Db,
 		schedule.RaftInstance.Db, schedule.RaftInstance.Snapshots, schedule.RaftInstance.Transport)
 
 	for _, member := range schedule.RaftInstance.Serf.Members() {
@@ -159,5 +162,8 @@ func ClusterRecover(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 			slog.Errorf("Error while remove serf member %s: %#v", member.Name, err)
 		}
 	}
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+	return "recovered", nil
 }
