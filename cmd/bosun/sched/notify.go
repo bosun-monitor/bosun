@@ -63,37 +63,37 @@ func (s *Schedule) CheckNotifications() time.Time {
 	s.Lock("CheckNotifications")
 	defer s.Unlock()
 	latestTime := utcNow()
-	notifications, err := s.DataAccess.Notifications().GetDueNotifications()
-	if err != nil {
-		slog.Error("Error getting notifications", err)
-		return utcNow().Add(time.Minute)
-	}
-	for ak, ns := range notifications {
-		if si := silenced(ak); si != nil {
-			slog.Infoln("silencing", ak)
-			continue
+	if s.RaftInstance.IsLeader() {
+		notifications, err := s.DataAccess.Notifications().GetDueNotifications()
+		if err != nil {
+			slog.Error("Error getting notifications", err)
+			return utcNow().Add(time.Minute)
 		}
-		for name, t := range ns {
-			n := s.RuleConf.GetNotification(name)
-			if n == nil {
+		for ak, ns := range notifications {
+			if si := silenced(ak); si != nil {
+				slog.Infoln("silencing", ak)
 				continue
 			}
-			//If alert is currently unevaluated because of a dependency,
-			//simply requeue it until the dependency resolves itself.
-			_, uneval := s.GetUnknownAndUnevaluatedAlertKeys(ak.Name())
-			unevaluated := false
-			for _, un := range uneval {
-				if un == ak {
-					unevaluated = true
-					break
+			for name, t := range ns {
+				n := s.RuleConf.GetNotification(name)
+				if n == nil {
+					continue
 				}
-			}
-			if unevaluated {
-				// look at it again in a minute
-				s.QueueNotification(ak, n, t.Add(time.Minute))
-				continue
-			}
-			if s.RaftInstance.IsLeader() {
+				//If alert is currently unevaluated because of a dependency,
+				//simply requeue it until the dependency resolves itself.
+				_, uneval := s.GetUnknownAndUnevaluatedAlertKeys(ak.Name())
+				unevaluated := false
+				for _, un := range uneval {
+					if un == ak {
+						unevaluated = true
+						break
+					}
+				}
+				if unevaluated {
+					// look at it again in a minute
+					s.QueueNotification(ak, n, t.Add(time.Minute))
+					continue
+				}
 				st, err := s.DataAccess.State().GetLatestIncident(ak)
 				if err != nil {
 					slog.Error(err)
@@ -116,8 +116,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 				}
 			}
 		}
-	}
-	if s.RaftInstance.IsLeader() {
+
 		s.sendNotifications(silenced)
 		s.pendingNotifications = nil
 		err = s.DataAccess.Notifications().ClearNotificationsBefore(latestTime)
