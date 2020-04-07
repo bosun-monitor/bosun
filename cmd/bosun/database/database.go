@@ -12,6 +12,7 @@ import (
 
 	"bosun.org/cmd/bosun/database/sentinel"
 	"bosun.org/collect"
+	promstat "bosun.org/collect/prometheus"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -119,8 +120,24 @@ func (c *connWrapper) Close() error {
 	return err
 }
 
+func (c *connWrapper) Do(commandName string, args ...interface{}) (reply interface{}, err error) {
+	start := time.Now()
+	defer promstat.BosunDatabaseQueriesLatency.WithLabelValues(myCallerName(), commandName).Observe(time.Since(start).Seconds())
+
+	reply, err = c.Conn.Do(commandName, args...)
+	if err != nil {
+		promstat.BosunDatabaseQueryErrors.WithLabelValues(myCallerName(), commandName).Inc()
+	}
+	return
+}
+
 func (d *dataAccess) Get() redis.Conn {
-	closer := collect.StartTimer("redis", opentsdb.TagSet{"op": myCallerName()})
+	closerTsdb := collect.StartTimer("redis", opentsdb.TagSet{"op": myCallerName()})
+	startTime := time.Now()
+	closer := func() {
+		closerTsdb()
+		promstat.BosunDatabaseGetConnectorLatency.WithLabelValues(myCallerName()).Observe(time.Since(startTime).Seconds())
+	}
 	return &connWrapper{
 		Conn:   d.pool.Get(),
 		closer: closer,

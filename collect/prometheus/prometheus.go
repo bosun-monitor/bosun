@@ -59,10 +59,58 @@ var (
 		Name: "bosun_checks_executed",
 		Help: "Amount of checks that were executed",
 	})
-	BosunNotificationsSent = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "bosun_notifications_sent",
-		Help: "Amount of checks that were executed",
-	})
+	BosunNotificationSent = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "bosun_notification_sent",
+			Help: "Amount of notifications that were sent",
+		},
+		[]string{"transport"},
+	)
+	BosunNotificationError = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "bosun_notification_errors",
+			Help: "Amount of notifications that weren't sent because error",
+		},
+		[]string{"transport"},
+	)
+	BosunNotificationLatency = prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name:       "bosun_notifications_latency",
+			Help:       "Latencies for notifications per channel (sec)",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+		[]string{"transport"},
+	)
+	BosunIncidentChanged = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "bosun_incidents_changed",
+			Help: "Amount of incidents that were opened by status",
+		},
+		[]string{"state"},
+	)
+	BosunDatabaseGetConnectorLatency = prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name:       "bosun_database_get_connector_latency",
+			Help:       "Latencies for database queries (sec)",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+		[]string{"query"},
+	)
+	BosunDatabaseQueriesLatency = prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name:       "bosun_database_query_latency",
+			Help:       "Latencies for database queries (sec)",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+		[]string{"caller", "query"},
+	)
+	BosunDatabaseQueryErrors = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "bosun_database_query_errors",
+			Help: "Amount of queries with error",
+		},
+		[]string{"caller", "query"},
+	)
 )
 
 func Init() {
@@ -78,7 +126,13 @@ func Init() {
 		ClusterApplyLogErrors,
 		ClusterFailovers,
 		BosunChecksExecuted,
-		BosunNotificationsSent,
+		BosunNotificationSent,
+		BosunNotificationError,
+		BosunNotificationLatency,
+		BosunIncidentChanged,
+		BosunDatabaseQueriesLatency,
+		BosunDatabaseGetConnectorLatency,
+		BosunDatabaseQueryErrors,
 	)
 	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
 }

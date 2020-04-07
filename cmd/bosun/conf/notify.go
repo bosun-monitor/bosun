@@ -11,8 +11,10 @@ import (
 	"net/mail"
 	"net/smtp"
 	"strings"
+	"time"
 
 	"bosun.org/collect"
+	promstat "bosun.org/collect/prometheus"
 	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/slog"
@@ -50,7 +52,10 @@ type PreparedNotifications struct {
 }
 
 func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
+	transport := "email"
 	if p.Email != nil {
+		start := time.Now()
+		promstat.BosunNotificationSent.WithLabelValues(transport).Inc()
 		if err := p.Email.Send(c); err != nil {
 			slog.Errorf(
 				sendLogErrorFmt,
@@ -61,6 +66,7 @@ func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 				p.Email.Body,
 				err.Error(),
 			)
+			promstat.BosunNotificationError.WithLabelValues(transport).Inc()
 			errs = append(errs, err)
 		} else if p.Print {
 			slog.Infof(
@@ -72,8 +78,12 @@ func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 				p.Email.Body,
 			)
 		}
+		promstat.BosunNotificationLatency.WithLabelValues(transport).Observe(time.Since(start).Seconds())
 	}
 	for _, h := range p.HTTP {
+		start := time.Now()
+		transport = "http"
+		promstat.BosunNotificationSent.WithLabelValues(transport).Inc()
 		var logPrefix string
 		if h.Details.At != "" {
 			logPrefix = fmt.Sprintf("action_type: %s", h.Details.At)
@@ -90,6 +100,7 @@ func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 				h.Body,
 				err.Error(),
 			)
+			promstat.BosunNotificationError.WithLabelValues(transport).Inc()
 			errs = append(errs, err)
 		} else if p.Print {
 			slog.Infof(
@@ -101,6 +112,7 @@ func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 				h.Body,
 			)
 		}
+		promstat.BosunNotificationLatency.WithLabelValues(transport).Observe(time.Since(start).Seconds())
 	}
 
 	return

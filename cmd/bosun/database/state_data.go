@@ -8,6 +8,7 @@ import (
 
 	"strings"
 
+	promstat "bosun.org/collect/prometheus"
 	"bosun.org/models"
 	"bosun.org/slog"
 	"github.com/garyburd/redigo/redis"
@@ -369,6 +370,7 @@ func (d *dataAccess) SetIncidentNext(previousIncidentId, nextIncidentId int64) e
 }
 
 func (d *dataAccess) UpdateIncidentState(s *models.IncidentState) (int64, error) {
+	promstat.BosunIncidentChanged.WithLabelValues(s.CurrentStatus.String()).Inc()
 	return d.save(s, false)
 }
 
