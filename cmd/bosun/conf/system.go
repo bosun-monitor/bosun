@@ -46,6 +46,7 @@ type SystemConf struct {
 	MinGroupSize  int
 
 	UnknownThreshold       int
+	ProblemRunsToUnknown   int
 	CheckFrequency         Duration // Time between alert checks: 5m
 	DefaultRunEvery        int      // Default number of check intervals to run each alert: 1
 	AlertCheckDistribution string   // Method to distribute alet checks. No distribution if equals ""
@@ -720,6 +721,15 @@ func (sc *SystemConf) GetAzureMonitorContext() expr.AzureMonitorClients {
 		allClients[prefix] = cc
 	}
 	return allClients
+}
+
+// how many runs can by skipped because the errors of some stuck within the bosun
+// before we assume the alert should go to the unknown state
+func (sc *SystemConf) GetProblemRunsToUnknown() time.Duration {
+	if sc.ProblemRunsToUnknown <= 0 {
+		sc.ProblemRunsToUnknown = 1
+	}
+	return time.Duration(1 + sc.ProblemRunsToUnknown)
 }
 
 // azureLogRequest outputs HTTP requests to Azure to the logs

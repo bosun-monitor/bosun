@@ -81,6 +81,7 @@ Config items:
 * httpListen: HTTP listen address, defaults to `:8070`
 * hostname: when generating links in templates, use this value as the hostname instead of using the system's hostname
 * minGroupSize: minimum group size for alerts to be grouped together on dashboard. Default `5`.
+* problemRunsToUnknown: how many runs of the alert we should be able to skip (because an error while query the redis as instance) before we decide that alert should go to `unknown` (untouched) state. By default we will decide that alert was untouched and should be in `unknown` state on next run after an error (As an example: We have `defaultRunEvery` = 1, `checkFrequency` = 5m. We have an alert was successfully executed at the time 0 (second), the error was while query redis database at the time 300 (0 + 5 minutes). Next check at the time 600 will generate the `unknown` state). Default `1`. 
 * ping: if present, will ping all values tagged with host
 * responseLimit: number of bytes to limit OpenTSDB responses, defaults to 1MB (`1048576`)
 * searchSince: duration of time to filter by during certain searches, defaults to `3d`; currently used by the hosts list on the items page

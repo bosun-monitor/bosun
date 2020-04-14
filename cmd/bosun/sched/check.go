@@ -540,7 +540,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 		if a.RunEvery != 0 {
 			runEvery = a.RunEvery
 		}
-		t = s.SystemConf.GetCheckFrequency() * 2 * time.Duration(runEvery)
+		t = s.SystemConf.GetCheckFrequency() * time.Duration(runEvery) * s.SystemConf.GetProblemRunsToUnknown()
 	}
 	maxTouched := now.UTC().Unix() - int64(t.Seconds())
 	untouched, err := s.DataAccess.State().GetUntouchedSince(alert, maxTouched)

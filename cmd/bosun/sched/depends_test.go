@@ -12,7 +12,7 @@ import (
 // Result should be {a=c} only.
 func TestDependency_Simple(t *testing.T) {
 	defer setup()()
-	testSched(t, &schedTest{
+	testSched(t, nil, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:c{a=*}", "5m", "")) > 0
 			depends = avg(q("avg:d{a=*}", "5m", "")) > 0
@@ -52,7 +52,7 @@ func TestDependency_Simple(t *testing.T) {
 // Crit and depends don't have same tag sets.
 func TestDependency_Overlap(t *testing.T) {
 	defer setup()()
-	testSched(t, &schedTest{
+	testSched(t, nil, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:c{a=*,b=*}", "5m", "")) > 0
 			depends = avg(q("avg:d{a=*,d=*}", "5m", "")) > 0
@@ -91,7 +91,7 @@ func TestDependency_Overlap(t *testing.T) {
 
 func TestDependency_OtherAlert(t *testing.T) {
 	defer setup()()
-	testSched(t, &schedTest{
+	testSched(t, nil, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:a{host=*,cpu=*}", "5m", "")) > 0
 		}
@@ -134,7 +134,7 @@ func TestDependency_OtherAlert(t *testing.T) {
 func TestDependency_OtherAlert_Unknown(t *testing.T) {
 	defer setup()()
 
-	testSched(t, &schedTest{
+	testSched(t, nil, &schedTest{
 		conf: `alert a {
 			warn = avg(q("avg:a{host=*}", "5m", "")) > 0
 		}
@@ -182,7 +182,7 @@ func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 	bb := models.AlertKey("b{host=b}")
 	cb := models.AlertKey("c{host=b}")
 
-	s := testSched(t, &schedTest{
+	s := testSched(t, nil, &schedTest{
 		conf: `
 		alert a {
 			warn = avg(q("avg:a{host=*}", "5m", "")) && 0
@@ -240,7 +240,7 @@ func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 
 func TestDependency_Blocks_Unknown(t *testing.T) {
 	defer setup()()
-	testSched(t, &schedTest{
+	testSched(t, nil, &schedTest{
 		conf: `alert a {
 			depends = avg(q("avg:b{host=*}", "5m", "")) > 0
 			warn = avg(q("avg:a{host=*}", "5m", "")) > 0
@@ -267,7 +267,7 @@ func TestDependency_Blocks_Unknown(t *testing.T) {
 func TestDependency_AlertFunctionHasNoResults(t *testing.T) {
 	defer setup()()
 
-	testSched(t, &schedTest{
+	testSched(t, nil, &schedTest{
 		conf: `
 alert a {
     warn = max(rename(q("sum:bosun.ping.timeout{dst_host=*,host=*}", "5m", ""), "host=source,dst_host=host"))
