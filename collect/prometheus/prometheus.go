@@ -1,6 +1,10 @@
 package prometheus
 
 import (
+	"time"
+
+	"github.com/armon/go-metrics"
+	prommetrics "github.com/armon/go-metrics/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -113,7 +117,24 @@ var (
 	)
 )
 
-func Init() {
+func Init() error {
+	sink, err := prommetrics.NewPrometheusSink()
+	if err != nil {
+		return err
+	}
+
+	metrics.NewGlobal(
+		&metrics.Config{
+			ServiceName:          "bosun", // Use client provided service
+			HostName:             "system",
+			EnableHostname:       true,             // Enable hostname prefix
+			EnableRuntimeMetrics: false,            // Enable runtime profiling
+			EnableTypePrefix:     false,            // Disable type prefix
+			TimerGranularity:     time.Millisecond, // Timers are in milliseconds
+			ProfileInterval:      time.Second,      // Poll runtime every second
+			FilterDefault:        true,             // Don't filter metrics by default
+		}, sink)
+
 	prometheus.MustRegister(
 		ClusterState,
 		ClusterMemberMode,
@@ -135,4 +156,5 @@ func Init() {
 		BosunDatabaseQueryErrors,
 	)
 	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+	return nil
 }

@@ -328,7 +328,10 @@ func main() {
 		return nil
 	}
 
-	promstat.Init()
+	err = promstat.Init()
+	if err != nil {
+		slog.Fatalf("Error while init prometheus metrics: %v", err)
+	}
 
 	// If cluster enable - init cluster
 	if systemConf.ClusterEnabled() {
