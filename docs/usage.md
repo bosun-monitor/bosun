@@ -238,5 +238,159 @@ Each row in the image is one of the items in the result set. The color squares r
 
 Annotations are currently stored in elastic. When annotations are enabled you can create, edit and visualize them on the the Graph page. There is also a Submit Annotations page that allows for creation and editing annotations. The API described in this [README](https://github.com/bosun-monitor/annotate/blob/master/web/README.md) gets injected into bosun under `/api/` - you can also find a description of the schema there. 
 
+# Clustering
+
+## Concept
+
+Bosun uses the [raft consensus algorithm](https://raft.github.io/) for clusterization. We are using several libraries to implement clustering:
+
+1. Member list-to store members in cluster (https://github.com/hashicorp/memberlist)
+
+2. Serf-cluster membership and orchestration (it is possible to share some data within cluster by serf) (https://www.serf.io/docs/)
+
+3. Raft-hashicorp Raft-consensus implementation (https://raft.github.io/raft.pdf)
+
+Current cluster implementation follow rules:
+
+1. Cluster has only one `Leader` node
+
+2. Only `Leader` node can manage cluster internal data
+
+3. Rules definitions can be set only  on the `Leader` node
+
+4. Cluster shares follow data:
+
+- cluster metadata
+
+- leasing time for the leader
+
+- list of nodes in cluster
+
+- logic metadata (e.g. rules configuration (definition of the alerts))
+
+5. only `Leader` node executes checks and sends notifications related with check results.
+
+6. all other nodes are able to process users queries to UI and REST api. All messages that are generated while actions from UI/API can be sent from all nodes (`Leader`/`Follower`)
+
+## Telemetry
+
+All internal cluster telemetry available in the prometheus endpoint (see [PrometheusPath system config parameter](/system_configuration#PrometheusPath)).
+
+## Reload rules definition within cluster
+
+![Reload rules definition within cluster](/public/cluster_reload_config.png)
+
+## Start node within cluster
+
+![Start node within cluster](/public/cluster_start_node.png)
+
+## Change leader handler
+
+![Change leader handler](/public/cluster_change_leader.png)
+
+## Starting new cluster example
+
+We have 3 empty nodes:
+
+- node1: IP 10.0.0.1
+
+- node2: IP 10.0.0.2
+
+- node3: IP 10.0.0.3
+
+To start new cluster:
+
+### node1 start
+
+- Create new path for bosun's cluster metadata - `/var/lib/bosun/cluster`
+
+- Create empty memberlist file `/etc/bosun/memberslist.conf`
+
+- Change bosun configuration on node1:
+
+```
+...
+[ClusterConf]
+    MetadataStorePath = "/var/lib/bosun/cluster"
+    RPCListen = "10.0.0.1:8071"
+    MembersFile = "/etc/bosun/memberslist.conf"
+    NodeID = "node1"
+...
+```
+
+- Start bosun service
+
+### node2 start
+
+- Create new path for bosun's cluster metadata - `/var/lib/bosun/cluster`
+
+- Create memberlist file `/etc/bosun/memberslist.conf` with content:
+
+```
+10.0.0.1:8071
+```
+
+- Change bosun configuration on node2:
+
+```
+...
+[ClusterConf]
+    MetadataStorePath = "/var/lib/bosun/cluster"
+    RPCListen = "10.0.0.2:8071"
+    MembersFile = "/etc/bosun/memberslist.conf"
+    NodeID = "node2"
+...
+```
+
+- Start bosun service
+
+### node3 start
+
+- Create new path for bosun's cluster metadata - `/var/lib/bosun/cluster`
+
+- Create memberlist file `/etc/bosun/memberslist.conf` with content:
+
+```
+10.0.0.1:8071
+10.0.0.2:8071
+```
+
+- Change bosun configuration on node3:
+
+```
+...
+[ClusterConf]
+    MetadataStorePath = "/var/lib/bosun/cluster"
+    RPCListen = "10.0.0.3:8071"
+    MembersFile = "/etc/bosun/memberslist.conf"
+    NodeID = "node3"
+...
+```
+
+- Start bosun service
+
+### Make memberlist file is actual
+
+- node1:
+
+```
+10.0.0.2:8071
+10.0.0.3:8071
+```
+
+- node2:
+
+```
+10.0.0.1:8071
+10.0.0.3:8071
+```
+
+- node3:
+
+```
+10.0.0.1:8071
+10.0.0.2:8071
+```
+
 </div>
 </div>

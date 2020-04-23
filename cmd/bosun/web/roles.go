@@ -44,7 +44,7 @@ var roleDefs = &roleMetadata{
 		{canSilence, "Silence", "Can add and manage silences"},
 		{canManageTokens, "Manage Tokens", "Can manage authorization tokens"},
 		{canOverwriteUsername, "Set Username", "Allows external services to set username in api requests"},
-		{canManageCluster, "Manage Cluster", "Allows external services to manage cluster configuration in api requests"},
+		{canManageCluster, "Manage Cluster", "Can manage cluster configuration via api/UI"},
 	},
 	Roles: []bitDesc{
 		{roleReader, "Reader", "Read access to dashboard and alert data"},

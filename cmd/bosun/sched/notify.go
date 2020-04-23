@@ -62,7 +62,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 	s.Lock("CheckNotifications")
 	defer s.Unlock()
 	latestTime := utcNow()
-	if s.RaftInstance.IsLeader() {
+	if s.RaftInstance == nil || s.RaftInstance.IsLeader() {
 		notifications, err := s.DataAccess.Notifications().GetDueNotifications()
 		if err != nil {
 			slog.Error("Error getting notifications", err)

@@ -101,6 +101,11 @@ Permissions provide the ability to certain things with both, and Roles are a col
         <td>Admin</td>
         <td>Allows external services to set a different username in api requests</td>
     </tr>
+    <tr>
+        <td>Manage Cluster</td>
+        <td>Admin</td>
+        <td>Can manage cluster configuration via api/UI</td>
+    </tr>
 </table>
 
 ## Syncing Tokens

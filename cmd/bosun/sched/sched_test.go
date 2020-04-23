@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"bosun.org/cmd/bosun/cluster"
+	"bosun.org/cmd/bosun/cluster/fsm"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
@@ -20,6 +22,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/hashicorp/raft"
 )
 
 func init() {
@@ -38,6 +41,61 @@ type schedTest struct {
 	// state -> active
 	state   map[schedState]bool
 	touched map[models.AlertKey]time.Time
+}
+
+type clusterTest struct {
+	leader bool
+}
+
+func (c *clusterTest) Snapshot() raft.SnapshotFuture {
+	return nil
+}
+
+func (c *clusterTest) ReapSnapshots() error {
+	return nil
+}
+
+func (c *clusterTest) Apply(cmd *fsm.ClusterCommand, timeout time.Duration) error {
+	return nil
+}
+
+func (c *clusterTest) State() raft.RaftState {
+	if c.leader {
+		return raft.Leader
+	}
+	return raft.Follower
+}
+
+func (c *clusterTest) GetClusterStat() error {
+	return nil
+}
+
+func (c *clusterTest) Watch() {
+	return
+}
+
+func (c *clusterTest) GetConfiguration() raft.ConfigurationFuture {
+	return nil
+}
+
+func (c *clusterTest) GetLeader() raft.ServerAddress {
+	return "127.0.0.1"
+}
+
+func (c *clusterTest) IsLeader() bool {
+	return c.leader
+}
+
+func (c *clusterTest) GetStat() map[string]string {
+	return make(map[string]string)
+}
+
+func (c *clusterTest) ChangeMaster(node *cluster.ClusterNode) error {
+	return nil
+}
+
+func (c *clusterTest) Recover(nodeList []cluster.ClusterNode) error {
+	return nil
 }
 
 // test-only function to check all alerts immediately.
@@ -62,14 +120,14 @@ func setup() func() {
 	return closer
 }
 
-func initSched(sc conf.SystemConfProvider, c conf.RuleConfProvider, startTime time.Time) (*Schedule, error) {
+func initSched(sc conf.SystemConfProvider, c conf.RuleConfProvider, startTime time.Time, cluster cluster.Cluster) (*Schedule, error) {
 	s := new(Schedule)
-	err := s.Init("test_schedule", sc, c, db, nil, nil, false, false)
+	err := s.Init("test_schedule", sc, c, db, nil, cluster, false, false)
 	s.StartTime = startTime // while init we set starting time to now(). Let's pretend we've been running for a while.
 	return s, err
 }
 
-func testSched(t *testing.T, st *schedTest) (s *Schedule) {
+func testSched(t *testing.T, st *schedTest, cluster cluster.Cluster) (s *Schedule) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req opentsdb.Request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -107,7 +165,7 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 
 	time.Sleep(time.Millisecond * 250)
 	sysConf := &conf.SystemConf{CheckFrequency: conf.Duration{Duration: time.Minute * 5}, DefaultRunEvery: 1, UnknownThreshold: 5, MinGroupSize: 5, OpenTSDBConf: conf.OpenTSDBConf{Host: u.Host, ResponseLimit: 1 << 20}}
-	s, _ = initSched(sysConf, c, time.Date(1900, 0, 0, 0, 0, 0, 0, time.UTC)) //pretend we've been running for a while
+	s, _ = initSched(sysConf, c, time.Date(1900, 0, 0, 0, 0, 0, 0, time.UTC), cluster) //pretend we've been running for a while
 	for ak, time := range st.touched {
 		s.DataAccess.State().TouchAlertKey(ak, time)
 	}
@@ -170,7 +228,31 @@ func TestCrit(t *testing.T) {
 		state: map[schedState]bool{
 			{"a{a=b}", "critical"}: true,
 		},
-	})
+	}, nil)
+	if !s.AlertSuccessful("a") {
+		t.Fatal("Expected alert a to be successful")
+	}
+}
+
+func TestClusterEnabledFollover_AlertRun(t *testing.T) {
+	defer setup()()
+	s := testSched(t, &schedTest{
+		conf: `alert a {
+			crit = avg(q("avg:m{a=b}", "5m", "")) > 0
+		}`,
+		queries: map[string]opentsdb.ResponseSet{
+			`q("avg:m{a=b}", ` + window5Min + `)`: {
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "b"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+			},
+		},
+		state: map[schedState]bool{
+			{"a{a=b}", "critical"}: true,
+		},
+	}, &clusterTest{})
 	if !s.AlertSuccessful("a") {
 		t.Fatal("Expected alert a to be successful")
 	}
@@ -200,7 +282,7 @@ func TestBandDisableUnjoined(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, nil)
 }
 
 func TestCount(t *testing.T) {
@@ -223,7 +305,7 @@ func TestCount(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, nil)
 }
 
 func TestUnknown(t *testing.T) {
@@ -242,7 +324,7 @@ func TestUnknown(t *testing.T) {
 			"a{a=b}": queryTime.Add(-10 * time.Minute),
 			"a{a=c}": queryTime.Add(-9 * time.Minute),
 		},
-	})
+	}, nil)
 }
 
 func TestUnknown_HalfFreq(t *testing.T) {
@@ -262,7 +344,7 @@ func TestUnknown_HalfFreq(t *testing.T) {
 			"a{a=b}": queryTime.Add(-20 * time.Minute),
 			"a{a=c}": queryTime.Add(-19 * time.Minute),
 		},
-	})
+	}, nil)
 }
 
 func TestUnknown_WithError(t *testing.T) {
@@ -279,7 +361,7 @@ func TestUnknown_WithError(t *testing.T) {
 		touched: map[models.AlertKey]time.Time{
 			"a{a=b}": queryTime.Add(-10 * time.Minute),
 		},
-	})
+	}, nil)
 
 	if s.AlertSuccessful("a") {
 		t.Fatal("Expected alert a to be in a failed state")
@@ -337,7 +419,7 @@ func TestRename(t *testing.T) {
 			{"ping.host{host=ny-web01,source=ny-kbrandt02}", "warning"}:     true,
 			{"os.cpu{host=ny-web02}", "warning"}:                            true,
 		},
-	})
+	}, nil)
 }
 
 func TestUnknownsAreNormal(t *testing.T) {
@@ -355,5 +437,5 @@ func TestUnknownsAreNormal(t *testing.T) {
 			"a{a=b}": queryTime.Add(-10 * time.Minute),
 			"a{a=c}": queryTime.Add(-9 * time.Minute),
 		},
-	})
+	}, nil)
 }

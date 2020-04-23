@@ -27,19 +27,34 @@ import (
 
 type MembersFileWatch func(*conf.SystemConf, *Raft)
 
-type RaftClusterState interface {
-	GetClusterStat()
-	IsEnabled() bool
-}
-
 const (
 	SERF_EVENT_CHANGE_MASTER = "change_master"
 )
 
 type EventChangeMaster struct {
-	Id      string
-	Address string
-	Source  string
+	Node   *ClusterNode
+	Source raft.ServerID
+}
+
+type ClusterNode struct {
+	Id       raft.ServerID
+	Address  raft.ServerAddress
+	Suffrage raft.ServerSuffrage
+}
+
+type Cluster interface {
+	Snapshot() raft.SnapshotFuture
+	ReapSnapshots() error
+	Apply(cmd *fsm.ClusterCommand, timeout time.Duration) error
+	State() raft.RaftState
+	GetClusterStat() error
+	Watch()
+	GetConfiguration() raft.ConfigurationFuture
+	GetLeader() raft.ServerAddress
+	IsLeader() bool
+	GetStat() map[string]string
+	ChangeMaster(node *ClusterNode) error
+	Recover(nodeList []ClusterNode) error
 }
 
 type Raft struct {
@@ -55,11 +70,8 @@ type Raft struct {
 	memberList map[string]struct{}
 }
 
-func (r *Raft) IsEnabled() bool {
-	if r == nil {
-		return false
-	}
-	return true
+func (r *Raft) GetStat() map[string]string {
+	return r.Instance.Stats()
 }
 
 func (r *Raft) IsLeader() bool {
@@ -70,10 +82,89 @@ func (r *Raft) IsLeader() bool {
 	return r.Instance.State() == raft.Leader
 }
 
-func (r *Raft) GetClusterStat() {
+func (r *Raft) Recover(nodeList []ClusterNode) error {
+	configuration := raft.Configuration{Servers: make([]raft.Server, 0)}
+	for _, member := range nodeList {
+		configuration.Servers = append(configuration.Servers, raft.Server{
+			Suffrage: member.Suffrage, Address: member.Address, ID: member.Id})
+	}
+
+	if s := r.Instance.Shutdown(); s.Error() != nil {
+		return s.Error()
+	}
+	slog.Infof("Start to recover cluster with configuration: {%#v}", configuration)
+	if err := raft.RecoverCluster(r.Config, r.Fsm, r.Db, r.Db, r.Snapshots, r.Transport, configuration); err != nil {
+		slog.Errorf("Error while recover cluster: %v", err)
+		return err
+	}
+
+	slog.Infof("Start to recover raft configuration")
+	var err error
+	r.Instance, err = raft.NewRaft(r.Config, r.Fsm, r.Db, r.Db, r.Snapshots, r.Transport)
+
+	if err != nil {
+		return err
+	}
+
+	for _, member := range r.Serf.Members() {
+		slog.Infof("Remove serf member: %s", member.Name)
+		if err := r.Serf.RemoveFailedNode(member.Name); err != nil {
+			slog.Errorf("Error while remove serf member %s: %#v", member.Name, err)
+		}
+	}
+	return nil
+}
+
+func (r *Raft) GetLeader() raft.ServerAddress {
+	return r.Instance.Leader()
+}
+
+func (r *Raft) GetConfiguration() raft.ConfigurationFuture {
+	return r.Instance.GetConfiguration()
+}
+
+func (r *Raft) State() raft.RaftState {
+	return r.Instance.State()
+}
+
+func (r *Raft) Snapshot() raft.SnapshotFuture {
+	return r.Instance.Snapshot()
+}
+
+func (r *Raft) ReapSnapshots() error {
+	return r.Snapshots.ReapSnapshots()
+}
+
+func (r *Raft) ChangeMaster(node *ClusterNode) error {
+	if r.IsLeader() {
+		f := r.Instance.LeadershipTransferToServer(raft.ServerID(node.Id), raft.ServerAddress(node.Address))
+		if f.Error() != nil {
+			return f.Error()
+		}
+	} else {
+		data := EventChangeMaster{
+			Node:   node,
+			Source: r.Config.LocalID,
+		}
+		raw, err := json.Marshal(data)
+		if err != nil {
+			return err
+		}
+		if err := r.Serf.UserEvent(
+			SERF_EVENT_CHANGE_MASTER,
+			raw,
+			false,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Raft) GetClusterStat() error {
 	if r == nil {
 		promstat.ClusterMemberMode.Set(-1)
-		return
+		return nil
 	} else {
 		promstat.ClusterMemberMode.Set(float64(r.Instance.State()))
 	}
@@ -82,7 +173,7 @@ func (r *Raft) GetClusterStat() {
 
 	future := r.Instance.GetConfiguration()
 	if err := future.Error(); err != nil {
-		slog.Error("could not get configuration for stats", "error", err)
+		return err
 	} else {
 		configuration := future.Configuration()
 		promstat.ClusterLatestConfigurationIndex.Set(float64(future.Index()))
@@ -104,6 +195,7 @@ func (r *Raft) GetClusterStat() {
 		}
 		promstat.ClusterPeersCount.Set(numPeers)
 	}
+	return nil
 }
 
 func (r *Raft) Apply(cmd *fsm.ClusterCommand, timeout time.Duration) error {
@@ -200,11 +292,11 @@ func (r *Raft) Watch() {
 					leader := r.Instance.VerifyLeader()
 
 					if leader.Error() == nil {
-						f := r.Instance.LeadershipTransferToServer(raft.ServerID(eventChangeMaster.Id), raft.ServerAddress(eventChangeMaster.Address))
+						f := r.Instance.LeadershipTransferToServer(eventChangeMaster.Node.Id, eventChangeMaster.Node.Address)
 						if f.Error() != nil {
-							slog.Errorf("error while change leader to node: id %s, address: %s, err: %s", eventChangeMaster.Id, eventChangeMaster.Address, f.Error())
+							slog.Errorf("error while change leader to node: id %s, address: %s, err: %s", eventChangeMaster.Node.Id, eventChangeMaster.Node.Address, f.Error())
 						} else {
-							slog.Infof("leader was changed by change_master user event to node: id %s, address: %s", eventChangeMaster.Id, eventChangeMaster.Address)
+							slog.Infof("leader was changed by change_master user event to node: id %s, address: %s", eventChangeMaster.Node.Id, eventChangeMaster.Node.Address)
 						}
 					} else {
 						slog.Errorf("error while check leader: %v", leader.Error())
@@ -225,7 +317,7 @@ func (cl clusterLog) Write(data []byte) (n int, err error) {
 	return len(data), nil
 }
 
-func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), clusterReload func(*rule.Conf) error) (raftInstance *Raft, err error) {
+func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), clusterReload func(*rule.Conf) error) (Cluster, error) {
 	logFilter := &logutils.LevelFilter{
 		Levels:   []logutils.LogLevel{"DEBUG", "INFO", "WARN", "ERROR"},
 		MinLevel: logutils.LogLevel("INFO"),
@@ -309,7 +401,7 @@ func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), cluste
 		slog.Fatalf("Error while get system conf provider: %v", err)
 	}
 
-	raftInstance = &Raft{
+	raftInstance := &Raft{
 		Config:     c,
 		logger:     logger,
 		Serf:       serfListener,
@@ -343,7 +435,7 @@ func StartCluster(systemConf *conf.SystemConf, setRules func(*rule.Conf), cluste
 			return nil, errors.New("Error while bootstrap cluster: " + err.Error())
 		}
 	}
-	return
+	return raftInstance, err
 }
 
 func isBootstrapped(instance *Raft) bool {

@@ -1,8 +1,6 @@
 package sched
 
 import (
-	"bosun.org/host"
-	"bosun.org/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +8,9 @@ import (
 	"net/url"
 	"testing"
 	"time"
+
+	"bosun.org/host"
+	"bosun.org/util"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
@@ -44,7 +45,7 @@ func TestCheckFlapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(&conf.SystemConf{}, c, utcNow())
+	s, _ := initSched(&conf.SystemConf{}, c, utcNow(), nil)
 	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[models.AlertKey]*models.Event{
@@ -132,7 +133,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{}, c, utcNow())
+	s, err := initSched(&conf.SystemConf{}, c, utcNow(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +172,7 @@ func TestDelayedClose(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(&conf.SystemConf{}, c, utcNow())
+	s, _ := initSched(&conf.SystemConf{}, c, utcNow(), nil)
 	now := time.Now()
 	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
@@ -310,7 +311,7 @@ func TestIncidentIds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(&conf.SystemConf{}, c, utcNow())
+	s, _ := initSched(&conf.SystemConf{}, c, utcNow(), nil)
 	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[models.AlertKey]*models.Event{
@@ -377,7 +378,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{}, c, utcNow())
+	s, err := initSched(&conf.SystemConf{}, c, utcNow(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -424,7 +425,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c, utcNow())
+	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c, utcNow(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -487,7 +488,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c, utcNow())
+	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c, utcNow(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +556,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(&conf.SystemConf{}, c, utcNow())
+	s, err := initSched(&conf.SystemConf{}, c, utcNow(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -602,5 +603,137 @@ Loop:
 		default:
 			t.Errorf("unexpected alert key %s", st.AlertKey)
 		}
+	}
+}
+
+func TestCheckNotify_Cluster_FollowerState(t *testing.T) {
+	defer setup()()
+	nc := make(chan string, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := ioutil.ReadAll(r.Body)
+		nc <- string(b)
+	}))
+	defer ts.Close()
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
+		template t {
+			subject = {{.Alert.Name}}
+			body = b
+		}
+		notification n {
+			post = http://%s/
+		}
+		alert a {
+			template = t
+			critNotification = n
+			crit = 1
+		}
+		alert b {
+			template = t
+			critNotification = n
+			crit = 1
+			log = true
+		}
+	`, u.Host))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := initSched(&conf.SystemConf{}, c, utcNow(), &clusterTest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	check(s, utcNow())
+	s.CheckNotifications()
+	gotA := false
+	gotB := false
+Loop:
+	for {
+		select {
+		case r := <-nc:
+			if r == "a" && !gotA {
+				gotA = true
+			} else if r == "b" && !gotB {
+				gotB = true
+			} else {
+				t.Errorf("unexpected: %v", r)
+			}
+		case <-time.After(time.Millisecond):
+			break Loop
+		}
+	}
+	if gotA {
+		t.Errorf("got notification a while cluster node follower state")
+	}
+	if gotB {
+		t.Errorf("got notification b while cluster node follower state")
+	}
+}
+
+func TestCheckNotify_Cluster_LeaderState(t *testing.T) {
+	defer setup()()
+	nc := make(chan string, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := ioutil.ReadAll(r.Body)
+		nc <- string(b)
+	}))
+	defer ts.Close()
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
+		template t {
+			subject = {{.Alert.Name}}
+			body = b
+		}
+		notification n {
+			post = http://%s/
+		}
+		alert a {
+			template = t
+			critNotification = n
+			crit = 1
+		}
+		alert b {
+			template = t
+			critNotification = n
+			crit = 1
+			log = true
+		}
+	`, u.Host))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := initSched(&conf.SystemConf{}, c, utcNow(), &clusterTest{leader: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	check(s, utcNow())
+	s.CheckNotifications()
+	gotA := false
+	gotB := false
+Loop:
+	for {
+		select {
+		case r := <-nc:
+			if r == "a" && !gotA {
+				gotA = true
+			} else if r == "b" && !gotB {
+				gotB = true
+			} else {
+				t.Errorf("unexpected: %v", r)
+			}
+		case <-time.After(time.Millisecond):
+			break Loop
+		}
+	}
+	if !gotA {
+		t.Errorf("didn't get notification a while cluster node follower state")
+	}
+	if !gotB {
+		t.Errorf("didn't get notification b while cluster node follower state")
 	}
 }

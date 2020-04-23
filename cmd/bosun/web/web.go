@@ -86,7 +86,7 @@ func Listen(
 	reloadFunc func() error,
 	authConfig *conf.AuthConf,
 	st time.Time,
-	raft cluster.RaftClusterState,
+	raft cluster.Cluster,
 	prometheusPath string,
 ) error {
 	startTime = st
@@ -119,7 +119,9 @@ func Listen(
 
 	baseChain := alice.New(miniProfilerMiddleware, endpointStatsMiddleware, gziphandler.GzipHandler)
 
-	clusterEnabled = raft.IsEnabled()
+	if raft != nil {
+		clusterEnabled = true
+	}
 
 	auth, tokens, err := buildAuth(authConfig)
 	if err != nil {
@@ -233,7 +235,10 @@ func Listen(
 
 	// Prometheus metrics
 	router.HandleFunc(prometheusPath, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raft.GetClusterStat()
+		err := raft.GetClusterStat()
+		if err != nil {
+			slog.Error("could not get configuration for stats", "error", err)
+		}
 		promhttp.HandlerFor(
 			prometheus.DefaultGatherer,
 			promhttp.HandlerOpts{

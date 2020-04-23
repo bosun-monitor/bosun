@@ -46,7 +46,7 @@ func TestDependency_Simple(t *testing.T) {
 		state: map[schedState]bool{
 			{"a{a=c}", "critical"}: true,
 		},
-	})
+	}, nil)
 }
 
 // Crit and depends don't have same tag sets.
@@ -86,7 +86,7 @@ func TestDependency_Overlap(t *testing.T) {
 		state: map[schedState]bool{
 			{"a{a=c,b=q}", "critical"}: true,
 		},
-	})
+	}, nil)
 }
 
 func TestDependency_OtherAlert(t *testing.T) {
@@ -128,7 +128,7 @@ func TestDependency_OtherAlert(t *testing.T) {
 			{"a{cpu=0,host=ny01}", "critical"}: true,
 			{"c{host=ny01}", "critical"}:       true,
 		},
-	})
+	}, nil)
 }
 
 func TestDependency_OtherAlert_Unknown(t *testing.T) {
@@ -173,7 +173,7 @@ func TestDependency_OtherAlert_Unknown(t *testing.T) {
 		touched: map[models.AlertKey]time.Time{
 			"a{host=ny02}": queryTime.Add(-10 * time.Minute),
 		},
-	})
+	}, nil)
 }
 
 func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
@@ -214,7 +214,7 @@ func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 			bb: queryTime,
 			cb: queryTime,
 		},
-	})
+	}, nil)
 	check := func(ak models.AlertKey, expec bool) {
 		_, uneval, err := s.DataAccess.State().GetUnknownAndUnevalAlertKeys(ak.Name())
 		if err != nil {
@@ -261,7 +261,7 @@ func TestDependency_Blocks_Unknown(t *testing.T) {
 		touched: map[models.AlertKey]time.Time{
 			"a{host=ny01}": queryTime.Add(-10 * time.Minute),
 		},
-	})
+	}, nil)
 }
 
 func TestDependency_AlertFunctionHasNoResults(t *testing.T) {
@@ -302,5 +302,5 @@ alert c {
 			"b{host=ny01}":                queryTime.Add(-10 * time.Minute),
 			"c{host=ny01}":                queryTime.Add(-10 * time.Minute),
 		},
-	})
+	}, nil)
 }

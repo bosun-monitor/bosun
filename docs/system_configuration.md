@@ -102,6 +102,12 @@ checks are run at every `CheckFrequency` multiplied by the
 Example:
 `CheckFrequency = "1m"`
 
+### PrometheusPath
+HTTP path with [prometheus](https://prometheus.io/docs/introduction/overview/) metrics. Default is "/metrics".
+
+Example:
+`PrometheusPath = "/metrics"`
+
 ### DefaultRunEvery
 By default, alert checks are run at every
 [`CheckFrequency`](/system_configuration#checkevery) multiplied by the
@@ -258,9 +264,51 @@ Enables clustering solution in Bosun. There is no required to have this section 
 Cluster would only have one ‘leader’ at a time, all other nodes are followers (so this is an implementation of a model with with 1 master and multiple standby nodes).
 ‘Master’ node executes the checks and sends notifications, ‘follower’ nodes don’t do neither (they run with ‘no-checks’ and ‘quiet-mode’ options enabled).
 
-By default clustering is disabled. For enable clustering follow parameters in this section should be filled:
-- MetadataStorePath
-- RPCListen
+By default clustering is disabled. To enable clustering follow parameters in this section should be filled:
+- `MetadataStorePath`
+- `RPCListen`
+
+#### MetadataStorePath
+Directory to store cluster metadata
+
+#### RPCListen
+Host and port for listen [serf](https://github.com/hashicorp/serf). Should be in the format `host:port`. `host` here should be address available from every cluster node. This address will be used to send `serf` RPC. Port next by  `RPCListen` will be automatically occupied for [raft](https://github.com/hashicorp/raft) RPC.
+
+As an example, if you define `192.168.1.12:9999` as `RPCListen`:
+
+- `192.168.1.12:9999` will be used for `serf` RPC
+- `192.168.1.12:10000` will be used for `raft` RPC
+
+#### Members
+List of available members in the cluster. Should be an array of addresses/ports strings separated by commas. Ex. `["192.168.3.1:9999", "192.168.3.2:9999", "192.168.3.3:9999"]`. Please notice that port for nodes should be `serf` port.
+
+#### MembersFile
+Location of the file with a list of available members in the cluster. This file should contain host and port for each member. If you define `MembersFile` and `Members` at the same time, the cluster will use `MembersFile` as the source of the members list.
+
+Example of file content:
+```
+192.168.3.1:9999
+192.168.3.2:9999
+192.168.3.3:9999
+```
+
+#### HeartbeatTimeout
+`HeartbeatTimeout` specifies the time in follower state without a leader before we attempt an election in ms. Default: 1000
+
+#### ElectionTimeout
+`ElectionTimeout` specifies the time in candidate state without a leader before we attempt an election. Value is in ms. Default: 1000 
+
+#### LeaderLeaseTimeout
+`LeaderLeaseTimeout` is used to control how long the "lease" lasts for being the leader without being able to contact a quorum of nodes. If we reach this interval without contact, we will step down as leader. Value is in ms. Default: 500
+
+#### SnapshotInterval
+`ClusterSnapshotInterval` returns interval for make raft DB snapshots. Value is in seconds. Default: 600. In the current implementation, we are making snapshots for each change. This parameter will be used for future changes.
+
+#### NodeID
+Unique identifier of the node within the cluster. If `NodeID` wasn't defined its value will be equals `RPCListen`
+
+#### DontSyncRules
+We will use only rules definitions from `RuleFilePath`. If value is true we will use cluster-wide rules definition. Default: `false`
 
 #### MetadataStorePath
 Path for store Raft cluster metadata. This path should be available for writing. This path will contain database `raft.db` and path `snapshots`. Basically all data in MetadataStorePath can be deleted without any problem. You can delete all files in MetadataStorePath but Bosun should be stopped before. If clustering is disabled all those data are mindless.

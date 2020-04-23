@@ -214,5 +214,48 @@ errors. Returns an error if invalid.
 
 Reloads the rule configuration when `{ "Reload": true }` is POST'd to the endpoint.
 
+## Cluster Endpoints
+
+### /api/cluster/status
+
+Returns current cluster status. Supports only GET requests. `Manage Cluster` permission is required.
+
+### /api/cluster/recover_cluster
+
+Is used to manually force a new configuration in order to recover from a loss of quorum where the current configuration cannot be restored, such as when several servers die at the same time. This works by reading all the current state for this server, creating a snapshot with the supplied configuration, and then truncating the Raft log. This is the only safe way to force a given configuration without actually altering the log to insert any new entries, which could cause conflicts with other servers with different states.
+
+A typical way to recover the cluster is to shut down all servers and then run RecoverCluster on every server using an identical configuration. When the cluster is then restarted, and election should occur and then Raft will resume normal operation. If it's desired to make a particular server the leader, this can be used to inject a new configuration with that server as the sole voter, and then join up other new clean-state peer servers using the usual APIs in order to bring the cluster back into a known state.
+
+Supports only POST request with body of cluster members configuration:
+
+Body example:
+
+```
+{
+  "members": [
+    {"id": "node1", "address": "192.168.1.1:9999"},
+    {"id": "node2", "address": "192.168.1.2:9999"},
+    {"id": "node3", "address": "192.168.1.3:9999"},
+  ]
+}
+```
+
+`Manage Cluster` permission is required.
+
+### /api/cluster/change_master
+
+Is used to change current leader to another node. Accept POST requests with body describing new leader location.
+
+Body example:
+
+```
+{
+  "id": "node2",
+  "address": "192.168.1.2:9999"
+}
+```
+
+`Manage Cluster` permission is required.
+
 </div>
 </div>

@@ -10,6 +10,12 @@ import (
 	"bosun.org/slog"
 )
 
+type alertCh struct {
+	ch     chan<- *checkContext
+	modulo int
+	shift  int // used to distribute alert runs
+}
+
 // Run should be called once (and only once) to start all schedule activity.
 func (s *Schedule) Run() error {
 	if s.RuleConf == nil || s.SystemConf == nil {
@@ -17,11 +23,7 @@ func (s *Schedule) Run() error {
 	}
 	s.nc = make(chan interface{}, 1)
 	go s.dispatchNotifications()
-	type alertCh struct {
-		ch     chan<- *checkContext
-		modulo int
-		shift  int // used to distribute alert runs
-	}
+
 	chs := []alertCh{}
 
 	// Every alert gets a small shift in time.
@@ -46,6 +48,10 @@ func (s *Schedule) Run() error {
 		// the shifts for a given period range 0..(period - 1)
 		circular_shifts[re] = (circular_shifts[re] + 1) % re
 	}
+	return s.RunLoop(chs)
+}
+
+func (s *Schedule) RunLoop(chs []alertCh) error {
 	isLeader := false
 	i := 0
 	for {
@@ -62,7 +68,7 @@ func (s *Schedule) Run() error {
 			if (i+a.shift)%a.modulo != 0 {
 				continue
 			}
-			if !s.RaftInstance.IsLeader() {
+			if s.RaftInstance != nil && !s.RaftInstance.IsLeader() {
 				isLeader = false
 				continue
 			} else if !isLeader {

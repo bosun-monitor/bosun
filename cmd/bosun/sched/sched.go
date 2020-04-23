@@ -73,10 +73,10 @@ type Schedule struct {
 	// whereas the runHistory is allowed to complete
 	checksRunning sync.WaitGroup
 
-	RaftInstance *cluster.Raft
+	RaftInstance cluster.Cluster
 }
 
-func (s *Schedule) Init(name string, systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, raftInstance *cluster.Raft, skipLast, quiet bool) error {
+func (s *Schedule) Init(name string, systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, raftInstance cluster.Cluster, skipLast, quiet bool) error {
 	//initialize all variables and collections so they are ready to use.
 	//this will be called once at app start, and also every time the rule
 	//page runs, so be careful not to spawn long running processes that can't
@@ -499,7 +499,7 @@ func marshalTime(t time.Time) string {
 var DefaultSched = &Schedule{}
 
 // Load loads a configuration into the default schedule.
-func Load(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, raftInstance *cluster.Raft, skipLast, quiet bool) error {
+func Load(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, raftInstance cluster.Cluster, skipLast, quiet bool) error {
 	return DefaultSched.Init("alerts", systemConf, ruleConf, dataAccess, annotate, raftInstance, skipLast, quiet)
 }
 

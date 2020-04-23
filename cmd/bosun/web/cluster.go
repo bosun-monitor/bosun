@@ -3,12 +3,10 @@ package web
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
 	"bosun.org/cmd/bosun/cluster"
-	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/hashicorp/raft"
 )
@@ -16,12 +14,6 @@ import (
 type ClusterOpResult struct {
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
-}
-
-type ClusterMember struct {
-	Address  raft.ServerAddress
-	Id       raft.ServerID
-	Suffrage raft.ServerSuffrage
 }
 
 type ClusterStat struct {
@@ -37,13 +29,13 @@ type ClusterNode struct {
 }
 
 func ClusterStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	if !schedule.RaftInstance.IsEnabled() {
+	if schedule.RaftInstance == nil {
 		return nil, errors.New("Cluster isn't enabled")
 	}
 	var cs ClusterStat
 	cs.Nodes = make([]ClusterNode, 0)
 
-	cfuture := schedule.RaftInstance.Instance.GetConfiguration()
+	cfuture := schedule.RaftInstance.GetConfiguration()
 
 	if err := cfuture.Error(); err != nil {
 		return nil, err
@@ -51,7 +43,7 @@ func ClusterStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request)
 
 	configuration := cfuture.Configuration()
 
-	leaderAddress := schedule.RaftInstance.Instance.Leader()
+	leaderAddress := schedule.RaftInstance.GetLeader()
 
 	for _, server := range configuration.Servers {
 		state := "Follower"
@@ -60,59 +52,33 @@ func ClusterStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request)
 		}
 		cs.Nodes = append(cs.Nodes, ClusterNode{Address: server.Address, State: state, Id: server.ID})
 	}
-	cs.Stats = schedule.RaftInstance.Instance.Stats()
-	cs.State = schedule.RaftInstance.Instance.State().String()
+	cs.Stats = schedule.RaftInstance.GetStat()
+	cs.State = schedule.RaftInstance.State().String()
 	return cs, nil
 }
 
 func ClusterChangeMasterTo(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	var data struct {
-		Id      string
-		Address string
-	}
+	var data cluster.ClusterNode
 	j := json.NewDecoder(r.Body)
 	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
 
 	if data.Id == "" {
-		data.Id = data.Address
+		data.Id = raft.ServerID(data.Address)
 	}
 
 	res := ClusterOpResult{Status: "ok"}
-	lead := schedule.RaftInstance.Instance.Leader()
+	lead := schedule.RaftInstance.GetLeader()
 
-	if schedule.RaftInstance.Instance.State() == raft.Leader {
-		f := schedule.RaftInstance.Instance.LeadershipTransferToServer(raft.ServerID(data.Id), raft.ServerAddress(data.Address))
-		if f.Error() != nil {
-			res.Status = "error"
-			res.Error = f.Error().Error()
-		}
-	} else {
-		data := cluster.EventChangeMaster{
-			Id:      data.Id,
-			Address: data.Address,
-			Source:  string(schedule.RaftInstance.Config.LocalID),
-		}
-		raw, err := json.Marshal(data)
-		if err != nil {
-			res.Status = "error"
-			res.Error = err.Error()
-			return res, nil
-		}
-		if err := schedule.RaftInstance.Serf.UserEvent(
-			cluster.SERF_EVENT_CHANGE_MASTER,
-			raw,
-			false,
-		); err != nil {
-			res.Status = "error"
-			res.Error = err.Error()
-		}
-
+	if err := schedule.RaftInstance.ChangeMaster(&data); err != nil {
+		res.Status = "error"
+		res.Error = err.Error()
 	}
+
 	e := "Timeout was reached (10s). It is possible that something went wrong"
 	for i := 0; i < 10; i++ {
-		if schedule.RaftInstance.Instance.Leader() != lead {
+		if schedule.RaftInstance.GetLeader() != lead {
 			e = ""
 			break
 		}
@@ -124,7 +90,7 @@ func ClusterChangeMasterTo(t miniprofiler.Timer, w http.ResponseWriter, r *http.
 
 func ClusterRecover(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data struct {
-		Members []ClusterMember
+		Members []cluster.ClusterNode
 	}
 
 	j := json.NewDecoder(r.Body)
@@ -132,37 +98,7 @@ func ClusterRecover(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 		return nil, err
 	}
 
-	configuration := raft.Configuration{Servers: make([]raft.Server, 0)}
-
-	for _, member := range data.Members {
-		configuration.Servers = append(configuration.Servers, raft.Server{
-			Suffrage: member.Suffrage, Address: member.Address, ID: member.Id})
-	}
-
-	if s := schedule.RaftInstance.Instance.Shutdown(); s.Error() != nil {
-		return s.Error().Error, fmt.Errorf("error while shutdown raft: %v", s.Error())
-	}
-	slog.Infof("Start to recover cluster with configuration: {%#v}", configuration)
-	if err := raft.RecoverCluster(schedule.RaftInstance.Config, schedule.RaftInstance.Fsm,
-		schedule.RaftInstance.Db, schedule.RaftInstance.Db, schedule.RaftInstance.Snapshots,
-		schedule.RaftInstance.Transport, configuration); err != nil {
-		slog.Errorf("Error while recover cluster: %v", err)
-		return err.Error(), fmt.Errorf("recovery failed: %v", err)
-	}
-
-	slog.Infof("Start to recover raft configuration")
-	var err error
-	schedule.RaftInstance.Instance, err = raft.NewRaft(
-		schedule.RaftInstance.Config, schedule.RaftInstance.Fsm, schedule.RaftInstance.Db,
-		schedule.RaftInstance.Db, schedule.RaftInstance.Snapshots, schedule.RaftInstance.Transport)
-
-	for _, member := range schedule.RaftInstance.Serf.Members() {
-		slog.Infof("Remove serf member: %s", member.Name)
-		if err := schedule.RaftInstance.Serf.RemoveFailedNode(member.Name); err != nil {
-			slog.Errorf("Error while remove serf member %s: %#v", member.Name, err)
-		}
-	}
-	if err != nil {
+	if err := schedule.RaftInstance.Recover(data.Members); err != nil {
 		return nil, err
 	}
 	return "recovered", nil

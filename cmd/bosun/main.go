@@ -158,7 +158,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	var raftInstance *cluster.Raft
+	var raftInstance cluster.Cluster
 
 	var ruleProvider conf.RuleConfProvider = ruleConf
 
@@ -290,14 +290,14 @@ func main() {
 			// make snapshot with changes
 			go func() {
 				slog.Infoln("Making snap")
-				snap := raftInstance.Instance.Snapshot()
+				snap := raftInstance.Snapshot()
 				if snap.Error() != nil {
 					promstat.ClusterSnapshotsErrors.Inc()
 					slog.Errorf("Error while create snapshot: %v", err)
 					return
 				}
 				slog.Infoln("snapshot was created")
-				if err := raftInstance.Snapshots.ReapSnapshots(); err != nil {
+				if err := raftInstance.ReapSnapshots(); err != nil {
 					slog.Errorf("Error while reap old snapshots: %v", err)
 				}
 			}()
@@ -306,7 +306,7 @@ func main() {
 	}
 
 	reload = func() error {
-		if !sysProvider.ClusterDontSyncRules() && raftInstance != nil && raftInstance.Instance.State() != raft.Leader {
+		if !sysProvider.ClusterDontSyncRules() && raftInstance != nil && raftInstance.State() != raft.Leader {
 			return errors.New("Current node isn't a leader. Please send reload command to leader node")
 		}
 
