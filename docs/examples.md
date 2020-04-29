@@ -719,7 +719,7 @@ template netbackup {
 
 ## Conditional Alerts
 
-###Swapping notification unless there is a high exim mail queue
+### Swapping notification unless there is a high exim mail queue
 This alert makes it so that swapping won't trigger if there is a high exim mail queue on the host that is swapping. All operators (such as &&) perform a join, so this alert makes it so if there is no exim mailq for that host, then it is as if the mail queue were high.
 
 <p class="h4">Rule</p>
