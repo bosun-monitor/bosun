@@ -149,7 +149,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	}
 
 	handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph), canRunTests).Name("expr_graph")
-	handle("/api/errors", JSON(ErrorHistory), canViewDash).Name("errors").Methods(GET, POST)
+	handle("/api/errors", JSON(ErrorHistory), fullyOpen).Name("errors").Methods(GET, POST)
 	handle("/api/expr", JSON(Expr), canRunTests).Name("expr").Methods(POST)
 	handle("/api/graph", JSON(Graph), canViewDash).Name("graph").Methods(GET)
 
