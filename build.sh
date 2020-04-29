@@ -1,6 +1,10 @@
 #!/bin/bash
-set -euxo pipefail
+set -euo pipefail
 
+# ensure binaries needed for building exist
+which go > /dev/null
+which bzr > /dev/null
+which tsc > /dev/null
 
 LDFLAGS="-X bosun.org/_version.VersionSHA=$(git rev-parse HEAD) -X bosun.org/_version.VersionDate=$(date -u "+%Y%m%d%H%M%S")"
 
