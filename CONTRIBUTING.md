@@ -73,7 +73,8 @@ Use GitHub pull requests to submit code. General submission guidelines:
 
 1. Add/update unit tests for your new feature or fix 
 1. Use the available targets in the [Makefile] (especially `make checks`) to perform the checks on your code. 
-For the full list of validation checks that will be run by the CI tool, see [.travis.yaml]
+For the full list of validation checks that will be run by the CI tool, see [.travis.yaml] and the Actions tab in 
+Github.
 1. Add any new third party dependencies to the `go.mod` file
 1. The commit message should indicate what folder is being changed 
 (example: `cmd/scollector: new xyz collector` or `docs: fix typo in window function`)
