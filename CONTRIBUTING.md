@@ -24,6 +24,14 @@ Please use [StackOverflow] for support questions. There exists a Slack instance 
 
 Please also see also our [Code of Conduct].
 
+### Setting up your build system
+
+The repository contains a [Makefile] which should make it easy to install all dependencies. Other than that, 
+you're going to need a recent (1.13+) Go environment, NPM and GCC.
+Run the following targets to get all dependencies:
+- `make deps`
+- `make testdeps`  
+
 ### Bug reports
 
 A bug is a _demonstrable problem_ that is caused by the code in the repository. Good bug reports are extremely helpful - thank you!
@@ -64,10 +72,14 @@ for issues tagged with [good first issue] for some of the easier issues to get y
 Use GitHub pull requests to submit code. General submission guidelines:
 
 1. Add/update unit tests for your new feature or fix 
-1. Use `gofmt -s -w` and `go vet bosun.org/...`. See `build/validate.sh` for the full list of validation checks that will be run by Travis CI on each commit.
+1. Use the available targets in the [Makefile] (especially `make checks`) to perform the checks on your code. 
+For the full list of validation checks that will be run by the CI tool, see [.travis.yaml]
 1. Add any new third party dependencies to the `go.mod` file
-1. The commit message should indicate what folder is being changed (example: `cmd/scollector: new xyz collector` or `docs: fix typo in window function`)
-1. Documentation changes should be made in the same branch as code changes using the `docs` folder. After the PR is approved is merged into the master branch it will show up on https://bosun.org (and is rendered using Github Pages).  
+1. The commit message should indicate what folder is being changed 
+(example: `cmd/scollector: new xyz collector` or `docs: fix typo in window function`)
+1. Documentation changes should be made in the same branch as code changes using the `docs` folder. 
+After the PR is approved is merged into the master branch it will show up on https://bosun.org 
+(and is rendered using Github Pages).  
 
 Unless otherwise noted, the source files are distributed under the MIT license found in the LICENSE file.
 
@@ -77,12 +89,15 @@ We use the golang [Go code review comments] document as the basis for our style.
 Take particular note of Error Strings, Mixed Caps, and Indent Error Flow sections. 
 Also we don't have blank lines within functions.
 
+The make target `checks` will be run to make sure that the basic style guidelines are adhered to and fail the build
+if they weren't.
+
 ### Bosun submission guidelines
 
-1. If changing HTML, JS, or other static content, install esc (`go get github.com/mjibson/esc`), then run `go generate` in `cmd/bosun`.
+1. If changing HTML, JS, or other static content, run `make generate`.
 1. [typescript][typescript] is required if changing JS files. 
    Invoke bosun with `-w` to watch for `.ts` changes and automatically run typescript. 
-   We currently use typescript 2.3.1: `npm i -g typescript@2.3.1`
+   We currently use typescript 2.4.2: `npm i -g typescript@2.4.2` (or `make deps`)
 
 #### Note for vim users
 
@@ -117,4 +132,6 @@ set backupskip+=*/cmd/bosun/{*.go\\,web/static/{js/*.ts\\,templates/*.html}}
 [typescript]: https://www.npmjs.com/package/typescript
 [keepalive collectors]: https://github.com/bosun-monitor/bosun/blob/master/cmd/scollector/collectors/keepalived_linux.go "keepalive collectors"
 [memcached]: https://github.com/bosun-monitor/bosun/blob/master/cmd/scollector/collectors/memcached_unix.go "memcached"
+[Makefile]: https://github.com/bosun-monitor/bosun/blob/master/Makefile "Makefile"
+[.travis.yaml]: https://github.com/bosun-monitor/bosun/blob/master/.travis.yaml "`.travis.yaml`"
 [good first issue]: https://github.com/bosun-monitor/bosun/labels/good%20first%20issue "good first issue"
