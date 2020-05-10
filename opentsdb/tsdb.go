@@ -2,11 +2,9 @@
 package opentsdb // import "bosun.org/opentsdb"
 
 import (
-	"bosun.org/slog"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"math"
@@ -18,6 +16,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"bosun.org/slog"
+	"github.com/pkg/errors"
 )
 
 // ResponseSet is a Multi-Set Response:

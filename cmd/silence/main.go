@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bosun.org/host"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +10,8 @@ import (
 	"os"
 	"runtime"
 	"time"
+
+	"bosun.org/host"
 
 	"bytes"
 

@@ -1,8 +1,9 @@
 package host
 
 import (
-	"bosun.org/name"
 	"testing"
+
+	"bosun.org/name"
 )
 
 type testCase struct {

@@ -2,8 +2,9 @@
 package host
 
 import (
-	"bosun.org/name"
 	"fmt"
+
+	"bosun.org/name"
 	"github.com/pkg/errors"
 )
 
