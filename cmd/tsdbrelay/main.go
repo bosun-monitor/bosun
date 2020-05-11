@@ -30,13 +30,15 @@ import (
 )
 
 var (
-	listenAddr      = flag.String("l", ":4242", "Listen address.")
-	bosunServer     = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
-	secondaryRelays = flag.String("r", "", "Additional relays to send data to. Intended for secondary data center replication. Only response from primary tsdb server wil be relayed to clients.")
-	tsdbServer      = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
-	logVerbose      = flag.Bool("v", false, "enable verbose logging")
-	toDenormalize   = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `__tagvalue.tagvalue.metric`")
-	flagVersion     = flag.Bool("version", false, "Prints the version and exits.")
+	listenAddr       = flag.String("l", ":4242", "Listen address.")
+	bosunServer      = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
+	secondaryRelays  = flag.String("r", "", "Additional relays to send data to. Intended for secondary data center replication. Only response from primary tsdb server wil be relayed to clients.")
+	tsdbServer       = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
+	logVerbose       = flag.Bool("v", false, "enable verbose logging")
+	hostnameOverride = flag.String("hostname", "", "Override the own hostname. Especially useful when running in a container.")
+	useFullHostname  = flag.Bool("useFullHostname", false, "Whether to use the fully qualified hostname")
+	toDenormalize    = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `__tagvalue.tagvalue.metric`")
+	flagVersion      = flag.Bool("version", false, "Prints the version and exits.")
 
 	redisHost = flag.String("redis", "", "redis host for aggregating external counters")
 	redisDb   = flag.Int("db", 0, "redis db to use for counters")
@@ -105,6 +107,8 @@ func main() {
 			slog.Fatal(err)
 		}
 	}
+
+	util.InitHostManager(*hostnameOverride, *useFullHostname)
 
 	tsdbURL, err := parseHost(*tsdbServer, "", true)
 	if err != nil {
