@@ -1,12 +1,11 @@
-
 #!/bin/bash
 
 export COMPRESSION="NONE"
 
-cd $TSDB
-./src/create_table.sh
+${TSDB_DIR}/src/create_table.sh
 if [ $? -ne 0 ]; then
     echo "Opentsdb /src/create_table.sh failed"
+    exit 1
 else
-    touch $TSDB/opentsdb_tables_created.txt
+    touch ${TSDB_DIR}/opentsdb_tables_created.txt
 fi

@@ -16,6 +16,11 @@ BINARY_MAC=$(BINARY_NAME)_mac
 BINARY_WIN=$(BINARY_NAME)_win
 BOSUN_PACKAGE=bosun.org/cmd/bosun
 
+SCOLLECTOR_BINARY=scollector
+SCOLLECTOR_PACKAGE=bosun.org/cmd/scollector
+TSDBRELAY_BINARY=tsdbrelay
+TSDBRELAY_PACKAGE=bosun.org/cmd/tsdbrelay
+
 SRCS := $(shell find . -name '*.go')
 LINTERS := \
 	golang.org/x/lint/golint \
@@ -136,6 +141,11 @@ bosun-darwin:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 $(GOBUILD) -o $(BINARY_MAC) -v $(BOSUN_PACKAGE)
 bosun-windows:
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -o $(BINARY_WIN) -v $(BOSUN_PACKAGE)
+scollector:
+	$(GOBUILD) -o $(SCOLLECTOR_BINARY) -v $(SCOLLECTOR_PACKAGE)
+tsdbrelay:
+	$(GOBUILD) -o $(TSDBRELAY_BINARY) -v $(TSDBRELAY_PACKAGE)
+
 
 .PHONY: all
-all: deps testdeps checks build all-os bosun test
+all: deps testdeps checks build all-os build test bosun scollector tsdbrelay
