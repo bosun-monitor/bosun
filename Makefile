@@ -30,7 +30,7 @@ build:
 .PHONY: deps
 deps:
 	$(GOGET) -d -v ./...
-	@command -v tsc >&- || npm i typescript@2.4.2
+	npm install
 
 .PHONY: updatedeps
 updatedeps:

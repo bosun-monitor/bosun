@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: make deps
       - name: Check whether go generate has run
-        run: make generate
+        run: export PATH=$(npm bin):$PATH && make generate
 
   build_and_test:
     name: Build and test
