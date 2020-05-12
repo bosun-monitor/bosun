@@ -1,11 +1,12 @@
 package opentsdb
 
 import (
-	"bosun.org/name"
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
 	"unicode"
+
+	"bosun.org/name"
+	"github.com/pkg/errors"
 )
 
 type openTsdbNameConfig struct {

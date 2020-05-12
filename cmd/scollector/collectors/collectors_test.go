@@ -1,9 +1,10 @@
 package collectors
 
 import (
+	"testing"
+
 	"bosun.org/host"
 	"bosun.org/util"
-	"testing"
 
 	"bosun.org/opentsdb"
 )

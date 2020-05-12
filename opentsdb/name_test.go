@@ -1,8 +1,9 @@
 package opentsdb
 
 import (
-	"bosun.org/name"
 	"testing"
+
+	"bosun.org/name"
 )
 
 func createVaidator(t *testing.T) name.RuneLevelProcessor {

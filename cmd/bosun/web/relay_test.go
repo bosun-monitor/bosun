@@ -1,8 +1,6 @@
 package web
 
 import (
-	"bosun.org/host"
-	"bosun.org/util"
 	"bytes"
 	"compress/gzip"
 	"net/http"
@@ -12,6 +10,9 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"bosun.org/host"
+	"bosun.org/util"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"

@@ -1,8 +1,6 @@
 package sched
 
 import (
-	"bosun.org/host"
-	"bosun.org/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +8,9 @@ import (
 	"net/url"
 	"testing"
 	"time"
+
+	"bosun.org/host"
+	"bosun.org/util"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"

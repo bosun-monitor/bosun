@@ -30,7 +30,7 @@ build:
 .PHONY: deps
 deps:
 	$(GOGET) -d -v ./...
-	@command -v tsc >&- || npm i -g typescript@2.4.2
+	npm install
 
 .PHONY: updatedeps
 updatedeps:
@@ -66,8 +66,9 @@ vet:
 .PHONY: generate
 generate:
 	$(GOGENERATE) ./...
-	@if [ -n "$$(git status --porcelain)" ]; then \
-  		echo "There are uncommitted changes in the repository."; \
+	@if [ -n "$$(git diff --exit-code --name-only)" ]; then \
+  		echo "The following files are uncommitted changes in the repository:"; \
+  		git diff --name-only; \
   		echo "Please commit the files created by go generate."; \
   		echo "This may be a false positive if there were uncommitted files before running this target."; \
   		exit 1; \

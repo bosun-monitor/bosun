@@ -1,9 +1,10 @@
 package dbtest
 
 import (
+	"testing"
+
 	"bosun.org/host"
 	"bosun.org/util"
-	"testing"
 )
 
 func TestConfigSave(t *testing.T) {

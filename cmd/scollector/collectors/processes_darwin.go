@@ -1,8 +1,9 @@
 package collectors
 
 import (
-	"bosun.org/cmd/scollector/conf"
 	"fmt"
+
+	"bosun.org/cmd/scollector/conf"
 )
 
 func AddProcessConfig(params conf.ProcessParams) error {
