@@ -7,11 +7,11 @@ RUN make bosun scollector tsdbrelay
 
 FROM alpine:latest
 
-ENV PACKAGES "ca-certificates rsyslog bash libc6-compat curl libgd libpng libjpeg libwebp libjpeg-turbo cairo pango lua supervisor asciidoctor"
+ARG PACKAGES="ca-certificates rsyslog bash libc6-compat curl libgd libpng libjpeg libwebp libjpeg-turbo cairo pango lua supervisor asciidoctor"
 
-ENV DOCKER_ROOT "docker"
+ARG DOCKER_ROOT="docker"
 
-ENV DATA_DIR /data
+ENV DATA_DIR=/data
 
 ENV TERM xterm
 ENV TSDBRELAY_OPTS -b localhost:8070 -t opentsdb:4242 -l 0.0.0.0:5252 -redis localhost:9565
