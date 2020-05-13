@@ -1,5 +1,10 @@
 version: "3"
 services:
+  redis:
+    image: redis:6
+    container_name: redis
+    ports:
+      - "6379:6379"
   opentsdb:
     build:
       context: ..
@@ -15,6 +20,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     depends_on:
+      - redis
       - opentsdb
     container_name: bosun
     restart: always

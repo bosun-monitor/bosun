@@ -11,4 +11,4 @@ HadoopHost = "opentsdb:16010"
 
 #Redis or ledis based external counters. See https://godoc.org/bosun.org/cmd/tsdbrelay
 [[RedisCounters]]
-    Server = "localhost:9565"
+    Server = "redis:6379"

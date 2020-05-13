@@ -69,6 +69,8 @@ EnableReload = true
 # for production setups. Defaults for ledis are below but would be ignored since redis takes
 # precedence
 [DBConf]
+	RedisHost = "redis:6379"
+	RedisDb = 0
 	LedisDir = "/data/ledis_data"
 	LedisBindAddr = "0.0.0.0:9565"	
 
