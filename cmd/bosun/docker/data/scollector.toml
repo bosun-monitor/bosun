@@ -7,7 +7,7 @@ Host = "localhost:5252"
 BatchSize = 5000
 
 #Monitoring of hbase inside the container
-HadoopHost = "localhost:16010"
+HadoopHost = "opentsdb:16010"
 
 #Redis or ledis based external counters. See https://godoc.org/bosun.org/cmd/tsdbrelay
 [[RedisCounters]]
