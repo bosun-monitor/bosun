@@ -9,7 +9,7 @@ FROM alpine:latest
 
 ENV PACKAGES "ca-certificates rsyslog bash libc6-compat curl libgd libpng libjpeg libwebp libjpeg-turbo cairo pango lua supervisor asciidoctor"
 
-ENV BOSUN_ROOT "cmd/bosun/docker"
+ENV DOCKER_ROOT "docker"
 
 ENV DATA_DIR /data
 
@@ -28,12 +28,12 @@ COPY --from=bosun_builder /bosun/scollector /scollector
 COPY --from=bosun_builder /bosun/tsdbrelay /tsdbrelay
 
 # Copy Bosun config
-COPY ${BOSUN_ROOT}/data/bosunrules.conf ${DATA_DIR}/
-COPY ${BOSUN_ROOT}/data/bosun.toml ${DATA_DIR}/
-COPY ${BOSUN_ROOT}/data/scollector.toml ${DATA_DIR}/
+COPY ${DOCKER_ROOT}/data/bosunrules.conf ${DATA_DIR}/
+COPY ${DOCKER_ROOT}/data/bosun.toml ${DATA_DIR}/
+COPY ${DOCKER_ROOT}/data/scollector.toml ${DATA_DIR}/
 
 # Copy supervisor config
-COPY ${BOSUN_ROOT}/data/supervisord.conf ${DATA_DIR}/
+COPY ${DOCKER_ROOT}/data/supervisord.conf ${DATA_DIR}/
 
 EXPOSE 8070 5252 9565
 VOLUME ["${DATA_DIR}"]

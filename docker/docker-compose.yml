@@ -2,8 +2,8 @@ version: "3"
 services:
   opentsdb:
     build:
-      context: ../../..
-      dockerfile: cmd/bosun/docker/opentsdb.Dockerfile
+      context: ..
+      dockerfile: docker/opentsdb.Dockerfile
     container_name: opentsdb
     restart: on-failure
     ports:
@@ -12,8 +12,8 @@ services:
       - "16030:16030"
   bosun:
     build:
-      context: ../../..
-      dockerfile: cmd/bosun/docker/Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     depends_on:
       - opentsdb
     container_name: bosun

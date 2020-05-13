@@ -10,7 +10,7 @@ ENV DATA_DIR /data
 ENV TSDB_DIR /tsdb
 ENV HBASE_DIR /hbase
 ENV HBASE_HOME ${HBASE_DIR}
-ENV BOSUN_ROOT "cmd/bosun/docker"
+ENV DOCKER_ROOT "docker"
 
 ENV JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk
 ENV PATH="$JAVA_HOME/bin:${PATH}"
@@ -31,8 +31,8 @@ RUN cd /tmp \
 WORKDIR ${HBASE_DIR}
 RUN curl -L -o - http://archive.apache.org/dist/hbase/${HBASE_VERSION}/hbase-${HBASE_VERSION}-bin.tar.gz | tar -xzf - --strip-components 1
 
-COPY ${BOSUN_ROOT}/hbase-site.xml ${HBASE_DIR}/conf/
-COPY ${BOSUN_ROOT}/start_hbase.sh ${HBASE_DIR}/
+COPY ${DOCKER_ROOT}/hbase-site.xml ${HBASE_DIR}/conf/
+COPY ${DOCKER_ROOT}/start_hbase.sh ${HBASE_DIR}/
 
 
 # Install OpenTSDB
@@ -46,12 +46,12 @@ RUN cd /tmp \
     && find . -name '*.mk' | xargs sed -i s#http://repo1.maven.org#https://repo1.maven.org#g \
     && ./build.sh
 
-COPY ${BOSUN_ROOT}/tsdb/opentsdb.conf ${TSDB_DIR}
-COPY ${BOSUN_ROOT}/tsdb/start_opentsdb.sh ${TSDB_DIR}
-COPY ${BOSUN_ROOT}/tsdb/create_tsdb_tables.sh ${TSDB_DIR}
+COPY ${DOCKER_ROOT}/tsdb/opentsdb.conf ${TSDB_DIR}
+COPY ${DOCKER_ROOT}/tsdb/start_opentsdb.sh ${TSDB_DIR}
+COPY ${DOCKER_ROOT}/tsdb/create_tsdb_tables.sh ${TSDB_DIR}
 
 # Copy supervisor config
-COPY ${BOSUN_ROOT}/data/supervisord-opentsdb.conf ${DATA_DIR}/
+COPY ${DOCKER_ROOT}/data/supervisord-opentsdb.conf ${DATA_DIR}/
 
 EXPOSE 4242
 VOLUME ["${DATA_DIR}", "/var/log", "${TSDB_DIR}"]
