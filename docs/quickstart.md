@@ -30,17 +30,39 @@ This guide is based on using our docker image. At Stack Exchange we do not use D
 
 ### Install Docker
 
-If you do not already have docker installed on your system, you can install it following the instructions outlined in [https://docs.docker.com/installation/](https://docs.docker.com/installation/).
+If you do not already have docker installed on your system, you can install it following the instructions outlined in [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/).
 
 **Note:** Don’t forget to ensure the docker daemon is running before moving forward!
 
-### Installing Bosun
+### Running a Bosun container
 
-Once Docker is installed, you will want to pull the latest version of Bosun from the Docker Registry. To do this, execute the following command:
+There are two ways to run Bosun in Docker. For a very quick start, you can run the version of Bosun that is published to
+Docker Hub. The latest version there is 0.6 which is significantly behind the latest code in GitHub.
+
+Alternatively, you can clone the repository from [Github](https://github.com/bosun-monitor/bosun) for the latest version. 
+
+#### From Docker Hub
+
+To pull the latest version published to Docker Hub, execute the following command:
 
 	$ docker run -d -p 4242:4242 -p 8070:8070 stackexchange/bosun
 
-The above command tells the Docker daemon that you would like to start a new daemonized instance of bosun and you wish to port-forward 8070 of your server into the docker container. After about 15 seconds, you should have a working Bosun instance on port 8070. You can navigate to the instance by opening a browser and heading to http://docker-server-ip:8070 where docker-server is your server running the docker daemon.
+The above command tells the Docker daemon that you would like to start a new daemonized instance of bosun and you wish to port-forward 8070 of your server into the docker container. 
+After about 30 seconds, you should have a working Bosun instance on port 8070.
+You can navigate to the instance by opening a browser and heading to http://docker-server-ip:8070 where docker-server is your server running the docker daemon.
+
+#### From the Github repository
+
+Clone the [Github repository](https://github.com/bosun-monitor/bosun) into a directory of your choice. From that 
+directory, run the following two commands: 
+    
+    $ cd docker
+    $ docker-compose up
+    
+This will launch two containers. One which runs OpenTSDB and HBase, Bosun's dependencies; and a second one that runs
+Bosun, [scollector](#scollector), and TSDBrelay. These three are the main components of the Bosun repository.
+
+Your Bosun is available at http://localhost:8070. OpenTSDB is also available at http://localhost:4242.
 
 ## Getting data into Bosun
 
