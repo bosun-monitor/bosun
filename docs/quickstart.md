@@ -59,8 +59,9 @@ directory, run the following two commands:
     $ cd docker
     $ docker-compose up
     
-This will launch two containers. One which runs OpenTSDB and HBase, Bosun's dependencies; and a second one that runs
-Bosun, [scollector](#scollector), and TSDBrelay. These three are the main components of the Bosun repository.
+This will launch three containers. One which runs OpenTSDB and HBase, and a second one with Redis - Bosun's 
+dependencies. A third one runs Bosun, [scollector](#scollector), and TSDBrelay. These three are the main components of 
+the Bosun repository.
 
 Your Bosun is available at http://localhost:8070. OpenTSDB is also available at http://localhost:4242.
 
