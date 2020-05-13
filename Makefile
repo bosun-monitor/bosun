@@ -116,8 +116,17 @@ staticcheck:
 test:
 	$(GOTEST) -v ./...
 
+.PHONY: test-coverprofile
+test-coverprofile:
+	go test -covermode=count -coverprofile=coverage.out `go list ./... | grep -v integration` -json > test-report.out
+
+.PHONY: coverage
+coverage:
+	go test -covermode=count -coverprofile=coverage.out `go list ./... | grep -v integration`
+	go tool cover -html=coverage.out
+
 .PHOHY: checks
-checks: goimports-check vet generate tidy-check
+checks: goimports-check vet generate tidy-check test-coverprofile
 
 .PHONY: clean
 clean:
