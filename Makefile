@@ -125,8 +125,8 @@ coverage:
 	$(GOTEST) -covermode=count -coverprofile=coverage.out  $$($(GOLIST) ./... | grep -v integration)
 	$(GOTOOL) cover -html=coverage.out
 
-.PHOHY: checks
-checks: goimports-check vet generate tidy-check test-coverprofile
+.PHONY: checks
+checks: goimports-check vet generate tidy-check
 
 .PHONY: clean
 clean:
