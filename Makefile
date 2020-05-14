@@ -9,7 +9,7 @@ GOLIST=$(GOCMD) list
 GOMOD=$(GOCMD) mod
 GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
-
+GOTOOL=$(GOCMD) tool
 BINARY_NAME=bosun
 BINARY_UNIX=$(BINARY_NAME)_unix
 BINARY_MAC=$(BINARY_NAME)_mac
@@ -118,12 +118,12 @@ test:
 
 .PHONY: test-coverprofile
 test-coverprofile:
-	go test -covermode=count -coverprofile=coverage.out `go list ./... | grep -v integration` -json > test-report.out
+	$(GOTEST) -covermode=count -coverprofile=coverage.out $$($(GOLIST) ./... | grep -v integration) -json > test-report.out
 
 .PHONY: coverage
 coverage:
-	go test -covermode=count -coverprofile=coverage.out `go list ./... | grep -v integration`
-	go tool cover -html=coverage.out
+	$(GOTEST) -covermode=count -coverprofile=coverage.out  $$($(GOLIST) ./... | grep -v integration)
+	$(GOTOOL) cover -html=coverage.out
 
 .PHOHY: checks
 checks: goimports-check vet generate tidy-check test-coverprofile
