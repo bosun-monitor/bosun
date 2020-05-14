@@ -9,6 +9,25 @@ Bosun is a time series alerting framework developed by Stack Exchange. Scollecto
 bosun and scollector are found under the `cmd` directory. Run `go build` in the corresponding directories to build each project.
 There's also a [Makefile] available for most tasks. 
 
+## Running 
+
+For a full stack with all dependencies, run `docker-compose up` from the `docker` directory. Don't forget to rebuild 
+images and containers if you change the code:
+
+    $ cd docker
+    $ docker-compose down
+    $ docker-compose up --build
+    
+If you only need the dependencies (Redis, OpenTSDB, HBase) and would like to run Bosun on your machine directly (e.g. to attach
+a debugger), you can bring up the dependencies with these three commands from the repository's root:
+
+    $ docker run -p 6379:6379 --name redis redis:6
+    $ docker build -f docker/opentsdb.Dockerfile -t opentsdb .
+    $ docker run -p 4242:4242 --name opentsdb opentsdb
+
+The OpenTSDB container will be reachable at http://localhost:4242. Redis listens on its default port `6379`.
+Bosun, if brought up in a Docker container, is available at http://localhost:8070.
+
 ## Developing
 
 Install:

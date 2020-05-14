@@ -43,7 +43,7 @@ EnableReload = true
 
 # Configuration to enable the OpenTSDB Backend
 [OpenTSDBConf]
-	Host = "localhost:4242"
+	Host = "opentsdb:4242"
 	# Default is 2.1, certain features like filters are enabled when the version is set to 2.2
 	Version = 2.2
 	# ResponseLimit will make requests error if the response from opentsdb is larger than this setting in bytes. Default of 1MB
@@ -69,6 +69,8 @@ EnableReload = true
 # for production setups. Defaults for ledis are below but would be ignored since redis takes
 # precedence
 [DBConf]
+	RedisHost = "redis:6379"
+	RedisDb = 0
 	LedisDir = "/data/ledis_data"
 	LedisBindAddr = "0.0.0.0:9565"	
 
