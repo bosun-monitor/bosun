@@ -9,7 +9,7 @@ GOLIST=$(GOCMD) list
 GOMOD=$(GOCMD) mod
 GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
-
+GOTOOL=$(GOCMD) tool
 BINARY_NAME=bosun
 BINARY_UNIX=$(BINARY_NAME)_unix
 BINARY_MAC=$(BINARY_NAME)_mac
@@ -116,7 +116,16 @@ staticcheck:
 test:
 	$(GOTEST) -v ./...
 
-.PHOHY: checks
+.PHONY: test-coverprofile
+test-coverprofile:
+	$(GOTEST) -covermode=count -coverprofile=coverage.out $$($(GOLIST) ./... | grep -v integration) -json > test-report.out
+
+.PHONY: coverage
+coverage:
+	$(GOTEST) -covermode=count -coverprofile=coverage.out  $$($(GOLIST) ./... | grep -v integration)
+	$(GOTOOL) cover -html=coverage.out
+
+.PHONY: checks
 checks: goimports-check vet generate tidy-check
 
 .PHONY: clean
