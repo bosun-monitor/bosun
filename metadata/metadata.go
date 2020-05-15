@@ -41,6 +41,7 @@ const (
 // Unit is the unit for a metric.
 type Unit string
 
+// Constants for units of metrics
 const (
 	// None is a not-yet documented unit.
 	None            Unit = ""
@@ -221,6 +222,7 @@ func Init(u *url.URL, debug bool) error {
 
 var putFunction func(k Metakey, v interface{}) error
 
+// InitF starts the periodic collection and submission of metadata with the given put function
 func InitF(debug bool, f func(k Metakey, v interface{}) error) error {
 	putFunction = f
 	metadebug = debug
@@ -238,6 +240,7 @@ func collectMetadata() {
 	}
 }
 
+// FlushMetadata sends the data created by all functions to Bosun
 func FlushMetadata() {
 	for _, f := range metafuncs {
 		f()
