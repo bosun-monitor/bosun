@@ -11,14 +11,14 @@ import (
 )
 
 const (
-	Millisecond Duration = Duration(time.Millisecond)
-	Second               = 1000 * Millisecond
-	Minute               = 60 * Second
-	Hour                 = 60 * Minute
-	Day                  = Hour * 24
-	Week                 = Day * 7
-	Month                = Day * 30
-	Year                 = Day * 365
+	millisecond = Duration(time.Millisecond)
+	second      = 1000 * millisecond
+	minute      = 60 * second
+	hour        = 60 * minute
+	day         = hour * 24
+	week        = day * 7
+	month       = day * 30
+	year        = day * 365
 )
 
 // Duration extends time.Duration to support OpenTSDB time-format specifiers:
@@ -145,29 +145,30 @@ func leadingInt(s string) (x int64, rem string, err error) {
 }
 
 func (d Duration) String() string {
-	return fmt.Sprintf("%dms", d/Millisecond)
+	return fmt.Sprintf("%dms", d/millisecond)
 }
 
+// HumanString returns a human-readable representation of the receiver
 func (d Duration) HumanString() string {
-	if d >= Year && d%Year == 0 {
-		return fmt.Sprintf("%dy", d/Year)
+	if d >= year && d%year == 0 {
+		return fmt.Sprintf("%dy", d/year)
 	}
-	if d >= Week && d%Week == 0 {
-		return fmt.Sprintf("%dw", d/Week)
+	if d >= week && d%week == 0 {
+		return fmt.Sprintf("%dw", d/week)
 	}
-	if d >= Day && d%Day == 0 {
-		return fmt.Sprintf("%dd", d/Day)
+	if d >= day && d%day == 0 {
+		return fmt.Sprintf("%dd", d/day)
 	}
-	if d >= Hour && d%Hour == 0 {
-		return fmt.Sprintf("%dh", d/Hour)
+	if d >= hour && d%hour == 0 {
+		return fmt.Sprintf("%dh", d/hour)
 	}
-	if d >= Minute && d%Minute == 0 {
-		return fmt.Sprintf("%dm", d/Minute)
+	if d >= minute && d%minute == 0 {
+		return fmt.Sprintf("%dm", d/minute)
 	}
-	if d >= Second && d%Second == 0 {
-		return fmt.Sprintf("%ds", d/Second)
+	if d >= second && d%second == 0 {
+		return fmt.Sprintf("%ds", d/second)
 	}
-	return fmt.Sprintf("%dms", d/Millisecond)
+	return fmt.Sprintf("%dms", d/millisecond)
 }
 
 // Seconds returns the duration as a floating point number of seconds.
@@ -175,6 +176,7 @@ func (d Duration) Seconds() float64 {
 	return time.Duration(d).Seconds()
 }
 
+// UnmarshalText is the method called by TOML when decoding a value
 func (d *Duration) UnmarshalText(text []byte) error {
 	duration, err := ParseDuration(string(text))
 	if err != nil {

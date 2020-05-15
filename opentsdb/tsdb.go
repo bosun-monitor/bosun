@@ -25,6 +25,7 @@ import (
 // http://opentsdb.net/docs/build/html/api_http/query/index.html#example-multi-set-response.
 type ResponseSet []*Response
 
+// Copy returns a reference to a deep copy of the receiver
 func (r ResponseSet) Copy() ResponseSet {
 	newSet := make(ResponseSet, len(r))
 	for i, resp := range r {
@@ -48,6 +49,7 @@ type Response struct {
 	SQL string `json:"sql,omitempty"`
 }
 
+// Copy returns a reference to a deep copy of the receiver
 func (r *Response) Copy() *Response {
 	newR := Response{}
 	newR.Metric = r.Metric
@@ -186,13 +188,15 @@ func (t TagSet) Tags() string {
 	b := &bytes.Buffer{}
 	for i, k := range keys {
 		if i > 0 {
-			fmt.Fprint(b, ",")
+			b.WriteString(",")
 		}
-		fmt.Fprintf(b, "%s=%s", k, t[k])
+		b.WriteString(fmt.Sprintf("%s=%s", k, t[k]))
 	}
 	return b.String()
 }
 
+// AllSubsets returns all subsets that can be formed
+// Returns a slice of strings of the form tagk1=tagv1,tagk2=tagv2,...,tagkN=tagvN
 func (t TagSet) AllSubsets() []string {
 	var keys []string
 	for k := range t {
@@ -203,7 +207,7 @@ func (t TagSet) AllSubsets() []string {
 }
 
 func (t TagSet) allSubsets(base string, start int, keys []string) []string {
-	subs := []string{}
+	subs := make([]string, 0)
 	for i := start; i < len(keys); i++ {
 		part := base
 		if part != "" {
@@ -216,14 +220,14 @@ func (t TagSet) allSubsets(base string, start int, keys []string) []string {
 	return subs
 }
 
-// Returns true if the two tagsets "overlap".
-// Two tagsets overlap if they:
+// Overlaps returns true if the two TagSets "overlap".
+// Two TagSets overlap if they:
 // 1. Have at least one key/value pair that matches
 // 2. Have no keys in common where the values do not match
-func (a TagSet) Overlaps(b TagSet) bool {
+func (t TagSet) Overlaps(other TagSet) bool {
 	anyMatch := false
-	for k, v := range a {
-		v2, ok := b[k]
+	for k, v := range t {
+		v2, ok := other[k]
 		if !ok {
 			continue
 		}
@@ -244,6 +248,8 @@ func (t TagSet) Valid() bool {
 	return err == nil
 }
 
+// Clean removes characters from tags and metric names that are incompatible with OpenTSDB. Also adjusts the timestamp
+// if it's likely to be in milliseconds
 func (d *DataPoint) Clean() error {
 	if err := d.Tags.Clean(); err != nil {
 		return fmt.Errorf("cleaning tags for metric %s: %s", d.Metric, err)
@@ -382,6 +388,8 @@ type Query struct {
 	GroupByTags TagSet      `json:"-"`
 }
 
+// Filter represents a filter used by OpenTSDB
+// http://opentsdb.net/docs/build/html/api_http/query/index.html#filters
 type Filter struct {
 	Type    string `json:"type"`
 	TagK    string `json:"tagk"`
@@ -393,6 +401,7 @@ func (f Filter) String() string {
 	return fmt.Sprintf("%s=%s(%s)", f.TagK, f.Type, f.Filter)
 }
 
+// Filters is a slice of `Filter` structs
 type Filters []Filter
 
 func (filters Filters) String() string {
@@ -960,17 +969,19 @@ func (h Host) Query(r *Request) (ResponseSet, error) {
 	return r.Query(string(h))
 }
 
-// OpenTSDB 2.1 version struct
+// Version2_1 is the version struct for OpenTSDB 2.1
 var Version2_1 = Version{2, 1}
 
-// OpenTSDB 2.2 version struct
+// Version2_2 is the version struct for OpenTSDB 2.2 and later
 var Version2_2 = Version{2, 2}
 
+// Version is a struct encoding an OpenTSDB version
 type Version struct {
 	Major int64
 	Minor int64
 }
 
+// UnmarshalText is the method called by TOML when decoding a value
 func (v *Version) UnmarshalText(text []byte) error {
 	var err error
 	split := strings.Split(string(text), ".")
@@ -988,6 +999,7 @@ func (v *Version) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// FilterSupport returns whether the OpenTSDB version supports filters
 func (v Version) FilterSupport() bool {
 	return v.Major >= 2 && v.Minor >= 2
 }
@@ -1014,6 +1026,7 @@ func NewLimitContext(host string, limit int64, version Version) *LimitContext {
 	}
 }
 
+// Version returns the version of OpenTSDB
 func (c *LimitContext) Version() Version {
 	return c.TSDBVersion
 }
