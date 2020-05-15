@@ -7,6 +7,7 @@ import (
 	"github.com/golang/groupcache/singleflight"
 )
 
+// Cache is an LRU cache which makes sure that on a cache miss the function to retrieve the value is only executed once
 type Cache struct {
 	g singleflight.Group
 
