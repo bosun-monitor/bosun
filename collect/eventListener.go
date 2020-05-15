@@ -12,6 +12,11 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
+// HandleCounterPut is the handler function of tsdbrelay for a custom counter
+//
+// These counters are stored in Redis and can be shipped to OpenTSDB/Bosun by scollector
+//
+// Follows the same API as OpenTSDB's /api/put
 func HandleCounterPut(server string, database int) http.HandlerFunc {
 
 	pool := newRedisPool(server, database)
@@ -53,6 +58,9 @@ func HandleCounterPut(server string, database int) http.HandlerFunc {
 	}
 }
 
+// RedisCountersKey is the Redis key used to store a hash that holds counters stored by tsdbrelay
+//
+// These custom counters are regularly shipped to OpenTSDB/Bosun by scollector depending on the configuration
 const RedisCountersKey = "scollectorCounters"
 
 func newRedisPool(server string, database int) *redis.Pool {

@@ -48,7 +48,7 @@ func queuer() {
 	}
 }
 
-// Locks the queue and sends all datapoints. Intended to be used as scollector exits.
+// Flush locks the queue and sends all datapoints. Intended to be used as scollector exits.
 func Flush() {
 	flushData()
 	metadata.FlushMetadata()
@@ -81,7 +81,7 @@ func send() {
 				slog.Infof("sending: %d, remaining: %d", i, len(queue))
 			}
 			qlock.Unlock()
-			if DisableDefaultCollectors == false {
+			if !DisableDefaultCollectors {
 				Sample("collect.post.batchsize", Tags, float64(len(sending)))
 			}
 			sendBatch(sending)
@@ -160,6 +160,7 @@ var bufferPool = sync.Pool{
 	New: func() interface{} { return &bytes.Buffer{} },
 }
 
+// SendDataPoints sends a slice of `opentsdb.DataPoint`s to OpenTSDB
 func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, error) {
 	req, err := buildHTTPRequest(dps, tsdb)
 	if err != nil {
