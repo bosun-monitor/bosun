@@ -163,15 +163,15 @@ func main() {
 	})
 	http.Handle("/", tsdbProxy)
 
-	collectUrl := &url.URL{
+	collectURL := &url.URL{
 		Scheme: "http",
 		Host:   *listenAddr,
 		Path:   "/api/put",
 	}
-	if err = collect.Init(collectUrl, "tsdbrelay"); err != nil {
+	if err = collect.Init(collectURL, "tsdbrelay"); err != nil {
 		slog.Fatal(err)
 	}
-	if err := metadata.Init(collectUrl, false); err != nil {
+	if err := metadata.Init(collectURL, false); err != nil {
 		slog.Fatal(err)
 	}
 	// Make sure these get zeroed out instead of going unknown on restart
@@ -321,7 +321,7 @@ func (rp *relayProxy) denormalize(body io.Reader) {
 	relayDps := []*opentsdb.DataPoint{}
 	for _, dp := range dps {
 		if rule, ok := denormalizationRules[dp.Metric]; ok {
-			if err = rule.Translate(dp); err == nil {
+			if err = rule.Convert(dp); err == nil {
 				relayDps = append(relayDps, dp)
 			} else {
 				verbose("error translating points: %v", err.Error())

@@ -8,8 +8,8 @@ import (
 
 func TestSimpleRewrite(t *testing.T) {
 	rule := &DenormalizationRule{
-		Metric:   "a.b.c",
-		TagNames: []string{"host"},
+		metric:   "a.b.c",
+		tagNames: []string{"host"},
 	}
 	tags := opentsdb.TagSet{"host": "foo-bar", "baz": "qwerty"}
 	dp := &opentsdb.DataPoint{
@@ -18,7 +18,7 @@ func TestSimpleRewrite(t *testing.T) {
 		Value:     3,
 		Tags:      tags.Copy(),
 	}
-	err := rule.Translate(dp)
+	err := rule.Convert(dp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,14 +39,14 @@ func TestSimpleRewrite(t *testing.T) {
 
 func TestMultipleTags(t *testing.T) {
 	rule := &DenormalizationRule{
-		Metric:   "a.b.c",
-		TagNames: []string{"host", "interface"},
+		metric:   "a.b.c",
+		tagNames: []string{"host", "interface"},
 	}
 	dp := &opentsdb.DataPoint{
 		Metric: "a.b.c",
 		Tags:   opentsdb.TagSet{"host": "foo-bar", "interface": "eth0"},
 	}
-	err := rule.Translate(dp)
+	err := rule.Convert(dp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,8 +58,8 @@ func TestMultipleTags(t *testing.T) {
 
 func TestRewrite_TagNotPresent(t *testing.T) {
 	rule := &DenormalizationRule{
-		Metric:   "a.b.c",
-		TagNames: []string{"host"},
+		metric:   "a.b.c",
+		tagNames: []string{"host"},
 	}
 	// Denormalization rule specified host, but data point has no host.
 	// Return error on translate and don't send anything downstream.
@@ -69,7 +69,7 @@ func TestRewrite_TagNotPresent(t *testing.T) {
 		Value:     3,
 		Tags:      opentsdb.TagSet{"baz": "qwerty"},
 	}
-	err := rule.Translate(dp)
+	err := rule.Convert(dp)
 	if err == nil {
 		t.Fatal("Expected error but got none.")
 	}

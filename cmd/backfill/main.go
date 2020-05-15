@@ -83,7 +83,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		dps := []*opentsdb.DataPoint{}
+		dps := make([]*opentsdb.DataPoint, 0)
 		for _, r := range resp {
 			for t, p := range r.DPS {
 
@@ -97,7 +97,7 @@ func main() {
 					Tags:      r.Tags,
 					Value:     p,
 				}
-				err = rule.Translate(dp)
+				err = rule.Convert(dp)
 				if err != nil {
 					return err
 				}
