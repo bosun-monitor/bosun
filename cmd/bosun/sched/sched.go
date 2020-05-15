@@ -587,7 +587,7 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 		found := false
 		for i, a := range st.Actions {
 			// Find first delayed close that hasn't already been fulfilled or canceled
-			if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
+			if a.Type == models.ActionDelayedClose && !(a.Fulfilled || a.Cancelled) {
 				found, st.Actions[i].Cancelled = true, true
 				break
 			}
@@ -611,7 +611,7 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 			}
 			// See if there is already a pending delayed close, if there is update the time and return
 			for i, a := range st.Actions {
-				if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
+				if a.Type == models.ActionDelayedClose && !(a.Fulfilled || a.Cancelled) {
 					st.Actions[i].Deadline = &dl
 					_, err := s.DataAccess.State().UpdateIncidentState(st)
 					if err != nil {

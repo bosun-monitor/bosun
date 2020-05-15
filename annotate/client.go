@@ -7,11 +7,13 @@ import (
 	"time"
 )
 
+// Client is a client for the annotations API
 type Client struct {
 	apiRoot string
 	client  *http.Client
 }
 
+// NewClient creates a new Client for the annotations API
 func NewClient(apiRoot string) Client {
 	return Client{
 		apiRoot: apiRoot,
@@ -39,6 +41,7 @@ func (c *Client) SendAnnotation(a Annotation) (Annotation, error) {
 
 // GetAnnotation gets an annotation by ID, and will return
 // nil without an error if the annotation does not exist
+// FIXME: This function looks unused
 func (c *Client) GetAnnotation(id string) (*Annotation, error) {
 	a := &Annotation{}
 	res, err := c.client.Get(c.apiRoot + "/annotation/" + id)
@@ -53,6 +56,8 @@ func (c *Client) GetAnnotation(id string) (*Annotation, error) {
 	return a, err
 }
 
+// GetAnnotations gets annotations with the given criteria
+// FIXME: This function looks unused
 func (c *Client) GetAnnotations(start, end *time.Time, source, host, creationUser, owner, category, url, message string) (Annotations, error) {
 	a := Annotations{}
 	req, err := http.NewRequest("GET", c.apiRoot+"/annotation/query", nil)

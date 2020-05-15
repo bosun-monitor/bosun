@@ -61,7 +61,8 @@ func AddRoutesWithMiddleware(router *mux.Router, prefix string, b []backend.Back
 	return nil
 }
 
-func Index(w http.ResponseWriter, r *http.Request) {
+// Index is the HTTP handler for /
+func Index(w http.ResponseWriter, _ *http.Request) {
 	w.Write(indexHTML)
 }
 
@@ -71,6 +72,7 @@ var (
 	backends  = []backend.Backend{}
 )
 
+// InsertAnnotation is the HTTP handler to insert an annotations
 func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 	var a annotate.Annotation
 	var ea annotate.EpochAnnotation
@@ -140,7 +142,6 @@ func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	return
 }
 
 func format(a *annotate.Annotation, w http.ResponseWriter, epochFmt bool) (e error) {
@@ -161,6 +162,7 @@ func formatPlural(a annotate.Annotations, w http.ResponseWriter, epochFmt bool) 
 	return
 }
 
+// GetAnnotation is the HTTP handler to get an annotation
 func GetAnnotation(w http.ResponseWriter, req *http.Request) {
 	var a *annotate.Annotation
 	var err error
@@ -184,9 +186,9 @@ func GetAnnotation(w http.ResponseWriter, req *http.Request) {
 		serveError(w, err)
 		return
 	}
-	return
 }
 
+// DeleteAnnotation is the HTTP handler to delete an annotation
 func DeleteAnnotation(w http.ResponseWriter, req *http.Request) {
 	id := mux.Vars(req)["id"]
 	if id == "" {
@@ -202,6 +204,7 @@ func DeleteAnnotation(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// GetFieldValues is the HTTP handler to get the values of a field
 func GetFieldValues(w http.ResponseWriter, req *http.Request) {
 	values := []string{}
 	var err error
@@ -221,9 +224,9 @@ func GetFieldValues(w http.ResponseWriter, req *http.Request) {
 		serveError(w, err)
 		return
 	}
-	return
 }
 
+// GetAnnotations is the HTTP handler to query annotations
 func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	var a annotate.Annotations
 	var startT time.Time
@@ -317,7 +320,6 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 		serveError(w, err)
 		return
 	}
-	return
 }
 
 func serveError(w http.ResponseWriter, err error) {

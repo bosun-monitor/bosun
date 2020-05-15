@@ -35,6 +35,7 @@ func (b *binding) unmarshal(v interface{}) error {
 		return err
 	}
 	v = convertType(v)
+	// FIXME: Should v be used here?
 	return nil
 }
 
@@ -79,44 +80,44 @@ func convertType(v interface{}) interface{} {
 	}
 }
 
-// less checks if a precedes b in the MIB tree.
-func (a binding) less(b binding) bool {
+// less checks if b precedes other in the MIB tree.
+func (b binding) less(other binding) bool {
 	switch {
-	case len(a.Name) < len(b.Name):
-		for i := 0; i < len(a.Name); i++ {
+	case len(b.Name) < len(other.Name):
+		for i := 0; i < len(b.Name); i++ {
 			switch {
-			case a.Name[i] < b.Name[i]:
+			case b.Name[i] < other.Name[i]:
 				return true
-			case a.Name[i] == b.Name[i]:
+			case b.Name[i] == other.Name[i]:
 				continue
-			case a.Name[i] > b.Name[i]:
+			case b.Name[i] > other.Name[i]:
 				return false
 			}
 		}
 		return true
 
-	case len(a.Name) == len(b.Name):
-		for i := 0; i < len(a.Name); i++ {
+	case len(b.Name) == len(other.Name):
+		for i := 0; i < len(b.Name); i++ {
 			switch {
-			case a.Name[i] < b.Name[i]:
+			case b.Name[i] < other.Name[i]:
 				return true
-			case a.Name[i] == b.Name[i]:
+			case b.Name[i] == other.Name[i]:
 				continue
-			case a.Name[i] > b.Name[i]:
+			case b.Name[i] > other.Name[i]:
 				return false
 			}
 		}
 		// Identical, so not less.
 		return false
 
-	case len(a.Name) > len(b.Name):
-		for i := 0; i < len(b.Name); i++ {
+	case len(b.Name) > len(other.Name):
+		for i := 0; i < len(other.Name); i++ {
 			switch {
-			case a.Name[i] < b.Name[i]:
+			case b.Name[i] < other.Name[i]:
 				return true
-			case a.Name[i] == b.Name[i]:
+			case b.Name[i] == other.Name[i]:
 				continue
-			case a.Name[i] > b.Name[i]:
+			case b.Name[i] > other.Name[i]:
 				return false
 			}
 		}
@@ -238,7 +239,7 @@ func (s *SNMP) do(req *request) (*response, error) {
 	if _, err := conn.Write(buf); err != nil {
 		return nil, err
 	}
-	buf = make([]byte, 10000, 10000)
+	buf = make([]byte, 10000)
 	if err := conn.SetReadDeadline(time.Now().Add(time.Duration(Timeout) * time.Second)); err != nil {
 		return nil, err
 	}

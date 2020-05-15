@@ -13,6 +13,7 @@ import (
 	elastic "github.com/olivere/elastic"
 )
 
+// Elastic6 is an implementation of an Elasticsearch 6 client
 type Elastic6 struct {
 	*elastic.Client
 	index             string
@@ -23,13 +24,15 @@ type Elastic6 struct {
 	initialized       bool
 }
 
+// NewElastic6 creates a new Elasticsearch 6 client for an annotations index
 func NewElastic6(urls []string, simpleclient bool, index string, clientoptions []elastic.ClientOptionFunc) *Elastic6 {
 	return &Elastic6{&elastic.Client{}, index, urls, simpleclient, clientoptions, 200, false}
 }
 
+// GetAnnotations gets annotations filtered by the arguments
 func (e *Elastic6) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFilter) (annotate.Annotations, error) {
 	if !e.initialized {
-		return nil, unInitErr
+		return nil, errUnInit
 	}
 	annotations := annotate.Annotations{}
 	filters := []elastic.Query{}
@@ -81,9 +84,10 @@ func (e *Elastic6) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFi
 	return annotations, nil
 }
 
+// GetFieldValues gets the values for a given field
 func (e *Elastic6) GetFieldValues(field string) ([]string, error) {
 	if !e.initialized {
-		return nil, unInitErr
+		return nil, errUnInit
 	}
 	terms := []string{}
 	switch field {
@@ -109,6 +113,7 @@ func (e *Elastic6) GetFieldValues(field string) ([]string, error) {
 	return terms, nil
 }
 
+// InitBackend initalises the backend
 func (e *Elastic6) InitBackend() error {
 	var err error
 	var ec *elastic.Client
@@ -167,17 +172,19 @@ func (e *Elastic6) InitBackend() error {
 	return nil
 }
 
+// InsertAnnotation inserts an annotation
 func (e *Elastic6) InsertAnnotation(a *annotate.Annotation) error {
 	if !e.initialized {
-		return unInitErr
+		return errUnInit
 	}
 	_, err := e.Index().Index(e.index).BodyJson(a).Id(a.Id).Type(docType).Do(context.Background())
 	return err
 }
 
+// GetAnnotation gets the annotation with the given ID
 func (e *Elastic6) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
 	if !e.initialized {
-		return nil, false, unInitErr
+		return nil, false, errUnInit
 	}
 	a := annotate.Annotation{}
 	if id == "" {
@@ -197,9 +204,10 @@ func (e *Elastic6) GetAnnotation(id string) (*annotate.Annotation, bool, error) 
 	return &a, res.Found, nil
 }
 
+// DeleteAnnotation deletes the annotation with the given ID
 func (e *Elastic6) DeleteAnnotation(id string) error {
 	if !e.initialized {
-		return unInitErr
+		return errUnInit
 	}
 	_, err := e.Delete().Index(e.index).Type(docType).Id(id).Do(context.Background())
 	if err != nil {

@@ -172,7 +172,7 @@ func (d *dataAccess) BackupLastInfos(m map[string]map[string]*LastInfo) error {
 	conn := d.Get()
 	defer conn.Close()
 
-	dat, err := util.MarshalGzipJson(m)
+	dat, err := util.MarshalGzipJSON(m)
 	if err != nil {
 		return slog.Wrap(err)
 	}
@@ -189,7 +189,7 @@ func (d *dataAccess) LoadLastInfos() (map[string]map[string]*LastInfo, error) {
 		return nil, slog.Wrap(err)
 	}
 	var m map[string]map[string]*LastInfo
-	err = util.UnmarshalGzipJson(b, &m)
+	err = util.UnmarshalGzipJSON(b, &m)
 	if err != nil {
 		return nil, slog.Wrap(err)
 	}

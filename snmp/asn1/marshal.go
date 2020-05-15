@@ -416,9 +416,9 @@ func marshalBody(out *forkableWriter, value reflect.Value, params fieldParameter
 		t := value.Interface().(time.Time)
 		if params.timeType == tagGeneralizedTime || outsideUTCRange(t) {
 			return marshalGeneralizedTime(out, t)
-		} else {
-			return marshalUTCTime(out, t)
 		}
+		return marshalUTCTime(out, t)
+
 	case bitStringType:
 		return marshalBitString(out, value.Interface().(BitString))
 	case objectIdentifierType:
@@ -431,9 +431,9 @@ func marshalBody(out *forkableWriter, value reflect.Value, params fieldParameter
 	case reflect.Bool:
 		if v.Bool() {
 			return out.WriteByte(255)
-		} else {
-			return out.WriteByte(0)
 		}
+		return out.WriteByte(0)
+
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return marshalInt64(out, int64(v.Int()))
 	case reflect.Struct:
@@ -456,9 +456,8 @@ func marshalBody(out *forkableWriter, value reflect.Value, params fieldParameter
 				 * bytes */
 				_, err = out.Write(stripTagAndLength(bytes))
 				return
-			} else {
-				startingField = 1
 			}
+			startingField = 1
 		}
 
 		for i := startingField; i < t.NumField(); i++ {
@@ -627,7 +626,7 @@ func marshalField(out *forkableWriter, v reflect.Value, params fieldParameters) 
 		})
 	}
 
-	return nil
+	return
 }
 
 // Marshal returns the ASN.1 encoding of val.
@@ -648,5 +647,8 @@ func Marshal(val interface{}) ([]byte, error) {
 		return nil, err
 	}
 	_, err = f.writeTo(&out)
+	if err != nil {
+		return nil, err
+	}
 	return out.Bytes(), nil
 }

@@ -35,7 +35,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
-	if *flagIn == true {
+	if *flagIn {
 		a := procIn()
 		sendAnnotation(a)
 		os.Exit(0)
@@ -62,7 +62,7 @@ func main() {
 	un := *userFlag
 	if un == "" {
 		// Since os/user requires cgo
-		un = os.Getenv(USER_ENV)
+		un = os.Getenv(userEnvVar)
 		sudo := os.Getenv("SUDO_USER")
 		if sudo != "" {
 			un = sudo

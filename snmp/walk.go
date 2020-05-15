@@ -181,24 +181,6 @@ type requestFunc func(*request) (*response, error)
 // walkFunc is a function that can request one or more rows.
 type walkFunc func([]binding, requestFunc) ([]row, error)
 
-// walk1 requests one row.
-func walk1(have []binding, rf requestFunc) ([]row, error) {
-	req := &request{
-		Type:     "GetNext",
-		ID:       <-nextID,
-		Bindings: have,
-	}
-	resp, err := rf(req)
-	if err != nil {
-		return nil, err
-	}
-	if err := check(resp, req); err != nil {
-		return nil, err
-	}
-	r := row{bindings: resp.Bindings}
-	return []row{r}, nil
-}
-
 // walkN requests a range of rows.
 func walkN(have []binding, rf requestFunc) ([]row, error) {
 	req := &request{
