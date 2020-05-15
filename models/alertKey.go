@@ -7,8 +7,10 @@ import (
 	"bosun.org/opentsdb"
 )
 
+// AlertKey is the string representation of an Alert name with its tags which uniquely identifies an alert
 type AlertKey string
 
+// ParseAlertKey parses an `AlertKey` from a string
 func ParseAlertKey(a string) (ak AlertKey, err error) {
 	ak = AlertKey(a)
 	defer func() {
@@ -21,10 +23,12 @@ func ParseAlertKey(a string) (ak AlertKey, err error) {
 	return
 }
 
+// NewAlertKey creates a new `AlertKey` from a name and a set of tags
 func NewAlertKey(name string, group opentsdb.TagSet) AlertKey {
 	return AlertKey(name + group.String())
 }
 
+// Name returns the name of the alert (without its group)
 func (a AlertKey) Name() string {
 	return strings.SplitN(string(a), "{", 2)[0]
 }
@@ -48,6 +52,7 @@ func (a AlertKey) Group() opentsdb.TagSet {
 	return g
 }
 
+// AlertKeys is a sortable slice of `AlertKey`s
 type AlertKeys []AlertKey
 
 func (a AlertKeys) Len() int           { return len(a) }

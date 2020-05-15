@@ -10,6 +10,7 @@ import (
 	"bosun.org/opentsdb"
 )
 
+// IncidentState is the state of an incident
 type IncidentState struct {
 	// Since IncidentState is embedded into a template's Context these fields
 	// are available to users. Changes to this object should be reflected
@@ -52,24 +53,27 @@ type IncidentState struct {
 // SetNotified marks the notification name as "active" for this incident.
 // All future actions and unknown notifications will go to all "active" notifications
 // it returns true if the set was changed (and needs resaving)
-func (i *IncidentState) SetNotified(not string) bool {
-	for _, n := range i.Notifications {
+func (is *IncidentState) SetNotified(not string) bool {
+	for _, n := range is.Notifications {
 		if n == not {
 			return false
 		}
 	}
-	i.Notifications = append(i.Notifications, not)
+	is.Notifications = append(is.Notifications, not)
 	return true
 }
 
+// Epoch is a wrapper around `time.Time` to allow custom (un-)marshalling
 type Epoch struct {
 	time.Time
 }
 
+// MarshalJSON is a custom JSON marshaller converting the Epoch to a unix timestamp in UTC
 func (t Epoch) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("%v", t.UTC().Unix())), nil
 }
 
+// UnmarshalJSON is a custom JSON unmarshaller from a unix timestamp in UTC
 func (t *Epoch) UnmarshalJSON(b []byte) (err error) {
 	if len(b) == 0 {
 		t.Time = time.Time{}
@@ -83,6 +87,8 @@ func (t *Epoch) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
+// RenderedTemplates is a template that has been rendered through the rendering engine, i.e. all variables have been
+// filled in with concrete values
 type RenderedTemplates struct {
 	Subject      string
 	Body         string
@@ -92,6 +98,7 @@ type RenderedTemplates struct {
 	Attachments  []*Attachment
 }
 
+// Get returns a variable defined in the template
 func (r *RenderedTemplates) Get(name string) string {
 	if name == "subject" {
 		return r.Subject
@@ -117,6 +124,8 @@ func (r *RenderedTemplates) Get(name string) string {
 	return ""
 }
 
+// GetDefault returns the value of a variable in the receiver, filling in the default value if the variable cannot be
+// found
 func (r *RenderedTemplates) GetDefault(name string, defaultName string) string {
 	if name == "" {
 		name = defaultName
@@ -124,37 +133,44 @@ func (r *RenderedTemplates) GetDefault(name string, defaultName string) string {
 	return r.Get(name)
 }
 
-func (s *IncidentState) Group() opentsdb.TagSet {
-	return s.AlertKey.Group()
+// Group returns the group of the alert
+func (is *IncidentState) Group() opentsdb.TagSet {
+	return is.AlertKey.Group()
 }
 
-func (s *IncidentState) Last() Event {
-	if len(s.Events) == 0 {
+// Last returns the most recent event
+func (is *IncidentState) Last() Event {
+	if len(is.Events) == 0 {
 		return Event{}
 	}
-	return s.Events[len(s.Events)-1]
+	return is.Events[len(is.Events)-1]
 }
 
-func (s *IncidentState) IsActive() bool {
-	return s.CurrentStatus > StNormal
+// IsActive returns whether the state is worse than normal
+func (is *IncidentState) IsActive() bool {
+	return is.CurrentStatus > StNormal
 }
 
+// Event is the result of an evaluation of an alert
 type Event struct {
-	Warn, Crit  *Result `json:",omitempty"`
+	Warn        *Result `json:",omitempty"`
+	Crit        *Result `json:",omitempty"`
 	Status      Status
 	Time        time.Time
 	Unevaluated bool
 }
 
+// EventsByTime is a sortable slice of `Event`s
 type EventsByTime []Event
 
 func (a EventsByTime) Len() int           { return len(a) }
 func (a EventsByTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a EventsByTime) Less(i, j int) bool { return a[i].Time.Before(a[j].Time) }
 
-// custom float type to support json marshalling of NaN
+// Float is a custom float type to support json marshalling of NaN
 type Float float64
 
+// MarshalJSON is a custom JSON marshaller
 func (m Float) MarshalJSON() ([]byte, error) {
 	if math.IsNaN(float64(m)) {
 		return []byte("null"), nil
@@ -162,6 +178,7 @@ func (m Float) MarshalJSON() ([]byte, error) {
 	return json.Marshal(float64(m))
 }
 
+// UnmarshalJSON is a custom JSON unmarshaller
 func (m *Float) UnmarshalJSON(b []byte) error {
 	if string(b) == "null" {
 		*m = Float(math.NaN())
@@ -173,19 +190,23 @@ func (m *Float) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// Result is the result of a number of computations and its final value
 type Result struct {
 	Computations `json:",omitempty"`
 	Value        Float
 	Expr         string
 }
 
+// Computations is a slice of `Computation`s
 type Computations []Computation
 
+// Computation is a computation and its outcome that has been made during the evaluation of expressions
 type Computation struct {
 	Text  string
 	Value interface{}
 }
 
+// FuncType is the type of a function in the Bosun language
 type FuncType int
 
 func (f FuncType) String() string {
@@ -223,6 +244,7 @@ func (f FuncType) String() string {
 	}
 }
 
+// Constants for the different types of functions known in the Bosun language
 const (
 	TypeString FuncType = iota
 	TypePrefix
@@ -241,8 +263,10 @@ const (
 	TypeUnexpected
 )
 
+// Status is an enumeration for the different states an alert can take
 type Status int
 
+// Constants for the different alert states
 const (
 	StNone Status = iota
 	StNormal
@@ -266,10 +290,12 @@ func (s Status) String() string {
 	}
 }
 
+// MarshalJSON is a custom JSON marshaller
 func (s Status) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
+// UnmarshalJSON is a custom JSON unmarshaller
 func (s *Status) UnmarshalJSON(b []byte) error {
 	switch string(b) {
 	case `"normal"`:
@@ -286,25 +312,25 @@ func (s *Status) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (s Status) IsNormal() bool   { return s == StNormal }
-func (s Status) IsWarning() bool  { return s == StWarning }
-func (s Status) IsCritical() bool { return s == StCritical }
-func (s Status) IsUnknown() bool  { return s == StUnknown }
-
+// Action represents an action triggered on the web interface by a user
+//
+// Examples include acknowledging or closing alerts
 type Action struct {
 	// These are available to users via the template language. Changes here
 	// should be reflected in the documentation
-	User       string
-	Message    string
-	Time       time.Time
-	Type       ActionType
-	Deadline   *time.Time `json:",omitempty"`
-	Fullfilled bool
-	Cancelled  bool
+	User      string
+	Message   string
+	Time      time.Time
+	Type      ActionType
+	Deadline  *time.Time `json:",omitempty"`
+	Fulfilled bool
+	Cancelled bool
 }
 
-type ActionType int // Available to users in templates, document changes in Bosun docs
+// ActionType is an enumeration available to users in templates, document changes in Bosun docs
+type ActionType int
 
+// Constants for the various types of actions a user can take
 const (
 	ActionNone ActionType = iota
 	ActionAcknowledge
@@ -376,10 +402,12 @@ func (a ActionType) String() string {
 	}
 }
 
+// MarshalJSON is a custom JSON marshaller
 func (a ActionType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
 }
 
+// UnmarshalJSON is a custom JSON unmarshaller
 func (a *ActionType) UnmarshalJSON(b []byte) error {
 	switch string(b) {
 	case `"Acknowledged"`:
@@ -404,6 +432,7 @@ func (a *ActionType) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// Attachment represents an attachment to e.g. an email
 type Attachment struct {
 	Data        []byte
 	Filename    string
