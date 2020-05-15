@@ -1,7 +1,6 @@
 package host
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -61,7 +60,7 @@ func (c *hostNameFormatConfig) FormatName(name string) (string, error) {
 	}
 
 	if !c.IsValid(name) {
-		return "", errors.New(fmt.Sprintf("Invalid name of '%s'", name))
+		return "", fmt.Errorf("invalid name '%s'", name)
 	}
 	return strings.ToLower(name), nil
 }
