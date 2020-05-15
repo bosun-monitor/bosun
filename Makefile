@@ -69,12 +69,7 @@ install: deps
 
 .PHONY: golint
 golint:
-	@for file in $(SRCS); do \
-		golint $${file}; \
-		if [ -n "$$(golint $${file})" ]; then \
-			exit 1; \
-		fi; \
-	done
+	golint -set_exit_status ./...
 
 .PHONY: vet
 vet:
