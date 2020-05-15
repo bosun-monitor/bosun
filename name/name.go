@@ -1,4 +1,4 @@
-// Package 'name' contains contracts and functionality to help with naming things.
+// Package name contains contracts and functionality to help with naming things.
 package name
 
 // Validator is an interface which declares operations associated with name validation.
