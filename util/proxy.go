@@ -6,7 +6,7 @@ import (
 	"net/url"
 )
 
-// Creates a new http Proxy that forwards requests to the specified url.
+// NewSingleHostProxy creates a new http Proxy that forwards requests to the specified url.
 // Differs from httputil.NewSingleHostReverseProxy only in that it properly sets the host header.
 func NewSingleHostProxy(target *url.URL) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)

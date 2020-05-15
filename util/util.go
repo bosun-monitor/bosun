@@ -12,6 +12,10 @@ import (
 // the system, rather than holding onto global state
 var hostManager host.Manager
 
+// InitHostManager initialises the package-wide hostManager
+//
+// A custom hostname can be passed in which will be used instead of the hostname the operating system reports.
+// Also takes a boolean flag that indicates whether or not to use the full domain name or only the lowest level
 func InitHostManager(customHostname string, useFullHostName bool) {
 	var hm host.Manager
 	var err error
@@ -29,14 +33,17 @@ func InitHostManager(customHostname string, useFullHostName bool) {
 	SetHostManager(hm)
 }
 
+// SetHostManager sets the package-wide hostManager
 func SetHostManager(hm host.Manager) {
 	hostManager = hm
 }
 
+// GetHostManager returns the package-wide hostManager
 func GetHostManager() host.Manager {
 	return hostManager
 }
 
+// NameMatches tests if a string matches any of the given regular expressions
 func NameMatches(name string, regexes []*regexp.Regexp) bool {
 	for _, r := range regexes {
 		if r.MatchString(name) {
@@ -46,6 +53,7 @@ func NameMatches(name string, regexes []*regexp.Regexp) bool {
 	return false
 }
 
+// Btoi converts a bool to an integer
 func Btoi(b bool) int {
 	if b {
 		return 1

@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	Separator = filepath.Separator
+	separator = filepath.Separator
 )
 
 // ErrBadPattern indicates a globbing pattern was malformed.
@@ -58,7 +58,7 @@ Pattern:
 		star, chunk, pattern = scanChunk(pattern)
 		if star && chunk == "" {
 			// Trailing * matches rest of string unless it has a /.
-			return strings.Index(name, string(Separator)) < 0, nil
+			return !strings.Contains(name, string(separator)), nil
 		}
 		// Look for match at current position.
 		t, ok, err := matchChunk(chunk, name)
@@ -75,7 +75,7 @@ Pattern:
 		if star {
 			// Look for match skipping i+1 bytes.
 			// Cannot skip /.
-			for i := 0; i < len(name) && name[i] != Separator; i++ {
+			for i := 0; i < len(name) && name[i] != separator; i++ {
 				t, ok, err := matchChunk(chunk, name[i+1:])
 				if ok {
 					// if we're the last chunk, make sure we exhausted the name
@@ -178,7 +178,7 @@ func matchChunk(chunk, s string) (rest string, ok bool, err error) {
 			}
 
 		case '?':
-			if s[0] == Separator {
+			if s[0] == separator {
 				return
 			}
 			_, n := utf8.DecodeRuneInString(s)
