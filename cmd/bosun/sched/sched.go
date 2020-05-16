@@ -31,6 +31,7 @@ func utcNow() time.Time {
 	return time.Now().UTC()
 }
 
+// Schedule is a schedule to evaluate alerts after
 type Schedule struct {
 	mutex         sync.Mutex
 	mutexHolder   string
@@ -72,12 +73,11 @@ type Schedule struct {
 	checksRunning sync.WaitGroup
 }
 
+// Init initialises all variables and collections so they are ready to use.
+//
+// This will be called once at app start, and also every time the rule page runs, so be careful not to spawn long
+// running processes that can't be avoided.
 func (s *Schedule) Init(name string, systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, skipLast, quiet bool) error {
-	//initialize all variables and collections so they are ready to use.
-	//this will be called once at app start, and also every time the rule
-	//page runs, so be careful not to spawn long running processes that can't
-	//be avoided.
-	//var err error
 	s.skipLast = skipLast
 	s.quiet = quiet
 	s.SystemConf = systemConf
@@ -112,6 +112,7 @@ func init() {
 		"Number of times the given caller acquired the lock.")
 }
 
+// Lock locks the lock
 func (s *Schedule) Lock(method string) {
 	start := utcNow()
 	s.mutex.Lock()
@@ -120,6 +121,7 @@ func (s *Schedule) Lock(method string) {
 	s.mutexWaitTime = int64(s.mutexAquired.Sub(start) / time.Millisecond) // remember this so we don't have to call put until we leave the critical section.
 }
 
+// Unlock unlocks the lock
 func (s *Schedule) Unlock() {
 	holder := s.mutexHolder
 	start := s.mutexAquired
@@ -131,13 +133,15 @@ func (s *Schedule) Unlock() {
 	collect.Add("schedule.lock_count", opentsdb.TagSet{"caller": holder}, 1)
 }
 
+// GetLockStatus returns the status of the lock
 func (s *Schedule) GetLockStatus() (holder string, since time.Time) {
 	return s.mutexHolder, s.mutexAquired
 }
 
+// PutMetadata writes metadata for the given key to the database
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
+	isCoreMeta := k.Name == "desc" || k.Name == "unit" || k.Name == "rate"
 
-	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
 	if !isCoreMeta {
 		s.DataAccess.Metadata().PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), utcNow())
 		return nil
@@ -150,10 +154,12 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 	return s.DataAccess.Metadata().PutMetricMetadata(k.Metric, k.Name, fmt.Sprint(v))
 }
 
+// DeleteMetadata deletes metadata for the given tag set
 func (s *Schedule) DeleteMetadata(tags opentsdb.TagSet, name string) error {
 	return s.DataAccess.Metadata().DeleteTagMetadata(tags, name)
 }
 
+// MetadataMetrics gets the metadata for a metric
 func (s *Schedule) MetadataMetrics(metric string) (*database.MetricMetadata, error) {
 	//denormalized metrics should give metric metadata for their undenormalized counterparts
 	if strings.HasPrefix(metric, "__") {
@@ -168,6 +174,7 @@ func (s *Schedule) MetadataMetrics(metric string) (*database.MetricMetadata, err
 	return mm, nil
 }
 
+// GetMetadata gets the metadata for a metric or tag set
 func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadata.Metasend, error) {
 	ms := make([]metadata.Metasend, 0)
 	if metric != "" {
@@ -217,8 +224,10 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadat
 	return ms, nil
 }
 
+// States is a map of alert key to its state
 type States map[models.AlertKey]*models.IncidentState
 
+// StateTuple is a tuple that states can be grouped by
 type StateTuple struct {
 	NeedAck       bool
 	Active        bool
@@ -321,6 +330,7 @@ func (states States) GroupSets(minGroup int) map[string]models.AlertKeys {
 	return groups
 }
 
+// GetOpenStates returns all open incidents from the database
 func (s *Schedule) GetOpenStates() (States, error) {
 	incidents, err := s.DataAccess.State().GetAllOpenIncidents()
 	if err != nil {
@@ -333,6 +343,7 @@ func (s *Schedule) GetOpenStates() (States, error) {
 	return states, nil
 }
 
+// StateGroup is a struct capturing the state of an alert
 type StateGroup struct {
 	Active        bool `json:",omitempty"`
 	Status        models.Status
@@ -347,6 +358,7 @@ type StateGroup struct {
 	Children      []*StateGroup         `json:",omitempty"`
 }
 
+// StateGroups groups alerts in different states
 type StateGroups struct {
 	Groups struct {
 		NeedAck      []*StateGroup `json:",omitempty"`
@@ -356,6 +368,7 @@ type StateGroups struct {
 	FailingAlerts, UnclosedErrors int
 }
 
+// MarshalGroups filters alerts and returns the result in groups
 func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
 	var silenced SilenceTester
 	T.Step("Silenced", func(miniprofiler.Timer) {
@@ -490,6 +503,7 @@ func marshalTime(t time.Time) string {
 	return string(b)
 }
 
+// DefaultSched is the defalut schedule
 var DefaultSched = &Schedule{}
 
 // Load loads a configuration into the default schedule.
@@ -497,15 +511,17 @@ func Load(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, da
 	return DefaultSched.Init("alerts", systemConf, ruleConf, dataAccess, annotate, skipLast, quiet)
 }
 
-// Run runs the default schedule.
+// Run runs the default schedule
 func Run() error {
 	return DefaultSched.Run()
 }
 
+// Close closes the default schedule
 func Close(reload bool) {
 	DefaultSched.Close(reload)
 }
 
+// Close cancels running checks and closes the schedule
 func (s *Schedule) Close(reload bool) {
 	s.cancelChecks()
 	s.checksRunning.Wait()
@@ -518,10 +534,13 @@ func (s *Schedule) Close(reload bool) {
 	}
 }
 
+// Reset resets the default schedule
 func (s *Schedule) Reset() {
+	// FIXME: Same as sched.Reset()?
 	DefaultSched = &Schedule{}
 }
 
+// Reset resets the default schedule
 func Reset() {
 	DefaultSched.Reset()
 }
@@ -538,6 +557,7 @@ func init() {
 		"The running count of actions performed by individual users (Closed alert, Acknowledged alert, etc).")
 }
 
+// ActionByAlertKey performs an action on an alert identified by an alert key
 func (s *Schedule) ActionByAlertKey(user, message string, t models.ActionType, at *time.Time, ak models.AlertKey) error {
 	st, err := s.DataAccess.State().GetLatestIncident(ak)
 	if err != nil {
@@ -550,13 +570,14 @@ func (s *Schedule) ActionByAlertKey(user, message string, t models.ActionType, a
 	return err
 }
 
-func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType, at *time.Time, id int64) (models.AlertKey, error) {
-	st, err := s.DataAccess.State().GetIncidentState(id)
+// ActionByIncidentId performs an action on an incident identified by an ID
+func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType, at *time.Time, incidentId int64) (models.AlertKey, error) {
+	st, err := s.DataAccess.State().GetIncidentState(incidentId)
 	if err != nil {
 		return "", err
 	}
 	if st == nil {
-		return "", fmt.Errorf("no incident with id: %v", id)
+		return "", fmt.Errorf("no incident with incidentId: %v", incidentId)
 	}
 	return s.action(user, message, t, at, st)
 }
@@ -664,6 +685,7 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 	return st.AlertKey, nil
 }
 
+// IncidentStatus models the status of an incident
 type IncidentStatus struct {
 	IncidentID         int64
 	Active             bool
@@ -677,6 +699,7 @@ type IncidentStatus struct {
 	NeedsAck           bool
 }
 
+// AlertSuccessful returns whether an alert has errors
 func (s *Schedule) AlertSuccessful(name string) bool {
 	b, err := s.DataAccess.Errors().IsAlertFailing(name)
 	if err != nil {
@@ -692,7 +715,6 @@ func (s *Schedule) markAlertError(name string, e error) {
 		slog.Error(err)
 		return
 	}
-
 }
 
 func (s *Schedule) markAlertSuccessful(name string) {
@@ -701,6 +723,7 @@ func (s *Schedule) markAlertSuccessful(name string) {
 	}
 }
 
+// ClearErrors clears the errors for a given alert
 func (s *Schedule) ClearErrors(alert string) error {
 	if alert == "all" {
 		return s.DataAccess.Errors().ClearAll()
@@ -717,6 +740,7 @@ func (s *Schedule) getErrorCounts() (failing, total int) {
 	return
 }
 
+// GetQuiet returns whether the schedule is set quiet
 func (s *Schedule) GetQuiet() bool {
 	return s.quiet
 }
@@ -732,10 +756,11 @@ func (s *Schedule) GetCheckFrequency(alertName string) (time.Duration, error) {
 	if runEvery == 0 {
 		runEvery = s.SystemConf.GetDefaultRunEvery()
 	}
-	return time.Duration(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency()), nil
+	return time.Duration(runEvery) * s.SystemConf.GetCheckFrequency(), nil
 
 }
 
+// GetSilence gets the silencing conditions for an alert
 func (s *Schedule) GetSilence(T miniprofiler.Timer, ak models.AlertKey) *models.Silence {
 	var silenced SilenceTester
 	T.Step("Silenced", func(miniprofiler.Timer) {

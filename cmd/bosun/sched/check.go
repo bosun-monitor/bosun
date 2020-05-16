@@ -37,6 +37,7 @@ func init() {
 	collect.AggregateMeta("bosun.template.render", metadata.MilliSecond, "The amount of time it takes to render the specified alert template.")
 }
 
+// NewIncident creates a new incident state for an alert key
 func NewIncident(ak models.AlertKey) *models.IncidentState {
 	s := &models.IncidentState{}
 	s.Start = utcNow()
@@ -47,6 +48,7 @@ func NewIncident(ak models.AlertKey) *models.IncidentState {
 	return s
 }
 
+// RunHistory is a struct keeping track of the history of an alert
 type RunHistory struct {
 	Cache    *cache.Cache
 	Start    time.Time
@@ -63,6 +65,7 @@ func (rh *RunHistory) AtTime(t time.Time) *RunHistory {
 	return &n
 }
 
+// NewRunHistory creates a new RunHistory for a given time
 func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistory {
 	r := &RunHistory{
 		Cache:    cache,
@@ -514,6 +517,7 @@ func (s *Schedule) CollectStates() {
 	}
 }
 
+// GetUnknownAndUnevaluatedAlertKeys takes an alert name and gets its unknown and unevaluated alert keys
 func (s *Schedule) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, uneval []models.AlertKey) {
 	unknown, uneval, err := s.DataAccess.State().GetUnknownAndUnevalAlertKeys(alert)
 	if err != nil {
@@ -557,6 +561,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 	return keys
 }
 
+// CheckAlert evaluates an alert
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) (cancelled bool) {
 	slog.Infof("check alert %v start with now set to %v", a.Name, r.Start.Format("2006-01-02 15:04:05.999999999"))
 	start := utcNow()
@@ -674,6 +679,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	return results, err
 }
 
+// CheckExpr checks a single expression
 func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus models.Status, ignore models.AlertKeys) (alerts models.AlertKeys, err error, cancelled bool) {
 	if e == nil {
 		return

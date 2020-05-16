@@ -10,6 +10,7 @@ import (
 	"bosun.org/slog"
 )
 
+// Host returns dashboard-ready data for all hosts
 func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	timeFilterAge := time.Hour * 2 * 24
 	hosts := make(map[string]*HostData)
@@ -640,14 +641,16 @@ func processHostIncidents(host *HostData, states States, silences SilenceTester)
 	}
 }
 
-// Cisco Discovery Protocol
+// CDPCacheEntry is an entry in the Cisco Discovery Protocol
 type CDPCacheEntry struct {
 	DeviceID   string
 	DevicePort string
 }
 
+// CDPCacheEntries is a slice of `CDPCacheEntry`s (Cisco Discovery Protocol)
 type CDPCacheEntries []CDPCacheEntry
 
+// HostInterface holds data on a network interface
 type HostInterface struct {
 	Description      string          `json:",omitempty"`
 	IPAddresses      []string        `json:",omitempty"`
@@ -663,6 +666,7 @@ type HostInterface struct {
 	Type             string
 }
 
+// Disk holds data on a disk
 type Disk struct {
 	UsedBytes        int64
 	TotalBytes       int64
@@ -670,6 +674,7 @@ type Disk struct {
 	StatsLastUpdated int64
 }
 
+// MemoryModule holds data on a memory module
 type MemoryModule struct {
 	// Maybe this should be a bool but that might be limiting
 	Status            string
@@ -677,11 +682,13 @@ type MemoryModule struct {
 	Size              string
 }
 
+// ChassisComponent holds data on a chassis component
 type ChassisComponent struct {
 	Status            string
 	StatusLastUpdated int64
 }
 
+// PowerSupply holds data on a power supply
 type PowerSupply struct {
 	Status                     string
 	StatusLastUpdated          int64
@@ -692,23 +699,27 @@ type PowerSupply struct {
 	metadata.HWPowerSupplyMeta //Should be renamed to Meta
 }
 
+// PhysicalDisk holds the status of a physical disk
 type PhysicalDisk struct {
 	Status            string
 	StatusLastUpdated int64
 	metadata.HWDiskMeta
 }
 
+// VirtualDisk holds the status of a virtual disk
 type VirtualDisk struct {
 	Status            string
 	StatusLastUpdated int64
 }
 
+// Controller holds data about a hardware controller
 type Controller struct {
 	Status            string
 	StatusLastUpdated int64
 	metadata.HWControllerMeta
 }
 
+// Temp holds temperature data
 type Temp struct {
 	Celsius            float64
 	Status             string
@@ -716,6 +727,7 @@ type Temp struct {
 	CelsiusLastUpdated int64
 }
 
+// ICMPData holds data about ICMP requests
 type ICMPData struct {
 	TimedOut               bool
 	TimedOutLastUpdated    int64
@@ -774,6 +786,7 @@ func (hd *HostData) Clean() {
 	}
 }
 
+// Hardware consolidates hardware data
 type Hardware struct {
 	Memory            map[string]*MemoryModule     `json:",omitempty"`
 	ChassisComponents map[string]*ChassisComponent `json:",omitempty"`
@@ -788,27 +801,32 @@ type Hardware struct {
 	BoardPowerReading *BoardPowerReading
 }
 
+// BoardPowerReading holds data on power levels
 type BoardPowerReading struct {
 	Watts            int64
 	WattsLastUpdated int64
 }
 
+// VM holds the status of a virtual machine
 type VM struct {
 	Host                  string `json:",omitempty"`
 	PowerState            string `json:",omitempty"`
 	PowerStateLastUpdated int64  `json:",omitempty"`
 }
 
+// Battery holds the status of a battery
 type Battery struct {
 	Status            string
 	StatusLastUpdated int64
 }
 
+// ServiceStatus holds the status of a service
 type ServiceStatus struct {
 	Running            bool
 	RunningLastUpdated int64
 }
 
+// Process holds data about an OS process
 type Process struct {
 	CPUPercentUsed              float64
 	CPUPercentLastUpdated       int64
@@ -820,6 +838,7 @@ type Process struct {
 	CountLastUpdated            int64
 }
 
+// HostData is a struct holding all data about a host
 type HostData struct {
 	CPU struct {
 		Logical          int64 `json:",omitempty"`

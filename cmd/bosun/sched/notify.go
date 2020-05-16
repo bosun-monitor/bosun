@@ -38,6 +38,7 @@ func (s *Schedule) dispatchNotifications() {
 
 }
 
+// IncidentWithTemplates links an incident and its rendered templates
 type IncidentWithTemplates struct {
 	*models.IncidentState
 	*models.RenderedTemplates
@@ -238,6 +239,7 @@ func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, t
 	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, time)
 }
 
+// ActionNotify sends a notification in response to an action taken by a user
 func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {
 	groupings, err := s.groupActionNotifications(at, aks)
 	if err != nil {

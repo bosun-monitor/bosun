@@ -8,7 +8,7 @@ import (
 
 	"bosun.org/cmd/bosun/expr"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/ajstarks/svgo"
+	svg "github.com/ajstarks/svgo"
 	"github.com/bradfitz/slice"
 	"github.com/vdobler/chart"
 	"github.com/vdobler/chart/imgg"
@@ -42,6 +42,7 @@ func Autostyle(i int) chart.Style {
 
 var white = color.RGBA{0xff, 0xff, 0xff, 0xff}
 
+// ExprSVG plots the given results to the passed writer as an SVG image
 func (s *Schedule) ExprSVG(t miniprofiler.Timer, w io.Writer, width, height int, unit string, res []*expr.Result) error {
 	ch, err := s.ExprGraph(t, unit, res)
 	if err != nil {
@@ -56,6 +57,7 @@ func (s *Schedule) ExprSVG(t miniprofiler.Timer, w io.Writer, width, height int,
 	return nil
 }
 
+// ExprPNG plots the given results to the passed writer as a PNG image
 func (s *Schedule) ExprPNG(t miniprofiler.Timer, w io.Writer, width, height int, unit string, res []*expr.Result) error {
 	ch, err := s.ExprGraph(t, unit, res)
 	if err != nil {
@@ -67,6 +69,7 @@ func (s *Schedule) ExprPNG(t miniprofiler.Timer, w io.Writer, width, height int,
 	return png.Encode(w, g)
 }
 
+// ExprGraph returns a graph with a plot of the results
 func (s *Schedule) ExprGraph(t miniprofiler.Timer, unit string, res []*expr.Result) (chart.Chart, error) {
 	c := chart.ScatterChart{
 		Key:    chart.Key{Pos: "itl"},

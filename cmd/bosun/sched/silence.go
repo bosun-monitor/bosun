@@ -9,10 +9,11 @@ import (
 	"bosun.org/slog"
 )
 
+// SilenceTester is a function to preview to determine if the given alert key is silenced at the current time
 type SilenceTester func(models.AlertKey) *models.Silence
 
 // Silenced returns a function that will determine if the given alert key is silenced at the current time.
-// A function is returned to avoid needing to enumerate all alert keys unneccesarily.
+// A function is returned to avoid needing to enumerate all alert keys unnecessarily.
 func (s *Schedule) Silenced() SilenceTester {
 	now := utcNow()
 	silences, err := s.DataAccess.Silence().GetActiveSilences()
@@ -36,6 +37,7 @@ func (s *Schedule) Silenced() SilenceTester {
 	}
 }
 
+// AddSilence adds a scheduled silence for a given alert with tags
 func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
@@ -93,6 +95,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 	return aks, nil
 }
 
+// ClearSilence removes the silence with the given ID
 func (s *Schedule) ClearSilence(id string) error {
 	return s.DataAccess.Silence().DeleteSilence(id)
 }

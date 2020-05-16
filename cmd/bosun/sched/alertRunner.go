@@ -26,7 +26,7 @@ func (s *Schedule) Run() error {
 	// Every alert gets a small shift in time.
 	// This way the alerts with the same period are not fired
 	// simultaneously, but are distributed.
-	circular_shifts := make(map[int]int) // the map is *run period* -> *time shift to add*
+	circularShifts := make(map[int]int) // the map is *run period* -> *time shift to add*
 	for _, a := range s.RuleConf.GetAlerts() {
 		ch := make(chan *checkContext, 1)
 		re := a.RunEvery
@@ -36,14 +36,14 @@ func (s *Schedule) Run() error {
 		go s.runAlert(a, ch)
 
 		if s.SystemConf.GetAlertCheckDistribution() == "simple" { // only apply shifts if the respective option is set
-			chs = append(chs, alertCh{ch: ch, modulo: re, shift: circular_shifts[re]})
+			chs = append(chs, alertCh{ch: ch, modulo: re, shift: circularShifts[re]})
 		} else {
 			// there are no shifts if option is off
 			chs = append(chs, alertCh{ch: ch, modulo: re, shift: 0})
 		}
 
 		// the shifts for a given period range 0..(period - 1)
-		circular_shifts[re] = (circular_shifts[re] + 1) % re
+		circularShifts[re] = (circularShifts[re] + 1) % re
 	}
 	i := 0
 	for {

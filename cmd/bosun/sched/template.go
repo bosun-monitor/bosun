@@ -27,6 +27,10 @@ import (
 	"github.com/jmoiron/jsonq"
 )
 
+// Note: IDEs may suggest that some of the functions in this file are unused, but they can be called from a template.
+// See the documentation for the functions available to templates.
+
+// Context holds context information for template rendering
 type Context struct {
 	*models.IncidentState
 	Alert   *conf.Alert
@@ -41,6 +45,7 @@ type Context struct {
 	vars map[string]interface{}
 }
 
+// Data returns a new Context struct
 func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert, isEmail bool) *Context {
 	c := Context{
 		IncidentState: st,
@@ -54,11 +59,13 @@ func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert,
 	return &c
 }
 
+// Set sets a variable with the given key on the context
 func (c *Context) Set(name string, value interface{}) string {
 	c.vars[name] = value
 	return "" // have to return something
 }
 
+// Get returns the variable with the given key from the context
 func (c *Context) Get(name string) interface{} {
 	return c.vars[name]
 }
@@ -85,6 +92,8 @@ func (c *Context) HostView(host string) string {
 	})
 }
 
+// Last returns the most recent Event in the history array
+//
 // Hack so template can read IncidentId off of event.
 func (c *Context) Last() interface{} {
 	return struct {
@@ -136,6 +145,7 @@ func (c *Context) Shorten(link string) string {
 	return c.schedule.SystemConf.MakeLink(fmt.Sprintf("/s/%d", id), nil)
 }
 
+// Rule creates a link to Bosun’s rule editor page
 func (c *Context) Rule() string {
 	p := url.Values{}
 	time := c.runHistory.Start
@@ -146,17 +156,20 @@ func (c *Context) Rule() string {
 	return c.schedule.SystemConf.MakeLink("/config", &p)
 }
 
+// Incident creates a link to Bosun’s incident view
 func (c *Context) Incident() string {
 	return c.schedule.SystemConf.MakeLink("/incident", &url.Values{
 		"id": []string{fmt.Sprint(c.Id)},
 	})
 }
 
+// UseElastic sets the `ElasticHost` context object which is used in `ESQuery` and `ESQueryAll` functions
 func (c *Context) UseElastic(host string) interface{} {
 	c.ElasticHost = host
 	return nil
 }
 
+// ExecuteBody executes the body template
 func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) (string, []*models.Attachment, error) {
 	t := a.Template
 	if t == nil {
@@ -181,6 +194,7 @@ func (s *Schedule) executeTpl(t *template.Template, c *Context) (string, []*mode
 	return buf.String(), c.Attachments, nil
 }
 
+// ExecuteSubject executes the subject template
 func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) (string, error) {
 	t := a.Template
 	if t == nil {
@@ -203,6 +217,7 @@ func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.Inci
 	return d, nil
 }
 
+// ExecuteAll executes all templates (subject, body, custom)
 func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.IncidentState, recordTimes bool) (*models.RenderedTemplates, []error) {
 	ctx := func() *Context { return s.Data(rh, st, a, false) }
 	var errs []error
@@ -271,7 +286,7 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	return rt, errs
 }
 
-var error_body = template.Must(template.New("body_error_template").Parse(`
+var errorBody = template.Must(template.New("body_error_template").Parse(`
 	<p>There was a runtime error processing alert {{.State.AlertKey}} using the {{.Alert.Template.Name}} template. The following errors occurred:</p>
 	<ul>
 	{{range .Errors}}
@@ -295,6 +310,7 @@ var error_body = template.Must(template.New("body_error_template").Parse(`
 		</tr>
 	{{end}}</table>`))
 
+// ExecuteBadTemplate executes a template that's used when a runtime error in the original template occurs
 func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Alert, st *models.IncidentState) (subject, body string, err error) {
 	sub := fmt.Sprintf("error: template rendering error for alert %v", st.AlertKey)
 	c := struct {
@@ -305,7 +321,7 @@ func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Aler
 		Context: s.Data(rh, st, a, true),
 	}
 	buf := new(bytes.Buffer)
-	error_body.Execute(buf, c)
+	errorBody.Execute(buf, c)
 	return sub, buf.String(), nil
 }
 
@@ -379,6 +395,9 @@ func (c *Context) Lookup(table, key string) string {
 	return c.LookupAll(table, key, c.AlertKey.Group())
 }
 
+// LookupAll behaves like Lookup except that you specify the tags
+//
+// The tags can be a string such as "host=a,dc=us" or can be a tagset
 func (c *Context) LookupAll(table, key string, group interface{}) string {
 	var t opentsdb.TagSet
 	switch v := group.(type) {
@@ -594,6 +613,7 @@ func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 	return joined, nil
 }
 
+// HTTPGet fetches a url and returns the raw text as a string
 func (c *Context) HTTPGet(url string) string {
 	resp, err := DefaultClient.Get(url)
 	if err != nil {
@@ -616,6 +636,7 @@ func (c *Context) HTTPGet(url string) string {
 	return string(body)
 }
 
+// HTTPGetJSON sends a HTTP GET request to the specified url and returns the response as an `JsonQuery` struct
 func (c *Context) HTTPGetJSON(url string) *jsonq.JsonQuery {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -646,6 +667,7 @@ func (c *Context) HTTPGetJSON(url string) *jsonq.JsonQuery {
 	return jsonq.NewQuery(data)
 }
 
+// HTTPPost sends a HTTP POST request to the specified url
 func (c *Context) HTTPPost(url, bodyType, data string) string {
 	resp, err := DefaultClient.Post(url, bodyType, bytes.NewBufferString(data))
 	if err != nil {
@@ -666,6 +688,10 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 	return string(body)
 }
 
+// ESQuery returns a slice of elastic documents
+//
+// The function behaves like the escount and esstat elastic expression functions but returns documents instead of
+// statistics about those documents
 func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
 	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
 	if !ok {
@@ -684,6 +710,8 @@ func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurati
 	return nil
 }
 
+// ESQueryAll behaves just like `ESQuery`, but the tag filtering to filter results to match the alert instance is not
+// applied
 func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
 	cfg, ok := c.runHistory.Backends.ElasticHosts.Hosts[c.ElasticHost]
 	if !ok {

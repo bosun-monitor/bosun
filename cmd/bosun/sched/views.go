@@ -13,12 +13,13 @@ import (
 
 // Views
 
+// EventSummary is like a models.Event but strips the Results and Unevaluated
 type EventSummary struct {
 	Status models.Status
 	Time   int64
 }
 
-// EventSummary is like a models.Event but strips the Results and Unevaluated
+// MakeEventSummary creates a new EventSummary and a flag indicating if the event is unevaluated
 func MakeEventSummary(e models.Event) (EventSummary, bool) {
 	return EventSummary{
 		Status: e.Status,
@@ -26,6 +27,7 @@ func MakeEventSummary(e models.Event) (EventSummary, bool) {
 	}, e.Unevaluated
 }
 
+// EpochAction is a struct representing an action a user took
 type EpochAction struct {
 	User    string
 	Message string
@@ -33,6 +35,7 @@ type EpochAction struct {
 	Type    models.ActionType
 }
 
+// MakeEpochAction creates a new `EpochAction`
 func MakeEpochAction(a models.Action) EpochAction {
 	return EpochAction{
 		User:    a.User,
@@ -42,6 +45,7 @@ func MakeEpochAction(a models.Action) EpochAction {
 	}
 }
 
+// IncidentSummaryView represents an incident and its history
 type IncidentSummaryView struct {
 	Id                     int64
 	Subject                string
@@ -63,6 +67,7 @@ type IncidentSummaryView struct {
 	LastStatusTime         int64
 }
 
+// MakeIncidentSummary creates a new `IncidentSummaryView`
 func MakeIncidentSummary(c conf.RuleConfProvider, s SilenceTester, is *models.IncidentState) (*IncidentSummaryView, error) {
 	alert := c.GetAlert(is.AlertKey.Name())
 	if alert == nil {
@@ -112,6 +117,8 @@ func MakeIncidentSummary(c conf.RuleConfProvider, s SilenceTester, is *models.In
 	}, nil
 }
 
+// Ask takes a filter in the format `key:value` and is used to parse filter expressions for alerts (e.g. from the web
+// interface or the Bosun API). Uses https://github.com/kylebrandt/boolq
 func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 	sp := strings.SplitN(filter, ":", 2)
 	if len(sp) != 2 {
