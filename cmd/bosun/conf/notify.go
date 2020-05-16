@@ -41,6 +41,7 @@ func init() {
 		"The number of post notifications that Bosun failed to send.")
 }
 
+// PreparedNotifications is a container for notifications that are ready to send
 type PreparedNotifications struct {
 	Email  *PreparedEmail
 	HTTP   []*PreparedHttp
@@ -49,6 +50,7 @@ type PreparedNotifications struct {
 	Errors []string
 }
 
+// Send sends a prepared notification
 func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 	if p.Email != nil {
 		if err := p.Email.Send(c); err != nil {
@@ -154,6 +156,7 @@ func (n *Notification) NotifyAlert(rt *models.RenderedTemplates, c SystemConfPro
 	go n.PrepareAlert(rt, ak, attachments...).Send(c)
 }
 
+// PreparedHttp is an HTTP request notification that is ready to send
 type PreparedHttp struct {
 	URL     string
 	Method  string
@@ -168,6 +171,7 @@ const (
 	multiunknown
 )
 
+// NotificationDetails holds details about a notification
 type NotificationDetails struct {
 	Ak          []string // alert key
 	At          string   // action type
@@ -176,6 +180,7 @@ type NotificationDetails struct {
 	NotifyType  int      // notifications type e.g alert, unknown etc
 }
 
+// Send sends a prepared HTTP request notification
 func (p *PreparedHttp) Send() (int, error) {
 	var body io.Reader
 	if p.Body != "" {
@@ -246,6 +251,7 @@ func (p *PreparedHttp) Send() (int, error) {
 	return resp.StatusCode, nil
 }
 
+// PrepHttp prepares an HTTP request notification so that it's ready to send
 func (n *Notification) PrepHttp(method string, url string, body string, alertDetails *NotificationDetails) *PreparedHttp {
 	prep := &PreparedHttp{
 		Method:  method,
@@ -260,7 +266,9 @@ func (n *Notification) PrepHttp(method string, url string, body string, alertDet
 	return prep
 }
 
+// SendHttp prepares and sends an HTTP request notification.
 func (n *Notification) SendHttp(method string, url string, body string) {
+	// FIXME: This function looks unused
 	details := &NotificationDetails{}
 	p := n.PrepHttp(method, url, body, details)
 	stat, err := p.Send()
@@ -270,6 +278,7 @@ func (n *Notification) SendHttp(method string, url string, body string) {
 	slog.Infof("%s notification successful for alert %s. Status: %d", method, details.Ak, stat)
 }
 
+// PreparedEmail is an email notification that is ready to send
 type PreparedEmail struct {
 	To          []string
 	Subject     string
@@ -278,6 +287,7 @@ type PreparedEmail struct {
 	Attachments []*models.Attachment
 }
 
+// PrepEmail prepares an email notification so that it's ready to send
 func (n *Notification) PrepEmail(subject, body string, ak string, attachments []*models.Attachment) *PreparedEmail {
 	pe := &PreparedEmail{
 		Subject:     subject,
@@ -291,6 +301,7 @@ func (n *Notification) PrepEmail(subject, body string, ak string, attachments []
 	return pe
 }
 
+// Send sends the prepared email notification
 func (p *PreparedEmail) Send(c SystemConfProvider) error {
 	// make sure "To" was not null
 	if len(p.To) <= 0 {
@@ -299,9 +310,7 @@ func (p *PreparedEmail) Send(c SystemConfProvider) error {
 
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
-	for _, a := range p.To {
-		e.To = append(e.To, a)
-	}
+	e.To = append(e.To, p.To...)
 	e.Subject = p.Subject
 	e.HTML = []byte(p.Body)
 	for _, a := range p.Attachments {

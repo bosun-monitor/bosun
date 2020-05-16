@@ -131,7 +131,7 @@ type AnnotateConf struct {
 	Index         string          // name of index / table
 }
 
-// ESClientOptions: elastic search client options
+// ESClientOptions are elastic search client options
 // reference https://github.com/olivere/elastic/blob/release-branch.v3/client.go#L107
 type ESClientOptions struct {
 	Enabled                   bool          // if true use client option else ignore
@@ -154,7 +154,7 @@ type ESClientOptions struct {
 // ElasticConf contains configuration for an elastic host that Bosun can query
 type ElasticConf AnnotateConf
 
-// AzureConf contains configuration for an Azure metrics
+// AzureMonitorConf contains configuration for an Azure metrics
 type AzureMonitorConf struct {
 	SubscriptionId string
 	TenantId       string
@@ -261,6 +261,7 @@ type AuthConf struct {
 	LDAP LDAPConf
 }
 
+// LDAPConf is a config for LDAP that can be used to authenticate users
 type LDAPConf struct {
 	// Domain name (used to make domain/username)
 	Domain string
@@ -482,11 +483,12 @@ func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
 }
 
-// RedisClientSetName returns if CLIENT SETNAME shoud send to redis.
+// IsRedisClientSetName returns if CLIENT SETNAME shoud send to redis.
 func (sc *SystemConf) IsRedisClientSetName() bool {
 	return sc.DBConf.RedisClientSetName
 }
 
+// GetAuthConf returns the current authentication config
 func (sc *SystemConf) GetAuthConf() *AuthConf {
 	return sc.AuthConf
 }

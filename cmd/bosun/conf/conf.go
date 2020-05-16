@@ -149,7 +149,7 @@ type Squelch map[string]*regexp.Regexp
 // Squelches is a collection of Squelch
 type Squelches []Squelch
 
-// Add adds a sqluech baed on the tags in the first argument. The value of the tag
+// Add adds a squelch based on the tags in the first argument. The value of the tag
 // is a regular expression. Tags are passed as a string in the format of
 func (s *Squelches) Add(v string) error {
 	tags, err := opentsdb.ParseTags(v)
@@ -210,6 +210,9 @@ type Template struct {
 	Locator `json:"-"`
 }
 
+// Get gets a template of a given name
+//
+// Supports `body`, `subject` and custom templates
 func (t *Template) Get(name string) *template.Template {
 	if name == "body" {
 		return t.Body
@@ -392,6 +395,7 @@ type Lookup struct {
 	Locator `json:"-"`
 }
 
+// ToExpr creates an `ExprLookup` from the receiver
 func (lookup *Lookup) ToExpr() *ExprLookup {
 	l := ExprLookup{
 		Tags: lookup.Tags,

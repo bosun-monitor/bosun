@@ -8,8 +8,10 @@ import (
 	"fmt"
 )
 
+// ByteSize is a float64 which makes it easier to display bytes in human-readable form
 type ByteSize float64
 
+// Constants for commonly used units
 const (
 	_           = iota
 	KB ByteSize = 1 << (10 * iota)

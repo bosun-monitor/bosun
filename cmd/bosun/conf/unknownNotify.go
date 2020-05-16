@@ -53,6 +53,7 @@ func init() {
 	unknownDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
+// PrepareUnknown prepares a notification for an alert in the state unknown
 func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey, states *models.IncidentState) *PreparedNotifications {
 	ctx := &unknownContext{
 		Time:     time.Now().UTC(),
@@ -96,7 +97,7 @@ func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name st
 			}
 			return false
 		}
-		if contain(fmt.Sprint(aks[i]), ak["alert_key"]) != true {
+		if !contain(fmt.Sprint(aks[i]), ak["alert_key"]) {
 			ak["alert_key"] = append(ak["alert_key"], fmt.Sprint(aks[i]))
 		}
 	}
@@ -112,6 +113,7 @@ func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name st
 	return pn
 }
 
+// NotifyUnknown prepares and sends a notification for an alert in the state unknown
 func (n *Notification) NotifyUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey, states *models.IncidentState) {
 	go n.PrepareUnknown(t, c, name, aks, states).Send(c)
 }
@@ -147,6 +149,10 @@ func init() {
 	unknownMultiDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
+// PrepareMultipleUnknowns prepares a notification to send multiple unknown notification in groups
+//
+// Unknown notifications are sent when data for an alert isn't available. Bosun attempts to group unknown notifications
+// to reduce spam.
 func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState) *PreparedNotifications {
 	ctx := &unknownMultiContext{
 		Time:      time.Now().UTC(),
@@ -176,7 +182,7 @@ func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider
 
 	tks := n.UnknownMultiTemplateKeys
 
-	ak := []string{}
+	ak := make([]string, 0)
 
 	for _, v := range groups {
 		ak = append(ak, fmt.Sprint(v))
@@ -193,6 +199,7 @@ func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider
 	return pn
 }
 
+// NotifyMultipleUnknowns prepares and sends notifications for alert in the unknown state
 func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys, states []*models.IncidentState) {
 	n.PrepareMultipleUnknowns(t, c, groups, states).Send(c)
 }

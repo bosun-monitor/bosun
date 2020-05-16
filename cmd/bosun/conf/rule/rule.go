@@ -23,6 +23,7 @@ import (
 	"bosun.org/opentsdb"
 )
 
+// Conf models the contents of Bosun's rules
 type Conf struct {
 	Vars conf.Vars
 	Name string // Config file name
@@ -61,12 +62,14 @@ type deferredSection struct {
 	SectionNode *parse.SectionNode
 }
 
+// AlertSquelched partially applies `Squelched` and returns a function that captured the Alert
 func (c *Conf) AlertSquelched(a *conf.Alert) func(opentsdb.TagSet) bool {
 	return func(tags opentsdb.TagSet) bool {
 		return c.Squelched(a, tags)
 	}
 }
 
+// Squelched returns whether or not an alert is squelched. Squelches can be defined in the rules or global config
 func (c *Conf) Squelched(a *conf.Alert, tags opentsdb.TagSet) bool {
 	return c.Squelch.Squelched(tags) || a.Squelch.Squelched(tags)
 }
@@ -122,6 +125,7 @@ func (c *Conf) parseNotifications(v string) (map[string]*conf.Notification, erro
 	return ns, nil
 }
 
+// ParseFile reads a file into a `Conf`
 func ParseFile(fname string, backends conf.EnabledBackends, sysVars map[string]string) (*Conf, error) {
 	f, err := ioutil.ReadFile(fname)
 	if err != nil {
@@ -130,10 +134,12 @@ func ParseFile(fname string, backends conf.EnabledBackends, sysVars map[string]s
 	return NewConf(fname, backends, sysVars, string(f))
 }
 
+// SaveConf writes the config to file
 func (c *Conf) SaveConf(newConf *Conf) error {
 	return ioutil.WriteFile(c.Name, []byte(newConf.RawText), os.FileMode(int(0640)))
 }
 
+// NewConf creates a new config
 func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]string, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
@@ -413,10 +419,7 @@ var defaultFuncs = template.FuncMap{
 	// treat things like 0 and false as "not true" just like
 	// nil.
 	"notNil": func(value interface{}) bool {
-		if value == nil {
-			return false
-		}
-		return true
+		return value != nil
 	},
 	"parseDuration": func(s string) *time.Duration {
 		d, err := time.ParseDuration(s)
@@ -471,6 +474,7 @@ var defaultFuncs = template.FuncMap{
 
 var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
 
+// Expand expands variables in a string. Uses the passed variables, config variables and environment variables
 func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) string {
 	ss := exRE.ReplaceAllStringFunc(v, func(s string) string {
 		var n string
@@ -507,6 +511,7 @@ func (c *Conf) seen(v string, m map[string]bool) {
 	m[v] = true
 }
 
+// NewExpr parses a string into an expression
 func (c *Conf) NewExpr(s string) *expr.Expr {
 	exp, err := expr.New(s, c.GetFuncs(c.backends))
 	if err != nil {
@@ -521,6 +526,9 @@ func (c *Conf) NewExpr(s string) *expr.Expr {
 	return exp
 }
 
+// GetFuncs returns a mapping of name to functions
+//
+// All these functions can be called by the given name from templates
 func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	lookup := func(e *expr.State, lookup, key string) (results *expr.Results, err error) {
 		results = new(expr.Results)
@@ -756,50 +764,62 @@ func (c *Conf) alert(s *expr.State, name, key string) (results *expr.Results, er
 	return results, nil
 }
 
+// GetTemplate returns the template with the given name
 func (c *Conf) GetTemplate(s string) *conf.Template {
 	return c.Templates[s]
 }
 
+// GetAlerts returns all alerts
 func (c *Conf) GetAlerts() map[string]*conf.Alert {
 	return c.Alerts
 }
 
+// GetAlert returns the alert with the given name
 func (c *Conf) GetAlert(s string) *conf.Alert {
 	return c.Alerts[s]
 }
 
+// GetNotifications returns all notifications
 func (c *Conf) GetNotifications() map[string]*conf.Notification {
 	return c.Notifications
 }
 
+// GetNotification returns the notification with the given name
 func (c *Conf) GetNotification(s string) *conf.Notification {
 	return c.Notifications[s]
 }
 
+// GetMacro returns the macro with the given name
 func (c *Conf) GetMacro(s string) *conf.Macro {
 	return c.Macros[s]
 }
 
+// GetLookup returns the lookup with the given name
 func (c *Conf) GetLookup(s string) *conf.Lookup {
 	return c.Lookups[s]
 }
 
+// GetSquelches returns all configured squelches
 func (c *Conf) GetSquelches() conf.Squelches {
 	return c.Squelch
 }
 
+// GetRawText gets the raw text representation of the config
 func (c *Conf) GetRawText() string {
 	return c.RawText
 }
 
+// SetReload sets the function to use when realoading the config
 func (c *Conf) SetReload(reload func() error) {
 	c.reload = reload
 }
 
+// Reload reloads the rule config
 func (c *Conf) Reload() error {
 	return c.reload()
 }
 
+// SetSaveHook sets the hook to call when the rule config is being saved
 func (c *Conf) SetSaveHook(sh conf.SaveHook) {
 	c.saveHook = sh
 }
@@ -815,6 +835,7 @@ func (c *Conf) genHash() {
 	c.Hash = conf.GenHash(c.RawText)
 }
 
+// GetHash returns the hash value of the config
 func (c *Conf) GetHash() string {
 	return c.Hash
 }

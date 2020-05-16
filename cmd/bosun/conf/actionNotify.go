@@ -39,6 +39,7 @@ func init() {
 	actionDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
+// ActionNotificationContext is a state struct for an action taken by a user
 type ActionNotificationContext struct {
 	States     []*ActionNotificationIncidentState
 	User       string
@@ -47,14 +48,17 @@ type ActionNotificationContext struct {
 	makeLink   func(string, *url.Values) string
 }
 
+// ActionNotificationIncidentState is an incident state with available variables
 type ActionNotificationIncidentState struct {
+	// FIXME: AlertVars looks assigned, but unused. Do we really need it?
 	*models.IncidentState
 	AlertVars Vars
 }
 
-func (a ActionNotificationContext) IncidentLink(i int64) string {
+// IncidentLink creates an HTML link to the incident with the given ID
+func (a ActionNotificationContext) IncidentLink(id int64) string {
 	return a.makeLink("/incident", &url.Values{
-		"id": []string{fmt.Sprint(i)},
+		"id": []string{fmt.Sprint(id)},
 	})
 }
 
@@ -63,6 +67,7 @@ func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemC
 	go n.PrepareAction(at, t, c, states, user, message, rcp).Send(c)
 }
 
+// RunOnActionType returns whether a notification should be run for a given action type
 func (n *Notification) RunOnActionType(at models.ActionType) bool {
 	if n.RunOnActions == "all" || n.RunOnActions == "true" {
 		return true
@@ -78,7 +83,9 @@ func (n *Notification) RunOnActionType(at models.ActionType) bool {
 	return false
 }
 
-// Prepate an action notification, but don't send yet.
+// PrepareAction prepares an action notification, but doesn't send it yet
+//
+// Renders the template and fills in the notification target so that it's ready to send
 func (n *Notification) PrepareAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string, rcp RuleConfProvider) *PreparedNotifications {
 	pn := &PreparedNotifications{Name: n.Name, Print: n.Print}
 	// get template keys to use for actions. Merge with default sets
@@ -127,7 +134,7 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, c System
 			return false
 		}
 
-		if contain(fmt.Sprint(states[i].AlertKey), ak["alert_key"]) != true {
+		if !contain(fmt.Sprint(states[i].AlertKey), ak["alert_key"]) {
 			ak["alert_key"] = append(ak["alert_key"], fmt.Sprint(states[i].AlertKey))
 		}
 	}

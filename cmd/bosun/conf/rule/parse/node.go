@@ -31,6 +31,7 @@ type NodeType int
 // this template was parsed.
 type Pos int
 
+// Position returns the position
 func (p Pos) Position() Pos {
 	return p
 }
@@ -46,6 +47,7 @@ func (t NodeType) Type() NodeType {
 	return t
 }
 
+// Constants for types of nodes
 const (
 	NodePair    NodeType = iota // key=value expression.
 	NodeList                    // A list of nodes.
