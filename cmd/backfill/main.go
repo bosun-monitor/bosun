@@ -32,7 +32,7 @@ func main() {
 		flag.PrintDefaults()
 		log.Fatal("host must be supplied")
 	}
-	putUrl := (&url.URL{Scheme: "http", Host: *tsdbHost, Path: "api/put"}).String()
+	putURL := (&url.URL{Scheme: "http", Host: *tsdbHost, Path: "api/put"}).String()
 
 	if *ruleFlag == "" {
 		flag.PrintDefaults()
@@ -111,7 +111,7 @@ func main() {
 			if len(dps) > *batchSize {
 				count = *batchSize
 			}
-			putResp, err := collect.SendDataPoints(dps[:count], putUrl)
+			putResp, err := collect.SendDataPoints(dps[:count], putURL)
 			if err != nil {
 				return err
 			}
