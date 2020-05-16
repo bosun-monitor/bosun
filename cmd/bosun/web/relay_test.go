@@ -17,7 +17,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
-	"bosun.org/cmd/bosun/database/test"
+	dbtest "bosun.org/cmd/bosun/database/test"
 )
 
 var testData database.DataAccess
@@ -46,7 +46,7 @@ func TestRelay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(Relay(rurl.Host))
+	ts := httptest.NewServer(RelayToOpenTSDB(rurl.Host))
 	defer ts.Close()
 
 	body := []byte(`[{

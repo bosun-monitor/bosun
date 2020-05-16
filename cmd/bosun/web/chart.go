@@ -43,12 +43,12 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	if ads_v := r.FormValue("autods"); ads_v != "" {
-		ads_i, err := strconv.Atoi(ads_v)
+	if adsV := r.FormValue("autods"); adsV != "" {
+		adsI, err := strconv.Atoi(adsV)
 		if err != nil {
 			return nil, err
 		}
-		if err := oreq.AutoDownsample(ads_i); err != nil {
+		if err := oreq.AutoDownsample(adsI); err != nil {
 			return nil, err
 		}
 	}
@@ -90,7 +90,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if endT.Equal(time.Time{}) {
 		endT = time.Now().UTC()
 	}
-	m_units := make(map[string]string)
+	mUnits := make(map[string]string)
 	for i, q := range oreq.Queries {
 		if ar[i] {
 
@@ -102,7 +102,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 				return nil, fmt.Errorf("no metadata for %s: cannot use auto rate", q)
 			}
 			if meta.Unit != "" {
-				m_units[q.Metric] = meta.Unit
+				mUnits[q.Metric] = meta.Unit
 			}
 			if meta.Rate != "" {
 				switch meta.Rate {
@@ -141,7 +141,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	cs, err := makeChart(tr, m_units)
+	cs, err := makeChart(tr, mUnits)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	return nil, nil
 }
 
-func makeChart(r opentsdb.ResponseSet, m_units map[string]string) ([]*chartSeries, error) {
+func makeChart(r opentsdb.ResponseSet, mUnits map[string]string) ([]*chartSeries, error) {
 	var series []*chartSeries
 	for _, resp := range r {
 		dps := make([][2]float64, 0)
@@ -295,7 +295,7 @@ func makeChart(r opentsdb.ResponseSet, m_units map[string]string) ([]*chartSerie
 				Metric: resp.Metric,
 				Tags:   resp.Tags,
 				Data:   dps,
-				Unit:   m_units[resp.Metric],
+				Unit:   mUnits[resp.Metric],
 			})
 		}
 	}

@@ -15,7 +15,7 @@ import (
 // Functions to run tsc to compile typescript and esc to embed static assests.
 // Assume that working path is set to `cmd/bosun`
 
-// Run esc to embed entire static directory into static.go
+// RunEsc embeds entire static directory into static.go
 func RunEsc() {
 	cfg := &embed.Config{
 		ModTime:    "0",
@@ -28,7 +28,7 @@ func RunEsc() {
 	embed.Run(cfg)
 }
 
-// Run tsc to compile all ts files into bosun.js
+// RunTsc compiles all ts files into bosun.js
 func RunTsc() {
 	base := filepath.Join("web", "static", "js")
 	tmp := filepath.Join(base, "bosun-new.js")

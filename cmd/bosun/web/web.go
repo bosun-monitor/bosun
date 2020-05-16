@@ -43,9 +43,10 @@ var (
 	schedule      = sched.DefaultSched
 	//InternetProxy is a url to use as a proxy when communicating with external services.
 	//currently only google's shortener.
-	InternetProxy   *url.URL
+	InternetProxy *url.URL
+	// AnnotateBackend is a client for the annotations store
 	AnnotateBackend backend.Backend
-	reload          func() error
+	reloadFn        func() error
 
 	tokensEnabled bool
 	authEnabled   bool
@@ -75,6 +76,7 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
+// Listen starts the web server
 func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error, authConfig *conf.AuthConf, st time.Time) error {
 	startTime = st
 	if devMode {
@@ -83,7 +85,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	webFS := FS(devMode)
 
 	if httpAddr == "" && httpsAddr == "" {
-		return fmt.Errorf("Either http or https address needs to be specified.")
+		return fmt.Errorf("either HTTP or HTTPS address needs to be specified")
 	}
 
 	indexTemplate = func() *template.Template {
@@ -95,7 +97,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		return templates
 	}
 
-	reload = reloadFunc
+	reloadFn = reloadFunc
 
 	if !devMode {
 		tpl := indexTemplate()
@@ -125,62 +127,62 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	)
 
 	if tsdbHost != "" {
-		handleFunc("/api/index", IndexTSDB, canPutData).Name("tsdb_index")
-		handle("/api/put", Relay(tsdbHost), canPutData).Name("tsdb_put")
+		handleFunc("/api/index", indexTSDBHandler, canPutData).Name("tsdb_index")
+		handle("/api/put", RelayToOpenTSDB(tsdbHost), canPutData).Name("tsdb_put")
 	}
 	router.PathPrefix("/auth/").Handler(auth.LoginHandler())
-	handleFunc("/api/", APIRedirect, fullyOpen).Name("api_redir")
-	handle("/api/action", JSON(Action), canPerformActions).Name("action").Methods(POST)
-	handle("/api/alerts", JSON(Alerts), canViewDash).Name("alerts").Methods(GET)
-	handle("/api/config", JSON(Config), canViewConfig).Name("get_config").Methods(GET)
+	handleFunc("/api/", apiRedirect, fullyOpen).Name("api_redir")
+	handle("/api/action", wrapJSON(action), canPerformActions).Name("action").Methods(POST)
+	handle("/api/alerts", wrapJSON(alerts), canViewDash).Name("alerts").Methods(GET)
+	handle("/api/config", wrapJSON(config), canViewConfig).Name("get_config").Methods(GET)
 
-	handle("/api/config_test", JSON(ConfigTest), canViewConfig).Name("config_test").Methods(POST)
-	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
+	handle("/api/config_test", wrapJSON(configTest), canViewConfig).Name("config_test").Methods(POST)
+	handle("/api/save_enabled", wrapJSON(saveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
 
 	if schedule.SystemConf.ReloadEnabled() {
-		handle("/api/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
+		handle("/api/reload", wrapJSON(reload), canSaveConfig).Name("can_save").Methods(POST)
 	}
 
 	if schedule.SystemConf.SaveEnabled() {
-		handle("/api/config/bulkedit", JSON(BulkEdit), canSaveConfig).Name("bulk_edit").Methods(POST)
-		handle("/api/config/save", JSON(SaveConfig), canSaveConfig).Name("config_save").Methods(POST)
-		handle("/api/config/diff", JSON(DiffConfig), canSaveConfig).Name("config_diff").Methods(POST)
-		handle("/api/config/running_hash", JSON(ConfigRunningHash), canViewConfig).Name("config_hash").Methods(GET)
+		handle("/api/config/bulkedit", wrapJSON(bulkEdit), canSaveConfig).Name("bulk_edit").Methods(POST)
+		handle("/api/config/save", wrapJSON(saveConfig), canSaveConfig).Name("config_save").Methods(POST)
+		handle("/api/config/diff", wrapJSON(diffConfig), canSaveConfig).Name("config_diff").Methods(POST)
+		handle("/api/config/running_hash", wrapJSON(configRunningHash), canViewConfig).Name("config_hash").Methods(GET)
 	}
 
-	handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph), canRunTests).Name("expr_graph")
-	handle("/api/errors", JSON(ErrorHistory), canViewDash).Name("errors").Methods(GET, POST)
-	handle("/api/expr", JSON(Expr), canRunTests).Name("expr").Methods(POST)
-	handle("/api/graph", JSON(Graph), canViewDash).Name("graph").Methods(GET)
+	handle("/api/egraph/{bs}.{format:svg|png}", wrapJSON(ExprGraph), canRunTests).Name("expr_graph")
+	handle("/api/errors", wrapJSON(errorHistory), canViewDash).Name("errors").Methods(GET, POST)
+	handle("/api/expr", wrapJSON(expression), canRunTests).Name("expr").Methods(POST)
+	handle("/api/graph", wrapJSON(Graph), canViewDash).Name("graph").Methods(GET)
 
-	handle("/api/health", JSON(HealthCheck), fullyOpen).Name("health_check").Methods(GET)
-	handle("/api/host", JSON(Host), canViewDash).Name("host").Methods(GET)
-	handle("/api/last", JSON(Last), canViewDash).Name("last").Methods(GET)
-	handle("/api/quiet", JSON(Quiet), canViewDash).Name("quiet").Methods(GET)
-	handle("/api/incidents/open", JSON(ListOpenIncidents), canViewDash).Name("open_incidents").Methods(GET)
-	handle("/api/incidents/events", JSON(IncidentEvents), canViewDash).Name("incident_events").Methods(GET)
-	handle("/api/metadata/get", JSON(GetMetadata), canViewDash).Name("meta_get").Methods(GET)
-	handle("/api/metadata/metrics", JSON(MetadataMetrics), canViewDash).Name("meta_metrics").Methods(GET)
-	handle("/api/metadata/put", JSON(PutMetadata), canPutData).Name("meta_put").Methods(POST)
-	handle("/api/metadata/delete", JSON(DeleteMetadata), canPutData).Name("meta_delete").Methods(http.MethodDelete)
-	handle("/api/metric", JSON(UniqueMetrics), canViewDash).Name("meta_uniqe_metrics").Methods(GET)
-	handle("/api/metric/{tagk}", JSON(MetricsByTagKey), canViewDash).Name("meta_metrics_by_tag").Methods(GET)
-	handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair), canViewDash).Name("meta_metric_by_tag_pair").Methods(GET)
+	handle("/api/health", wrapJSON(healthCheck), fullyOpen).Name("health_check").Methods(GET)
+	handle("/api/host", wrapJSON(hostHandler), canViewDash).Name("host").Methods(GET)
+	handle("/api/last", wrapJSON(last), canViewDash).Name("last").Methods(GET)
+	handle("/api/quiet", wrapJSON(quiet), canViewDash).Name("quiet").Methods(GET)
+	handle("/api/incidents/open", wrapJSON(listOpenIncidents), canViewDash).Name("open_incidents").Methods(GET)
+	handle("/api/incidents/events", wrapJSON(incidentEvents), canViewDash).Name("incident_events").Methods(GET)
+	handle("/api/metadata/get", wrapJSON(getMetadata), canViewDash).Name("meta_get").Methods(GET)
+	handle("/api/metadata/metrics", wrapJSON(metadataMetrics), canViewDash).Name("meta_metrics").Methods(GET)
+	handle("/api/metadata/put", wrapJSON(putMetadata), canPutData).Name("meta_put").Methods(POST)
+	handle("/api/metadata/delete", wrapJSON(deleteMetadata), canPutData).Name("meta_delete").Methods(http.MethodDelete)
+	handle("/api/metric", wrapJSON(uniqueMetrics), canViewDash).Name("meta_uniqe_metrics").Methods(GET)
+	handle("/api/metric/{tagk}", wrapJSON(metricsByTagKey), canViewDash).Name("meta_metrics_by_tag").Methods(GET)
+	handle("/api/metric/{tagk}/{tagv}", wrapJSON(metricsByTagPair), canViewDash).Name("meta_metric_by_tag_pair").Methods(GET)
 
-	handle("/api/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
-	handle("/api/rule/notification/test", JSON(TestHTTPNotification), canRunTests).Name("rule__notification_test").Methods(POST)
-	handle("/api/shorten", JSON(Shorten), canViewDash).Name("shorten")
-	handle("/s/{id}", JSON(GetShortLink), canViewDash).Name("shortlink")
-	handle("/api/silence/clear", JSON(SilenceClear), canSilence).Name("silence_clear")
-	handle("/api/silence/get", JSON(SilenceGet), canViewDash).Name("silence_get").Methods(GET)
-	handle("/api/silence/set", JSON(SilenceSet), canSilence).Name("silence_set")
-	handle("/api/status", JSON(Status), canViewDash).Name("status").Methods(GET)
-	handle("/api/tagk/{metric}", JSON(TagKeysByMetric), canViewDash).Name("search_tkeys_by_metric").Methods(GET)
-	handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey), canViewDash).Name("search_tvals_by_metric").Methods(GET)
-	handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey), canViewDash).Name("search_tvals_by_metrictagkey").Methods(GET)
-	handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric), canViewDash).Name("search_tagsets_by_metric").Methods(GET)
-	handle("/api/opentsdb/version", JSON(OpenTSDBVersion), fullyOpen).Name("otsdb_version").Methods(GET)
-	handle("/api/annotate", JSON(AnnotateEnabled), fullyOpen).Name("annotate_enabled").Methods(GET)
+	handle("/api/rule", wrapJSON(ruleTest), canRunTests).Name("rule_test").Methods(POST)
+	handle("/api/rule/notification/test", wrapJSON(testHTTPNotification), canRunTests).Name("rule__notification_test").Methods(POST)
+	handle("/api/shorten", wrapJSON(shorten), canViewDash).Name("shorten")
+	handle("/s/{id}", wrapJSON(getShortLink), canViewDash).Name("shortlink")
+	handle("/api/silence/clear", wrapJSON(silenceClear), canSilence).Name("silence_clear")
+	handle("/api/silence/get", wrapJSON(silenceGet), canViewDash).Name("silence_get").Methods(GET)
+	handle("/api/silence/set", wrapJSON(silenceSet), canSilence).Name("silence_set")
+	handle("/api/status", wrapJSON(status), canViewDash).Name("status").Methods(GET)
+	handle("/api/tagk/{metric}", wrapJSON(tagKeysByMetric), canViewDash).Name("search_tkeys_by_metric").Methods(GET)
+	handle("/api/tagv/{tagk}", wrapJSON(tagValuesByTagKey), canViewDash).Name("search_tvals_by_metric").Methods(GET)
+	handle("/api/tagv/{tagk}/{metric}", wrapJSON(tagValuesByMetricTagKey), canViewDash).Name("search_tvals_by_metrictagkey").Methods(GET)
+	handle("/api/tagsets/{metric}", wrapJSON(filteredTagsetsByMetric), canViewDash).Name("search_tagsets_by_metric").Methods(GET)
+	handle("/api/opentsdb/version", wrapJSON(openTSDBVersion), fullyOpen).Name("otsdb_version").Methods(GET)
+	handle("/api/annotate", wrapJSON(annotateEnabled), fullyOpen).Name("annotate_enabled").Methods(GET)
 
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
@@ -197,7 +199,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		handle("/api/tokens", tokens.AdminHandler(), canManageTokens).Name("tokens")
 	}
 
-	router.Handle("/api/version", baseChain.ThenFunc(Version)).Name("version").Methods(GET)
+	router.Handle("/api/version", baseChain.ThenFunc(versionHandler)).Name("version").Methods(GET)
 	fs := http.FileServer(webFS)
 	router.PathPrefix("/partials/").Handler(baseChain.Then(fs)).Name("partials")
 	router.PathPrefix("/static/").Handler(baseChain.Then(http.StripPrefix("/static/", fs))).Name("static")
@@ -211,7 +213,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	router.PathPrefix("/api").HandlerFunc(http.NotFound)
 	//MUST BE LAST!
-	router.PathPrefix("/").Handler(baseChain.Then(auth.Wrap(JSON(Index), canViewDash))).Name("index")
+	router.PathPrefix("/").Handler(baseChain.Then(auth.Wrap(wrapJSON(index), canViewDash))).Name("index")
 
 	slog.Infoln("tsdb host:", tsdbHost)
 	errChan := make(chan error, 1)
@@ -237,6 +239,7 @@ type relayProxy struct {
 	*httputil.ReverseProxy
 }
 
+// ResetSchedule resets the schedule to the default
 func ResetSchedule() {
 	schedule = sched.DefaultSched
 }
@@ -277,13 +280,18 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 	collect.Add("relay.response", tags, 1)
 }
 
-func Relay(dest string) http.Handler {
+// RelayToOpenTSDB creates a new handler to relay data to OpenTSDB
+//
+// This is used to mimic OpenTSDB's /api/put endpoint
+func RelayToOpenTSDB(tsdbHost string) http.Handler {
 	return &relayProxy{ReverseProxy: util.NewSingleHostProxy(&url.URL{
 		Scheme: "http",
-		Host:   dest,
+		Host:   tsdbHost,
 	})}
 }
 
+// indexTSDB indexes data points sent through /api/put for searching and autocomplete by Bosun.
+// Can be used directly or as part of the relay functionality
 func indexTSDB(r *http.Request, body []byte) {
 	clean := func(s string) string {
 		return opentsdb.MustReplace(s, "_")
@@ -307,7 +315,7 @@ func indexTSDB(r *http.Request, body []byte) {
 	}
 }
 
-func IndexTSDB(w http.ResponseWriter, r *http.Request) {
+func indexTSDBHandler(_ http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		slog.Error(err)
@@ -334,7 +342,7 @@ type indexVariables struct {
 	Settings string
 }
 
-func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if r.URL.Path == "/graph" {
 		r.ParseForm()
 		if _, present := r.Form["png"]; present {
@@ -385,7 +393,7 @@ func serveError(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
-func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) http.Handler {
+func wrapJSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t := miniprofiler.GetTimer(r)
 		d, err := h(t, w, r)
@@ -411,7 +419,7 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 	})
 }
 
-func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func shorten(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id, err := schedule.DataAccess.Configs().ShortenLink(r.Referer())
 	if err != nil {
 		return nil, err
@@ -421,33 +429,33 @@ func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inte
 	}{schedule.SystemConf.MakeLink(fmt.Sprintf("/s/%d", id), nil)}, nil
 }
 
-func GetShortLink(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func getShortLink(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	// on any error or bad param, just redirect to index. Otherwise 302 to stored url
 	vars := mux.Vars(r)
 	idv := vars["id"]
 	id, err := strconv.Atoi(idv)
 	targetURL := ""
 	if err != nil {
-		return Index(t, w, r)
+		return index(t, w, r)
 	}
 	targetURL, err = schedule.DataAccess.Configs().GetShortLink(id)
 	if err != nil {
-		return Index(t, w, r)
+		return index(t, w, r)
 	}
 	http.Redirect(w, r, targetURL, 302)
 	return nil, nil
 }
 
-type Health struct {
+type health struct {
 	// RuleCheck is true if last check happened within the check frequency window.
 	RuleCheck     bool
 	Quiet         bool
 	UptimeSeconds int64
 	StartEpoch    int64
-	Notifications NotificationStats
+	Notifications notificationStats
 }
 
-type NotificationStats struct {
+type notificationStats struct {
 	// Post and email notifiaction stats
 	PostNotificationsSuccess  int64
 	PostNotificationsFailed   int64
@@ -455,7 +463,7 @@ type NotificationStats struct {
 	EmailNotificationsFailed  int64
 }
 
-func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func reload(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	d := json.NewDecoder(r.Body)
 	var sane struct {
 		Reload bool
@@ -466,7 +474,7 @@ func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	if !sane.Reload {
 		return nil, fmt.Errorf("reload must be set to true in post body")
 	}
-	err := reload()
+	err := reloadFn()
 	if err != nil {
 		return nil, fmt.Errorf("failed to reload: %v", err)
 	}
@@ -474,13 +482,13 @@ func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 
 }
 
-func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func quiet(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error) {
 	return schedule.GetQuiet(), nil
 }
 
-func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	var h Health
-	var n NotificationStats
+func healthCheck(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error) {
+	var h health
+	var n notificationStats
 	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.SystemConf.GetCheckFrequency()))
 	h.Quiet = schedule.GetQuiet()
 	h.UptimeSeconds = int64(time.Since(startTime).Seconds())
@@ -496,18 +504,18 @@ func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	return h, nil
 }
 
-func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func openTSDBVersion(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error) {
 	if schedule.SystemConf.GetTSDBContext() != nil {
 		return schedule.SystemConf.GetTSDBContext().Version(), nil
 	}
 	return opentsdb.Version{Major: 0, Minor: 0}, nil
 }
 
-func AnnotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func annotateEnabled(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error) {
 	return schedule.SystemConf.AnnotateEnabled(), nil
 }
 
-func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func putMetadata(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	d := json.NewDecoder(r.Body)
 	var ms []metadata.Metasend
 	if err := d.Decode(&ms); err != nil {
@@ -527,7 +535,7 @@ func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	return nil, nil
 }
 
-func DeleteMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func deleteMetadata(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	d := json.NewDecoder(r.Body)
 	var ms []struct {
 		Tags opentsdb.TagSet
@@ -545,7 +553,7 @@ func DeleteMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	return nil, nil
 }
 
-func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func getMetadata(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	tags := make(opentsdb.TagSet)
 	r.ParseForm()
 	vals := r.Form["tagv"]
@@ -558,12 +566,12 @@ func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	return schedule.GetMetadata(r.FormValue("metric"), tags)
 }
 
-type MetricMetaTagKeys struct {
+type metricMetaTagKeys struct {
 	*database.MetricMetadata
 	TagKeys []string
 }
 
-func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func metadataMetrics(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	metric := r.FormValue("metric")
 	if metric != "" {
 		m, err := schedule.MetadataMetrics(metric)
@@ -578,12 +586,12 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 		for k := range keymap {
 			keys = append(keys, k)
 		}
-		return &MetricMetaTagKeys{
+		return &metricMetaTagKeys{
 			MetricMetadata: m,
 			TagKeys:        keys,
 		}, nil
 	}
-	all := make(map[string]*MetricMetaTagKeys)
+	all := make(map[string]*metricMetaTagKeys)
 	metrics, err := schedule.DataAccess.Search().GetAllMetrics()
 	if err != nil {
 		return nil, err
@@ -604,7 +612,7 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 		for k := range keymap {
 			keys = append(keys, k)
 		}
-		all[metric] = &MetricMetaTagKeys{
+		all[metric] = &metricMetaTagKeys{
 			MetricMetadata: m,
 			TagKeys:        keys,
 		}
@@ -612,25 +620,25 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 	return all, nil
 }
 
-func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func alerts(t miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.MarshalGroups(t, r.FormValue("filter"))
 }
 
-type ExtStatus struct {
+type extStatus struct {
 	AlertName string
 	Subject   string
 	*models.IncidentState
 	*models.RenderedTemplates
 }
 
-type ExtIncidentStatus struct {
-	ExtStatus
+type extIncidentStatus struct {
+	extStatus
 	IsActive  bool
 	Silence   *models.Silence
 	SilenceId string
 }
 
-func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func incidentEvents(t miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id := r.FormValue("id")
 	if id == "" {
 		return nil, fmt.Errorf("id must be specified")
@@ -647,8 +655,8 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	st := ExtIncidentStatus{
-		ExtStatus: ExtStatus{IncidentState: state, RenderedTemplates: rt, Subject: state.Subject},
+	st := extIncidentStatus{
+		extStatus: extStatus{IncidentState: state, RenderedTemplates: rt, Subject: state.Subject},
 		IsActive:  state.IsActive(),
 	}
 	silence := schedule.GetSilence(t, state.AlertKey)
@@ -659,9 +667,9 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	return st, nil
 }
 
-func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func status(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
-	m := make(map[string]ExtStatus)
+	m := make(map[string]extStatus)
 	for _, k := range r.Form["ak"] {
 		ak, err := models.ParseAlertKey(k)
 		if err != nil {
@@ -698,7 +706,7 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if err != nil {
 			return nil, err
 		}
-		st := ExtStatus{IncidentState: state, RenderedTemplates: rt}
+		st := extStatus{IncidentState: state, RenderedTemplates: rt}
 		if st.IncidentState == nil {
 			return nil, fmt.Errorf("unknown alert key: %v", k)
 		}
@@ -724,7 +732,7 @@ func userCanOverwriteUsername(r *http.Request) bool {
 	return false
 }
 
-func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func action(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data struct {
 		Type    string
 		Message string
@@ -756,7 +764,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	case "note":
 		at = models.ActionNote
 	}
-	errs := make(MultiError)
+	errs := make(multiError)
 	r.ParseForm()
 	successful := []models.AlertKey{}
 
@@ -801,13 +809,13 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	return nil, nil
 }
 
-type MultiError map[string]error
+type multiError map[string]error
 
-func (m MultiError) Error() string {
+func (m multiError) Error() string {
 	return fmt.Sprint(map[string]error(m))
 }
 
-func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func silenceGet(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	endingAfter := time.Now().UTC().Unix()
 	if t := r.FormValue("t"); t != "" {
 		endingAfter, _ = strconv.ParseInt(t, 10, 64)
@@ -826,7 +834,7 @@ var silenceLayouts = []string{
 	"2006-01-02 15:04",
 }
 
-func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func silenceSet(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var start, end time.Time
 	var err error
 	var data map[string]string
@@ -876,12 +884,12 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], username, data["message"])
 }
 
-func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func silenceClear(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id := r.FormValue("id")
 	return nil, schedule.ClearSilence(id)
 }
 
-func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func configTest(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -891,12 +899,12 @@ func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	}
 	_, err = rule.NewConf("test", schedule.SystemConf.EnabledBackends(), schedule.SystemConf.GetRuleVars(), string(b))
 	if err != nil {
-		fmt.Fprintf(w, err.Error())
+		fmt.Fprint(w, err.Error())
 	}
 	return nil, nil
 }
 
-func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func config(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var text string
 	var err error
 	if hash := r.FormValue("hash"); hash != "" {
@@ -911,18 +919,18 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	return nil, nil
 }
 
-func APIRedirect(w http.ResponseWriter, req *http.Request) {
+func apiRedirect(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "http://bosun.org/api.html", 302)
 }
 
-func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func hostHandler(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Host(r.FormValue("filter"))
 }
 
-// Last returns the most recent datapoint for a metric+tagset. The metric+tagset
+// last returns the most recent datapoint for a metric+tagset. The metric+tagset
 // string should be formated like os.cpu{host=foo}. The tag porition expects the
 // that the keys will be in alphabetical order.
-func Last(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func last(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var counter bool
 	if r.FormValue("counter") != "" {
 		counter = true
@@ -937,11 +945,11 @@ func Last(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}, err
 }
 
-func Version(w http.ResponseWriter, r *http.Request) {
+func versionHandler(w http.ResponseWriter, _ *http.Request) {
 	io.WriteString(w, version.GetVersionInfo("bosun"))
 }
 
-func ErrorHistory(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func errorHistory(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if r.Method == "GET" {
 		data, err := schedule.DataAccess.Errors().GetFullErrorHistory()
 		if err != nil {

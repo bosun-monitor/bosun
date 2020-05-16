@@ -9,7 +9,7 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 )
 
-func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func saveConfig(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
 		Config  string
 		Diff    string
@@ -35,7 +35,7 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	return nil, nil
 }
 
-func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func diffConfig(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
 		Config  string
 		Message string
@@ -60,7 +60,7 @@ func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	return nil, nil
 }
 
-func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func configRunningHash(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error) {
 	hash := schedule.RuleConf.GetHash()
 	return struct {
 		Hash string
@@ -69,7 +69,7 @@ func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	}, nil
 }
 
-func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func bulkEdit(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	bulkEdit := conf.BulkEditRequest{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&bulkEdit); err != nil {
@@ -83,6 +83,6 @@ func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	return nil, nil
 }
 
-func SaveEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func saveEnabled(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error) {
 	return schedule.SystemConf.SaveEnabled(), nil
 }

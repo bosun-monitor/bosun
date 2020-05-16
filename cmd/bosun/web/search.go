@@ -11,8 +11,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// UniqueMetrics returns a sorted list of available metrics.
-func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+// uniqueMetrics returns a sorted list of available metrics.
+func uniqueMetrics(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	q := r.URL.Query()
 	var epoch int64
 	if v := q.Get("since"); v != "" {
@@ -39,13 +39,13 @@ func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request)
 	return filtered, nil
 }
 
-func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func tagKeysByMetric(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	return schedule.Search.TagKeysByMetric(metric)
 }
 
-func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func tagValuesByMetricTagKey(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
@@ -70,7 +70,7 @@ func getSince(r *http.Request) (time.Duration, error) {
 	return since, nil
 }
 
-func FilteredTagsetsByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func filteredTagsetsByMetric(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagset := opentsdb.TagSet{}
@@ -93,7 +93,7 @@ func FilteredTagsetsByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 	return schedule.Search.FilteredTagSets(metric, tagset, since)
 }
 
-func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func metricsByTagPair(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	since, err := getSince(r)
 	if err != nil {
@@ -104,7 +104,7 @@ func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reque
 	return schedule.Search.MetricsByTagPair(tagk, tagv, since)
 }
 
-func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func metricsByTagKey(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	since, err := getSince(r)
@@ -127,7 +127,7 @@ func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 	return tagvMetrics, nil
 }
 
-func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func tagValuesByTagKey(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	since, err := getSince(r)

@@ -10,7 +10,7 @@ import (
 	"github.com/kylebrandt/boolq"
 )
 
-func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func listOpenIncidents(t miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	// TODO: Retune this when we no longer store email bodies with incidents
 	list, err := schedule.DataAccess.State().GetAllOpenIncidents()
 	if err != nil {
