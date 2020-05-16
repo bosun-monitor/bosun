@@ -18,7 +18,7 @@ func elasticTagQuery(args []parse.Node) (parse.Tags, error) {
 
 // ElasticFuncs are specific functions that query an elasticsearch instance.
 // They are only loaded when the elastic hosts are set in the config file
-var Elastic = map[string]parse.Func{
+var ElasticFuncs = map[string]parse.Func{
 	// Funcs for querying elastic
 	"escount": {
 		Args:          []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString},
@@ -41,7 +41,7 @@ var Elastic = map[string]parse.Func{
 		VArgs:    true,
 		VArgsPos: 1,
 		Return:   models.TypeESIndexer,
-		F:        ESIndicies,
+		F:        ESIndices,
 	},
 	"esdaily": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},

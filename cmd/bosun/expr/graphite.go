@@ -93,6 +93,7 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 	return results, nil
 }
 
+// GraphiteBand runs the band function
 func GraphiteBand(e *State, query, duration, period, format string, num float64) (r *Results, err error) {
 	r = new(Results)
 	r.IgnoreOtherUnjoined = true
@@ -164,6 +165,7 @@ func GraphiteBand(e *State, query, duration, period, format string, num float64)
 	return
 }
 
+// GraphiteQuery runs a query
 func GraphiteQuery(e *State, query string, sduration, eduration, format string) (r *Results, err error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {

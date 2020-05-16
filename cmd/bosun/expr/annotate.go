@@ -15,8 +15,8 @@ import (
 	"github.com/kylebrandt/boolq"
 )
 
-var Annotate = map[string]parse.Func{
-	// Funcs for querying elastic
+// AnnotateFuncs contains functions for querying elastic
+var AnnotateFuncs = map[string]parse.Func{
 	"ancounts": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
 		Return: models.TypeSeriesSet,
@@ -84,6 +84,8 @@ func getAndFilterAnnotations(e *State, start, end time.Time, filter string) (ann
 	return filteredAnnotations, nil
 }
 
+// AnDurations returns a series representing the duration in seconds of annotations that matched the filter for the
+// specified period
 func AnDurations(e *State, filter, startDuration, endDuration string) (r *Results, err error) {
 	reqStart, reqEnd, err := procDuration(e, startDuration, endDuration)
 	if err != nil {
@@ -128,6 +130,7 @@ func AnDurations(e *State, filter, startDuration, endDuration string) (r *Result
 	}, nil
 }
 
+// AnCounts returns a series representing the number of annotations that matched the filter for the specified period
 func AnCounts(e *State, filter, startDuration, endDuration string) (r *Results, err error) {
 	reqStart, reqEnd, err := procDuration(e, startDuration, endDuration)
 	if err != nil {

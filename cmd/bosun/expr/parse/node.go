@@ -38,7 +38,9 @@ type NodeType int
 // this template was parsed.
 type Pos int
 
+// Position returns itself
 func (p Pos) Position() Pos {
+	// FIXME: This function looks unused.
 	return p
 }
 
@@ -53,6 +55,7 @@ func (t NodeType) Type() NodeType {
 	return t
 }
 
+// Constants for the different types of nodes
 const (
 	NodeFunc   NodeType = iota // A function call.
 	NodeBinary                 // Binary operator: math, logical, compare
@@ -95,6 +98,7 @@ func (f *FuncNode) String() string {
 	return s
 }
 
+// StringAST returns the abstract syntax tree
 func (f *FuncNode) StringAST() string {
 	s := f.Name + "("
 	for i, arg := range f.Args {
@@ -107,6 +111,7 @@ func (f *FuncNode) StringAST() string {
 	return s
 }
 
+// Check validates that the node holds the correct type of data
 func (f *FuncNode) Check(t *Tree) error {
 	if f.F.MapFunc && !t.mapExpr {
 		return fmt.Errorf("%v is only valid in a map expression", f.Name)
@@ -153,10 +158,12 @@ func (f *FuncNode) Check(t *Tree) error {
 	return nil
 }
 
+// Return returns the node's value
 func (f *FuncNode) Return() models.FuncType {
 	return f.F.Return
 }
 
+// Tags returns the tags of the node
 func (f *FuncNode) Tags() (Tags, error) {
 	if f.F.Tags == nil {
 		return nil, nil
@@ -177,6 +184,7 @@ type NumberNode struct {
 	Text    string  // The original textual representation from the input.
 }
 
+// ExprNode holds an expression
 type ExprNode struct {
 	NodeType
 	Pos
@@ -196,14 +204,17 @@ func (s *ExprNode) String() string {
 	return fmt.Sprintf("%v", s.Text)
 }
 
+// StringAST returns the abstract syntax tree
 func (s *ExprNode) StringAST() string {
 	return s.String()
 }
 
+// Check validates that the node holds the correct type of data
 func (s *ExprNode) Check(*Tree) error {
 	return nil
 }
 
+// Return returns the node's value
 func (s *ExprNode) Return() models.FuncType {
 	switch s.Tree.Root.Return() {
 	case models.TypeNumberSet, models.TypeScalar:
@@ -215,6 +226,7 @@ func (s *ExprNode) Return() models.FuncType {
 	}
 }
 
+// Tags returns the tags of the node
 func (s *ExprNode) Tags() (Tags, error) {
 	return nil, nil
 }
@@ -253,18 +265,22 @@ func (n *NumberNode) String() string {
 	return n.Text
 }
 
+// StringAST returns the abstract syntax tree
 func (n *NumberNode) StringAST() string {
 	return n.String()
 }
 
+// Check validates that the node holds the correct type of data
 func (n *NumberNode) Check(*Tree) error {
 	return nil
 }
 
+// Return returns the node's value
 func (n *NumberNode) Return() models.FuncType {
 	return models.TypeScalar
 }
 
+// Tags returns the tags of the node
 func (n *NumberNode) Tags() (Tags, error) {
 	return nil, nil
 }
@@ -285,23 +301,27 @@ func (s *StringNode) String() string {
 	return s.Quoted
 }
 
+// StringAST returns the abstract syntax tree
 func (s *StringNode) StringAST() string {
 	return s.String()
 }
 
+// Check validates that the node holds the correct type of data
 func (s *StringNode) Check(*Tree) error {
 	return nil
 }
 
+// Return returns the node's value
 func (s *StringNode) Return() models.FuncType {
 	return models.TypeString
 }
 
+// Tags returns the tags of the node
 func (s *StringNode) Tags() (Tags, error) {
 	return nil, nil
 }
 
-// Prefix holds a string constant.
+// PrefixNode holds a string constant.
 type PrefixNode struct {
 	NodeType
 	Pos
@@ -317,10 +337,12 @@ func (p *PrefixNode) String() string {
 	return fmt.Sprintf("%s%s", p.Text, p.Arg)
 }
 
+// StringAST returns the abstract syntax tree
 func (p *PrefixNode) StringAST() string {
 	return p.String()
 }
 
+// Check validates that the node holds the correct type of data
 func (p *PrefixNode) Check(t *Tree) error {
 	if p.Arg.Type() != NodeFunc {
 		return fmt.Errorf("parse: prefix on non-function")
@@ -331,10 +353,12 @@ func (p *PrefixNode) Check(t *Tree) error {
 	return p.Arg.Check(t)
 }
 
+// Return returns the node's value
 func (p *PrefixNode) Return() models.FuncType {
 	return p.Arg.Return()
 }
 
+// Tags returns the tags of the node
 func (p *PrefixNode) Tags() (Tags, error) {
 	return p.Arg.Tags()
 }
@@ -356,10 +380,12 @@ func (b *BinaryNode) String() string {
 	return fmt.Sprintf("%s %s %s", b.Args[0], b.Operator.val, b.Args[1])
 }
 
+// StringAST returns the abstract syntax tree
 func (b *BinaryNode) StringAST() string {
 	return fmt.Sprintf("%s(%s, %s)", b.Operator.val, b.Args[0], b.Args[1])
 }
 
+// Check validates that the node holds the correct type of data
 func (b *BinaryNode) Check(t *Tree) error {
 	t1 := b.Args[0].Return()
 	t2 := b.Args[1].Return()
@@ -389,6 +415,7 @@ func (b *BinaryNode) Check(t *Tree) error {
 	return nil
 }
 
+// Return returns the node's value
 func (b *BinaryNode) Return() models.FuncType {
 	t0 := b.Args[0].Return()
 	t1 := b.Args[1].Return()
@@ -398,6 +425,7 @@ func (b *BinaryNode) Return() models.FuncType {
 	return t0
 }
 
+// Tags returns the tags of the node
 func (b *BinaryNode) Tags() (Tags, error) {
 	t, err := b.Args[0].Tags()
 	if err != nil {
@@ -426,10 +454,12 @@ func (u *UnaryNode) String() string {
 	return fmt.Sprintf("%s%s", u.Operator.val, u.Arg)
 }
 
+// StringAST returns the abstract syntax tree
 func (u *UnaryNode) StringAST() string {
 	return fmt.Sprintf("%s(%s)", u.Operator.val, u.Arg)
 }
 
+// Check validates that the node holds the correct type of data
 func (u *UnaryNode) Check(t *Tree) error {
 	switch rt := u.Arg.Return(); rt {
 	case models.TypeNumberSet, models.TypeSeriesSet, models.TypeScalar:
@@ -439,10 +469,12 @@ func (u *UnaryNode) Check(t *Tree) error {
 	}
 }
 
+// Return returns the node's value
 func (u *UnaryNode) Return() models.FuncType {
 	return u.Arg.Return()
 }
 
+// Tags returns the tags of the node
 func (u *UnaryNode) Tags() (Tags, error) {
 	return u.Arg.Tags()
 }

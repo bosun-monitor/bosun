@@ -10,8 +10,7 @@ import (
 	elastic "gopkg.in/olivere/elastic.v3"
 )
 
-// InitClient sets up the elastic client. If the client has already been
-// initialized it is a noop
+// InitClient2 sets up the elastic client. If the client has already been initialized it is a noop
 func (e ElasticHosts) InitClient2(prefix string) error {
 	if _, ok := e.Hosts[prefix]; !ok {
 		prefixes := make([]string, len(e.Hosts))
@@ -57,8 +56,7 @@ func (e *ElasticHosts) getService2(prefix string) (*elastic.SearchService, error
 	return esClients.m[prefix].(*elastic.Client).Search(), nil
 }
 
-// Query takes a Logstash request, applies it a search service, and then queries
-// elasticsearch.
+// Query2 takes a Logstash request, applies it a search service, and then queries elasticsearch.
 func (e ElasticHosts) Query2(r *ElasticRequest2) (*elastic.SearchResult, error) {
 	s, err := e.getService2(r.HostKey)
 	if err != nil {
@@ -83,7 +81,7 @@ func (e ElasticHosts) Query2(r *ElasticRequest2) (*elastic.SearchResult, error) 
 	return res, nil
 }
 
-// ElasticRequest is a container for the information needed to query elasticsearch or a date
+// ElasticRequest2 is a container for the information needed to query elasticsearch or a date
 // histogram.
 type ElasticRequest2 struct {
 	Indices []string
@@ -137,7 +135,10 @@ func timeESRequest2(e *State, req *ElasticRequest2) (resp *elastic.SearchResult,
 	return
 }
 
-func ESDateHistogram2(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
+// ESDateHistogram2 returns a date histogram from Elasticsearch
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/2.4/search-aggregations-bucket-datehistogram-aggregation.html
+func ESDateHistogram2(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, statField, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
 	req, err := ESBaseQuery2(e.now, indexer, filter, sduration, eduration, size, prefix)
 	if err != nil {
@@ -145,8 +146,8 @@ func ESDateHistogram2(prefix string, e *State, indexer ESIndexer, keystring stri
 	}
 	// Extended bounds and min doc count are required to get values back when the bucket value is 0
 	ts := elastic.NewDateHistogramAggregation().Field(indexer.TimeField).Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0).ExtendedBoundsMin(req.Start).ExtendedBoundsMax(req.End).Format(elasticRFC3339)
-	if stat_field != "" {
-		ts = ts.SubAggregation("stats", elastic.NewExtendedStatsAggregation().Field(stat_field))
+	if statField != "" {
+		ts = ts.SubAggregation("stats", elastic.NewExtendedStatsAggregation().Field(statField))
 		switch rstat {
 		case "avg", "min", "max", "sum", "sum_of_squares", "variance", "std_deviation":
 		default:
@@ -240,7 +241,7 @@ func ESDateHistogram2(prefix string, e *State, indexer ESIndexer, keystring stri
 	return r, nil
 }
 
-// ESBaseQuery builds the base query that both ESCount and ESStat share
+// ESBaseQuery2 builds the base query that both ESCount and ESStat share
 func ESBaseQuery2(now time.Time, indexer ESIndexer, filter elastic.Query, sduration, eduration string, size int, prefix string) (*ElasticRequest2, error) {
 	start, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
@@ -269,6 +270,7 @@ func ESBaseQuery2(now time.Time, indexer ESIndexer, filter elastic.Query, sdurat
 	return &r, nil
 }
 
+// ScopeES2 takes an Elasticsearch query and tag set and creates a new one with filters for all tag key/value pairs added
 func ScopeES2(ts opentsdb.TagSet, q elastic.Query) elastic.Query {
 	var filters []elastic.Query
 	for tagKey, tagValue := range ts {

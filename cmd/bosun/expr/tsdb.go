@@ -187,6 +187,7 @@ func bandTSDB(e *State, query, duration, period, eduration string, num float64, 
 	return
 }
 
+// Window performs num queries of duration each, period apart
 func Window(e *State, query, duration, period string, num float64, rfunc string) (*Results, error) {
 	var isPerc bool
 	var percValue float64
@@ -293,6 +294,7 @@ func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 	return nil
 }
 
+// BandQuery performs num queries of duration each, period apart and concatenates them together
 func BandQuery(e *State, query, duration, period, eduration string, num float64) (r *Results, err error) {
 	r, err = bandTSDB(e, query, duration, period, eduration, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
 		newarr := true
@@ -331,6 +333,7 @@ func BandQuery(e *State, query, duration, period, eduration string, num float64)
 	return
 }
 
+// OverQuery runs an over query
 func OverQuery(e *State, query, duration, period, eduration string, num float64) (r *Results, err error) {
 	r, err = bandTSDB(e, query, duration, period, eduration, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
 		values := make(Series)
@@ -352,19 +355,27 @@ func OverQuery(e *State, query, duration, period, eduration string, num float64)
 	return
 }
 
+// Band performs num queries of duration each, period apart and concatenates them together, starting period ago
 func Band(e *State, query, duration, period string, num float64) (r *Results, err error) {
 	// existing Band behaviour is to end 'period' ago, so pass period as eduration.
 	return BandQuery(e, query, duration, period, period, num)
 }
 
+// ShiftBand is very similar to `over`. The most recent period is not included in the seriesSet.
+// This function could be useful for anomaly detection when used with `aggr`, to calculate historical distributions to
+// compare against
 func ShiftBand(e *State, query, duration, period string, num float64) (r *Results, err error) {
 	return OverQuery(e, query, duration, period, period, num)
 }
 
+// Over is similar to `band`. `Over` shifts the time of previous periods to be now, tags them with duration that each
+// period was shifted, and merges those shifted periods into a single seriesSet, which includes the most recent period.
+// This is useful for displaying time over time graphs.
 func Over(e *State, query, duration, period string, num float64) (r *Results, err error) {
 	return OverQuery(e, query, duration, period, "", num)
 }
 
+// Query runs the given query
 func Query(e *State, query, sduration, eduration string) (r *Results, err error) {
 	r = new(Results)
 	q, err := opentsdb.ParseQuery(query, e.TSDBContext.Version())
@@ -420,6 +431,10 @@ func Query(e *State, query, sduration, eduration string) (r *Results, err error)
 	return
 }
 
+// Change is a way to determine the change of a query from startDuration to endDuration
+//
+// If `eduration` is the empty string, now is used. The query must either be a rate or a counter converted to a rate
+// with the agg:rate:metric flag.
 func Change(e *State, query, sduration, eduration string) (r *Results, err error) {
 	r = new(Results)
 	sd, err := opentsdb.ParseDuration(sduration)

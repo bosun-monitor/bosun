@@ -11,8 +11,7 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-// InitClient sets up the elastic client. If the client has already been
-// initialized it is a noop
+// InitClient5 sets up the elastic client. If the client has already been initialized it is a noop
 func (e ElasticHosts) InitClient5(prefix string) error {
 	if _, ok := e.Hosts[prefix]; !ok {
 		prefixes := make([]string, len(e.Hosts))
@@ -46,7 +45,7 @@ func (e ElasticHosts) InitClient5(prefix string) error {
 	return nil
 }
 
-// getService returns an elasticsearch service based on the global client
+// getService5 returns an elasticsearch service based on the global client
 func (e *ElasticHosts) getService5(prefix string) (*elastic.SearchService, error) {
 	esClients.Lock()
 	defer esClients.Unlock()
@@ -58,8 +57,7 @@ func (e *ElasticHosts) getService5(prefix string) (*elastic.SearchService, error
 	return esClients.m[prefix].(*elastic.Client).Search(), nil
 }
 
-// Query takes a Logstash request, applies it a search service, and then queries
-// elasticsearch.
+// Query5 takes a Logstash request, applies it a search service, and then queries Elasticsearch.
 func (e ElasticHosts) Query5(r *ElasticRequest5) (*elastic.SearchResult, error) {
 	s, err := e.getService5(r.HostKey)
 	if err != nil {
@@ -109,7 +107,7 @@ func (r *ElasticRequest5) CacheKey() (string, error) {
 	return fmt.Sprintf("%s:%v\n%s", r.HostKey, r.Indices, b), nil
 }
 
-// timeESRequest execute the elasticsearch query (which may set or hit cache) and returns
+// timeESRequest5 execute the elasticsearch query (which may set or hit cache) and returns
 // the search results.
 func timeESRequest5(e *State, req *ElasticRequest5) (resp *elastic.SearchResult, err error) {
 	var source interface{}
@@ -138,7 +136,10 @@ func timeESRequest5(e *State, req *ElasticRequest5) (resp *elastic.SearchResult,
 	return
 }
 
-func ESDateHistogram5(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
+// ESDateHistogram5 returns a date histogram from Elasticsearch
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-aggregations-bucket-datehistogram-aggregation.html
+func ESDateHistogram5(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, statField, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
 	req, err := ESBaseQuery5(e.now, indexer, filter, sduration, eduration, size, prefix)
 	if err != nil {
@@ -146,8 +147,8 @@ func ESDateHistogram5(prefix string, e *State, indexer ESIndexer, keystring stri
 	}
 	// Extended bounds and min doc count are required to get values back when the bucket value is 0
 	ts := elastic.NewDateHistogramAggregation().Field(indexer.TimeField).Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0).ExtendedBoundsMin(req.Start).ExtendedBoundsMax(req.End).Format(elasticRFC3339)
-	if stat_field != "" {
-		ts = ts.SubAggregation("stats", elastic.NewExtendedStatsAggregation().Field(stat_field))
+	if statField != "" {
+		ts = ts.SubAggregation("stats", elastic.NewExtendedStatsAggregation().Field(statField))
 		switch rstat {
 		case "avg", "min", "max", "sum", "sum_of_squares", "variance", "std_deviation":
 		default:
@@ -241,7 +242,7 @@ func ESDateHistogram5(prefix string, e *State, indexer ESIndexer, keystring stri
 	return r, nil
 }
 
-// ESBaseQuery builds the base query that both ESCount and ESStat share
+// ESBaseQuery5 builds the base query that both ESCount and ESStat share
 func ESBaseQuery5(now time.Time, indexer ESIndexer, filter elastic.Query, sduration, eduration string, size int, prefix string) (*ElasticRequest5, error) {
 	start, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
@@ -270,6 +271,7 @@ func ESBaseQuery5(now time.Time, indexer ESIndexer, filter elastic.Query, sdurat
 	return &r, nil
 }
 
+// ScopeES5 takes an Elasticsearch query and tag set and creates a new one with filters for all tag key/value pairs added
 func ScopeES5(ts opentsdb.TagSet, q elastic.Query) elastic.Query {
 	var filters []elastic.Query
 	for tagKey, tagValue := range ts {

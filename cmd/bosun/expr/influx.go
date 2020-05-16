@@ -44,6 +44,7 @@ func influxTag(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
+// InfluxQuery runs an influxDB query
 func InfluxQuery(e *State, db, query, startDuration, endDuration, groupByInterval string) (*Results, error) {
 	qres, err := timeInfluxRequest(e, db, query, startDuration, endDuration, groupByInterval)
 	if err != nil {
@@ -196,8 +197,8 @@ func timeInfluxRequest(e *State, db, query, startDuration, endDuration, groupByI
 		return nil, err
 	}
 	defer conn.Close()
-	q_key := fmt.Sprintf("%s: %s", db, q)
-	e.Timer.StepCustomTiming("influx", "query", q_key, func() {
+	qKey := fmt.Sprintf("%s: %s", db, q)
+	e.Timer.StepCustomTiming("influx", "query", qKey, func() {
 		getFn := func() (interface{}, error) {
 			res, err := conn.Query(client.Query{
 				Command:  q,
@@ -223,7 +224,7 @@ func timeInfluxRequest(e *State, db, query, startDuration, endDuration, groupByI
 		var val interface{}
 		var ok bool
 		var hit bool
-		val, err, hit = e.Cache.Get(q_key, getFn)
+		val, err, hit = e.Cache.Get(qKey, getFn)
 		collectCacheHit(e.Cache, "influx", hit)
 		if s, ok = val.([]influxModels.Row); !ok {
 			err = fmt.Errorf("influx: did not get a valid result from InfluxDB")

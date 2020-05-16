@@ -26,6 +26,7 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 )
 
+// State is the state of the expression language
 type State struct {
 	*Expr
 	now                time.Time
@@ -51,6 +52,7 @@ type State struct {
 	tsdbQueries []opentsdb.Request
 }
 
+// Backends are the available stores that can be queried
 type Backends struct {
 	TSDBContext     opentsdb.Context
 	GraphiteContext graphite.Context
@@ -61,6 +63,7 @@ type Backends struct {
 	PromConfig      PromClients
 }
 
+// BosunProviders is a struct holding some data that's being used during the evaluation of expressions
 type BosunProviders struct {
 	Squelched func(tags opentsdb.TagSet) bool
 	Search    *search.Search
@@ -69,18 +72,20 @@ type BosunProviders struct {
 	Annotate  backend.Backend
 }
 
-// Alert Status Provider is used to provide information about alert results.
+// AlertStatusProvider is used to provide information about alert results.
 // This facilitates alerts referencing other alerts, even when they go unknown or unevaluated.
 type AlertStatusProvider interface {
 	GetUnknownAndUnevaluatedAlertKeys(alertName string) (unknown, unevaluated []models.AlertKey)
 }
 
-var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
+var errUnknownOp = fmt.Errorf("expr: unknown op type")
 
+// Expr is an expression of the Bosun expression language
 type Expr struct {
 	*parse.Tree
 }
 
+// MarshalJSON is a custom JSON marshaller
 func (e *Expr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
 }
@@ -119,6 +124,7 @@ func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprof
 	return e.ExecuteState(s)
 }
 
+// ExecuteState walks the root of the expression
 func (e *Expr) ExecuteState(s *State) (r *Results, queries []opentsdb.Request, err error) {
 	defer errRecover(&err, s)
 	if s.Timer == nil {
@@ -162,46 +168,77 @@ func marshalFloat(n float64) ([]byte, error) {
 	return json.Marshal(n)
 }
 
+// Value is an interface for the different types of values known to Bosun
 type Value interface {
+	// Type returns the type of the value
 	Type() models.FuncType
+	// Value returns the value
 	Value() interface{}
 }
 
+// Number represents a numeric value
 type Number float64
 
-func (n Number) Type() models.FuncType        { return models.TypeNumberSet }
-func (n Number) Value() interface{}           { return n }
+// Type returns the type of the value
+func (n Number) Type() models.FuncType { return models.TypeNumberSet }
+
+// Value returns the value
+func (n Number) Value() interface{} { return n }
+
+// MarshalJSON is a custom JSON marshaller
 func (n Number) MarshalJSON() ([]byte, error) { return marshalFloat(float64(n)) }
 
+// Scalar represents a scalar value
 type Scalar float64
 
-func (s Scalar) Type() models.FuncType        { return models.TypeScalar }
-func (s Scalar) Value() interface{}           { return s }
+// Type returns the type of the value
+func (s Scalar) Type() models.FuncType { return models.TypeScalar }
+
+// Value returns the value
+func (s Scalar) Value() interface{} { return s }
+
+// MarshalJSON is a custom JSON marshaller
 func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
+// String represents a string value
 type String string
 
+// Type returns the type of the value
 func (s String) Type() models.FuncType { return models.TypeString }
-func (s String) Value() interface{}    { return s }
 
+// Value returns the value
+func (s String) Value() interface{} { return s }
+
+// NumberExpr represents a number expression
 type NumberExpr Expr
 
+// Type returns the type of the value
 func (s NumberExpr) Type() models.FuncType { return models.TypeNumberExpr }
-func (s NumberExpr) Value() interface{}    { return s }
 
+// Value returns the value
+func (s NumberExpr) Value() interface{} { return s }
+
+// Info represents a Prometheus info value
 type Info []interface{}
 
+// Type returns the type of the value
 func (i Info) Type() models.FuncType { return models.TypeInfo }
-func (i Info) Value() interface{}    { return i }
+
+// Value returns the value
+func (i Info) Value() interface{} { return i }
 
 //func (s String) MarshalJSON() ([]byte, error) { return json.Marshal(s) }
 
 // Series is the standard form within bosun to represent timeseries data.
 type Series map[time.Time]float64
 
+// Type returns the type of the value
 func (s Series) Type() models.FuncType { return models.TypeSeriesSet }
-func (s Series) Value() interface{}    { return s }
 
+// Value returns the value
+func (s Series) Value() interface{} { return s }
+
+// MarshalJSON is a custom JSON marshaller
 func (s Series) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, len(s))
 	for k, v := range s {
@@ -210,14 +247,20 @@ func (s Series) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (a Series) Equal(b Series) bool {
-	return reflect.DeepEqual(a, b)
+// Equal returns whether the passed series is equal to the receiver
+func (s Series) Equal(other Series) bool {
+	return reflect.DeepEqual(s, other)
 }
 
 // See the elastic#.go files for ESQuery
 
+// Type returns the type of the value
 func (e ESQuery) Type() models.FuncType { return models.TypeESQuery }
-func (e ESQuery) Value() interface{}    { return e }
+
+// Value returns the value
+func (e ESQuery) Value() interface{} { return e }
+
+// MarshalJSON is a custom JSON marshaller
 func (e ESQuery) MarshalJSON() ([]byte, error) {
 	// source, err := e.Query(esV2).Source()
 	// if err != nil {
@@ -227,32 +270,48 @@ func (e ESQuery) MarshalJSON() ([]byte, error) {
 	return json.Marshal("ESQuery")
 }
 
+// ESIndexer is a struct to help generating Elasticsearch indices
 type ESIndexer struct {
 	TimeField string
 	Generate  func(startDuration, endDuration *time.Time) []string
 }
 
+// Type returns the type of the value
 func (e ESIndexer) Type() models.FuncType { return models.TypeESIndexer }
-func (e ESIndexer) Value() interface{}    { return e }
+
+// Value returns the value
+func (e ESIndexer) Value() interface{} { return e }
+
+// MarshalJSON is a custom JSON marshaller
 func (e ESIndexer) MarshalJSON() ([]byte, error) {
 	return json.Marshal("ESGenerator")
 }
 
+// Table represents a table
 type Table struct {
 	Columns []string
 	Rows    [][]interface{}
 }
 
+// Type returns the type of the value
 func (t Table) Type() models.FuncType { return models.TypeTable }
-func (t Table) Value() interface{}    { return t }
 
+// Value returns the value
+func (t Table) Value() interface{} { return t }
+
+// Type returns the type of the value
 func (a AzureResources) Type() models.FuncType { return models.TypeAzureResourceList }
-func (a AzureResources) Value() interface{}    { return a }
 
+// Value returns the value
+func (a AzureResources) Value() interface{} { return a }
+
+// Type returns the type of the value
 func (a AzureApplicationInsightsApps) Type() models.FuncType { return models.TypeAzureAIApps }
-func (a AzureApplicationInsightsApps) Value() interface{}    { return a }
 
-type SortablePoint struct {
+// Value returns the value
+func (a AzureApplicationInsightsApps) Value() interface{} { return a }
+
+type sortablePoint struct {
 	T time.Time
 	V float64
 }
@@ -260,27 +319,30 @@ type SortablePoint struct {
 // SortableSeries is an alternative datastructure for timeseries data,
 // which stores points in a time-ordered fashion instead of a map.
 // see discussion at https://github.com/bosun-monitor/bosun/pull/699
-type SortableSeries []SortablePoint
+type SortableSeries []sortablePoint
 
 func (s SortableSeries) Len() int           { return len(s) }
 func (s SortableSeries) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s SortableSeries) Less(i, j int) bool { return s[i].T.Before(s[j].T) }
 
+// NewSortedSeries returns a new sortable series that's sorted
 func NewSortedSeries(dps Series) SortableSeries {
 	series := make(SortableSeries, 0, len(dps))
 	for t, v := range dps {
-		series = append(series, SortablePoint{t, v})
+		series = append(series, sortablePoint{t, v})
 	}
 	sort.Sort(series)
 	return series
 }
 
+// Result is a result for a set of computations
 type Result struct {
 	models.Computations
 	Value
 	Group opentsdb.TagSet
 }
 
+// Results contains a result slice and information how to process it
 type Results struct {
 	Results ResultSlice
 	// If true, ungrouped joins from this set will be ignored.
@@ -294,20 +356,20 @@ type Results struct {
 // Equal inspects if two results have the same content
 // error will return why they are not equal if they
 // are not equal
-func (a *Results) Equal(b *Results) (bool, error) {
-	if len(a.Results) != len(b.Results) {
-		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(a.Results), len(b.Results))
+func (r *Results) Equal(b *Results) (bool, error) {
+	if len(r.Results) != len(b.Results) {
+		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(r.Results), len(b.Results))
 	}
-	if a.IgnoreUnjoined != b.IgnoreUnjoined {
-		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreUnjoined, b.IgnoreUnjoined)
+	if r.IgnoreUnjoined != b.IgnoreUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreUnjoined, b.IgnoreUnjoined)
 	}
-	if a.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
-		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
+	if r.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
 	}
-	if a.NaNValue != b.NaNValue {
-		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", a.NaNValue, b.NaNValue)
+	if r.NaNValue != b.NaNValue {
+		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", r.NaNValue, b.NaNValue)
 	}
-	sortedA := ResultSliceByGroup(a.Results)
+	sortedA := ResultSliceByGroup(r.Results)
 	sort.Sort(sortedA)
 	sortedB := ResultSliceByGroup(b.Results)
 	sort.Sort(sortedB)
@@ -337,12 +399,16 @@ func (a *Results) Equal(b *Results) (bool, error) {
 	return true, nil
 }
 
+// ResultSlice is a slice of Results
 type ResultSlice []*Result
 
+// ResultSliceByGroup is a ResultSlice sortable by group
 type ResultSliceByGroup ResultSlice
 
+// ResultSliceByValue is a ResultSlice sortable by value
 type ResultSliceByValue ResultSlice
 
+// NaN is a not a number value
 func (r *Results) NaN() Number {
 	if r.NaNValue != nil {
 		return Number(*r.NaNValue)
@@ -350,7 +416,8 @@ func (r *Results) NaN() Number {
 	return Number(math.NaN())
 }
 
-func (r ResultSlice) DescByValue() ResultSlice {
+func (r ResultSlice) descByValue() ResultSlice {
+	// Fixme: This function looks unused
 	for _, v := range r {
 		if _, ok := v.Value.(Number); !ok {
 			return r
@@ -380,13 +447,14 @@ func (r ResultSliceByGroup) Len() int           { return len(r) }
 func (r ResultSliceByGroup) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func (r ResultSliceByGroup) Less(i, j int) bool { return r[i].Group.String() < r[j].Group.String() }
 
-func (e *State) AddComputation(r *Result, text string, value interface{}) {
+func (e *State) addComputation(r *Result, text string, value interface{}) {
 	if !e.enableComputations {
 		return
 	}
 	r.Computations = append(r.Computations, models.Computation{Text: opentsdb.ReplaceTags(text, r.Group), Value: value})
 }
 
+// Union represents the union of two values
 type Union struct {
 	models.Computations
 	A, B  Value
@@ -405,7 +473,7 @@ func wrap(v float64) *Results {
 	}
 }
 
-func (u *Union) ExtendComputations(o *Result) {
+func (u *Union) extendComputations(o *Result) {
 	u.Computations = append(u.Computations, o.Computations...)
 }
 
@@ -449,8 +517,8 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 				B:     rb.Value,
 				Group: group,
 			}
-			u.ExtendComputations(ra)
-			u.ExtendComputations(rb)
+			u.extendComputations(ra)
+			u.extendComputations(rb)
 			us = append(us, u)
 		}
 	}
@@ -462,8 +530,8 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 					B:     b.NaN(),
 					Group: r.Group,
 				}
-				e.AddComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.B))
-				u.ExtendComputations(r)
+				e.addComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.B))
+				u.extendComputations(r)
 				us = append(us, u)
 			}
 		}
@@ -474,8 +542,8 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 					B:     r.Value,
 					Group: r.Group,
 				}
-				e.AddComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.A))
-				u.ExtendComputations(r)
+				e.addComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.A))
+				u.extendComputations(r)
 				us = append(us, u)
 			}
 		}
@@ -534,11 +602,11 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 				switch bt := v.B.(type) {
 				case Scalar:
 					n := Scalar(operate(node.OpStr, float64(at), float64(bt)))
-					e.AddComputation(r, node.String(), Number(n))
+					e.addComputation(r, node.String(), Number(n))
 					value = n
 				case Number:
 					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					e.AddComputation(r, node.String(), n)
+					e.addComputation(r, node.String(), n)
 					value = n
 				case Series:
 					s := make(Series)
@@ -547,17 +615,17 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 					}
 					value = s
 				default:
-					panic(ErrUnknownOp)
+					panic(errUnknownOp)
 				}
 			case Number:
 				switch bt := v.B.(type) {
 				case Scalar:
 					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					e.AddComputation(r, node.String(), Number(n))
+					e.addComputation(r, node.String(), Number(n))
 					value = n
 				case Number:
 					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					e.AddComputation(r, node.String(), n)
+					e.addComputation(r, node.String(), n)
 					value = n
 				case Series:
 					s := make(Series)
@@ -566,7 +634,7 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 					}
 					value = s
 				default:
-					panic(ErrUnknownOp)
+					panic(errUnknownOp)
 				}
 			case Series:
 				switch bt := v.B.(type) {
@@ -586,10 +654,10 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 					}
 					value = s
 				default:
-					panic(ErrUnknownOp)
+					panic(errUnknownOp)
 				}
 			default:
-				panic(ErrUnknownOp)
+				panic(errUnknownOp)
 			}
 			r.Value = value
 			res.Results = append(res.Results, r)
@@ -700,7 +768,7 @@ func (e *State) walkUnary(node *parse.UnaryNode) *Results {
 				}
 				r.Value = s
 			default:
-				panic(ErrUnknownOp)
+				panic(errUnknownOp)
 			}
 		}
 	})
@@ -801,7 +869,7 @@ func (e *State) walkFunc(node *parse.FuncNode) *Results {
 		}
 		if node.Return() == models.TypeNumberSet {
 			for _, r := range res.Results {
-				e.AddComputation(r, node.String(), r.Value.(Number))
+				e.addComputation(r, node.String(), r.Value.(Number))
 			}
 		}
 	})

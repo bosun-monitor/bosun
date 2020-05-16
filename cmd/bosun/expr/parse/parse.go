@@ -31,6 +31,7 @@ type Tree struct {
 	peekCount int
 }
 
+// Func describes a function that can be called in Bosun's expression language
 type Func struct {
 	Args          []models.FuncType
 	Return        models.FuncType
@@ -46,6 +47,7 @@ type Func struct {
 	Check         func(*Tree, *FuncNode) error
 }
 
+// Tags is a set of tag keys
 type Tags map[string]struct{}
 
 func (t Tags) String() string {
@@ -57,6 +59,7 @@ func (t Tags) String() string {
 	return strings.Join(keys, ",")
 }
 
+// Equal returns whether two tags are equal
 func (t Tags) Equal(o Tags) bool {
 	if len(t) != len(o) {
 		return false
@@ -100,7 +103,8 @@ func Parse(text string, funcs ...map[string]Func) (t *Tree, err error) {
 	return
 }
 
-func ParseSub(text string, funcs ...map[string]Func) (t *Tree, err error) {
+// Sub parses a subtree
+func Sub(text string, funcs ...map[string]Func) (t *Tree, err error) {
 	t = New()
 	t.mapExpr = true
 	t.Text = text
@@ -245,7 +249,17 @@ func (t *Tree) parse() {
 	}
 }
 
-/* Grammar:
+/*
+O: Or
+A: And
+C: Condition
+P: Addition/subtraction
+M: Multiplication/division
+E: Exponentiation
+F: Function
+v: value
+
+Grammar:
 O -> A {"||" A}
 A -> C {"&&" C}
 C -> P {( "==" | "!=" | ">" | ">=" | "<" | "<=") P}
@@ -259,7 +273,7 @@ param -> number | "string" | subExpr | [query]
 optPrefix -> [ prefix ]
 */
 
-// expr:
+// O represents a logical OR symbol
 func (t *Tree) O() Node {
 	n := t.A()
 	for {
@@ -272,6 +286,7 @@ func (t *Tree) O() Node {
 	}
 }
 
+// A represents a logical AND and symbol
 func (t *Tree) A() Node {
 	n := t.C()
 	for {
@@ -284,6 +299,7 @@ func (t *Tree) A() Node {
 	}
 }
 
+// C represents a condition
 func (t *Tree) C() Node {
 	n := t.P()
 	for {
@@ -296,6 +312,7 @@ func (t *Tree) C() Node {
 	}
 }
 
+// P represents addition/subtraction
 func (t *Tree) P() Node {
 	n := t.M()
 	for {
@@ -308,6 +325,7 @@ func (t *Tree) P() Node {
 	}
 }
 
+// M represents multiplication
 func (t *Tree) M() Node {
 	n := t.E()
 	for {
@@ -320,6 +338,7 @@ func (t *Tree) M() Node {
 	}
 }
 
+// E represents exponentiation
 func (t *Tree) E() Node {
 	n := t.F()
 	for {
@@ -332,6 +351,7 @@ func (t *Tree) E() Node {
 	}
 }
 
+// F represents a function
 func (t *Tree) F() Node {
 	switch token := t.peek(); token.typ {
 	case itemNumber, itemFunc:
@@ -352,6 +372,7 @@ func (t *Tree) F() Node {
 	return nil
 }
 
+// v represents a value or function
 func (t *Tree) v() Node {
 	switch token := t.next(); token.typ {
 	case itemNumber:
@@ -369,6 +390,7 @@ func (t *Tree) v() Node {
 	return nil
 }
 
+// Func finds and validates the function for the next token of the lexer
 func (t *Tree) Func() (f *FuncNode) {
 	token := t.next()
 	funcv, ok := t.GetFunction(token.val)
@@ -423,7 +445,7 @@ func (t *Tree) Func() (f *FuncNode) {
 			if err != nil {
 				t.error(err)
 			}
-			n.Tree, err = ParseSub(n.Text, t.funcs...)
+			n.Tree, err = Sub(n.Text, t.funcs...)
 			if err != nil {
 				t.error(err)
 			}
@@ -440,6 +462,7 @@ func (t *Tree) Func() (f *FuncNode) {
 	}
 }
 
+// GetFunction gets the function of the given name
 func (t *Tree) GetFunction(name string) (v Func, ok bool) {
 	for _, funcMap := range t.funcs {
 		if funcMap == nil {
@@ -452,6 +475,7 @@ func (t *Tree) GetFunction(name string) (v Func, ok bool) {
 	return
 }
 
+// SetFunction stores a function with the given name in the map of availeble functions
 func (t *Tree) SetFunction(name string, F interface{}) error {
 	for i, funcMap := range t.funcs {
 		if funcMap == nil {
