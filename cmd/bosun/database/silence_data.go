@@ -24,6 +24,7 @@ const (
 	silenceIdx  = "SilencesByEnd"
 )
 
+// SilenceDataAccess is the core data access interface for everything around silences
 type SilenceDataAccess interface {
 	GetActiveSilences() ([]*models.Silence, error)
 	AddSilence(*models.Silence) error

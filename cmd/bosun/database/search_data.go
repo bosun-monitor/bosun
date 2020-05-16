@@ -29,7 +29,8 @@ search:allMetrics -> hash of metric name to timestamp
 search:mts:{metric} -> all tag sets for a metric. Hash with time stamps
 */
 
-const Search_All = "__all__"
+// SearchAll is a placeholder for all metrics
+const SearchAll = "__all__"
 const searchAllMetricsKey = "search:allMetrics"
 
 func searchMetricKey(tagK, tagV string) string {

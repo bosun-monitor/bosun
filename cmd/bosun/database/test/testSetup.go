@@ -14,6 +14,7 @@ import (
 var flagReddisHost = flag.String("redis", "", "redis server to test against")
 var flagFlushRedis = flag.Bool("flush", false, "flush database before tests. DANGER!")
 
+// StartTestRedis starts a test Redis instance on the given port
 func StartTestRedis(port int) (database.DataAccess, func()) {
 	flag.Parse()
 	// For redis tests we just point at an external server.

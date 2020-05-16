@@ -51,6 +51,7 @@ func incidentsForAlertKeyKey(ak models.AlertKey) string {
 	return fmt.Sprintf("incidents:%s", ak)
 }
 
+// StateDataAccess is the core data access interface for everything around state
 type StateDataAccess interface {
 	TouchAlertKey(ak models.AlertKey, t time.Time) error
 	GetUntouchedSince(alert string, time int64) ([]models.AlertKey, error)
@@ -58,7 +59,7 @@ type StateDataAccess interface {
 	GetOpenIncident(ak models.AlertKey) (*models.IncidentState, error)
 	GetLatestIncident(ak models.AlertKey) (*models.IncidentState, error)
 	GetAllOpenIncidents() ([]*models.IncidentState, error)
-	GetIncidentState(incidentId int64) (*models.IncidentState, error)
+	GetIncidentState(incidentID int64) (*models.IncidentState, error)
 
 	GetAllIncidentsByAlertKey(ak models.AlertKey) ([]*models.IncidentState, error)
 	GetAllIncidentIdsByAlertKey(ak models.AlertKey) ([]int64, error)
@@ -67,10 +68,10 @@ type StateDataAccess interface {
 	ImportIncidentState(s *models.IncidentState) error
 
 	// SetIncidentNext gets the incident for previousIncidentId, and sets its NextId field to be nextIncidentId and then saves the incident
-	SetIncidentNext(incidentId, nextIncidentId int64) error
+	SetIncidentNext(incidentID, nextIncidentID int64) error
 
-	SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error
-	GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error)
+	SetRenderedTemplates(incidentID int64, rt *models.RenderedTemplates) error
+	GetRenderedTemplates(incidentID int64) (*models.RenderedTemplates, error)
 	GetRenderedTemplateKeys() ([]string, error)
 	CleanupOldRenderedTemplates(olderThan time.Duration)
 	DeleteRenderedTemplates(incidentIds []int64) error
@@ -80,7 +81,7 @@ type StateDataAccess interface {
 	GetUnknownAndUnevalAlertKeys(alert string) ([]models.AlertKey, []models.AlertKey, error)
 }
 
-func (d *dataAccess) SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error {
+func (d *dataAccess) SetRenderedTemplates(incidentID int64, rt *models.RenderedTemplates) error {
 	conn := d.Get()
 	defer conn.Close()
 
@@ -88,18 +89,18 @@ func (d *dataAccess) SetRenderedTemplates(incidentId int64, rt *models.RenderedT
 	if err != nil {
 		return slog.Wrap(err)
 	}
-	_, err = conn.Do("SET", renderedTemplatesKey(incidentId), data)
+	_, err = conn.Do("SET", renderedTemplatesKey(incidentID), data)
 	if err != nil {
 		return slog.Wrap(err)
 	}
 	return nil
 }
 
-func (d *dataAccess) GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error) {
+func (d *dataAccess) GetRenderedTemplates(incidentID int64) (*models.RenderedTemplates, error) {
 	conn := d.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET", renderedTemplatesKey(incidentId)))
+	b, err := redis.Bytes(conn.Do("GET", renderedTemplatesKey(incidentID)))
 	renderedT := &models.RenderedTemplates{}
 	if err != nil {
 		if err == redis.ErrNil {
@@ -321,8 +322,8 @@ func (d *dataAccess) incidentMultiGet(conn redis.Conn, ids []int64) ([]*models.I
 	return results, nil
 }
 
-func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn) (*models.IncidentState, error) {
-	b, err := redis.Bytes(conn.Do("GET", incidentStateKey(incidentId)))
+func (d *dataAccess) getIncident(incidentID int64, conn redis.Conn) (*models.IncidentState, error) {
+	b, err := redis.Bytes(conn.Do("GET", incidentStateKey(incidentID)))
 	if err != nil {
 		return nil, slog.Wrap(err)
 	}
@@ -345,22 +346,22 @@ func (d *dataAccess) setIncident(incident *models.IncidentState, conn redis.Conn
 	return nil
 }
 
-func (d *dataAccess) GetIncidentState(incidentId int64) (*models.IncidentState, error) {
+func (d *dataAccess) GetIncidentState(incidentID int64) (*models.IncidentState, error) {
 	conn := d.Get()
 	defer conn.Close()
-	return d.getIncident(incidentId, conn)
+	return d.getIncident(incidentID, conn)
 }
 
 // SetIncidentNext gets the incident for previousIncidentId, and sets its NextId field
 // to be nextIncidentId and then saves the incident
-func (d *dataAccess) SetIncidentNext(previousIncidentId, nextIncidentId int64) error {
+func (d *dataAccess) SetIncidentNext(previousIncidentID, nextIncidentID int64) error {
 	conn := d.Get()
 	defer conn.Close()
-	previousIncident, err := d.getIncident(previousIncidentId, conn)
+	previousIncident, err := d.getIncident(previousIncidentID, conn)
 	if err != nil {
 		return err
 	}
-	previousIncident.NextId = nextIncidentId
+	previousIncident.NextId = nextIncidentID
 	err = d.setIncident(previousIncident, conn)
 	if err != nil {
 		return err
@@ -616,6 +617,7 @@ func (d *dataAccess) CleanupOldRenderedTemplates(olderThan time.Duration) {
 	}
 }
 
+// IsRedisNil returns whether an error returned from Redis is an is-nil error
 func IsRedisNil(err error) bool {
 	if err != nil && strings.Contains(err.Error(), "nil returned") {
 		return true

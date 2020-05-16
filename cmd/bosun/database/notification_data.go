@@ -27,6 +27,7 @@ func notsByAlertKeyKey(ak models.AlertKey) string {
 	return fmt.Sprintf("notsByAlert:%s", ak.Name())
 }
 
+// NotificationDataAccess is the core data access interface for everything around notifications
 type NotificationDataAccess interface {
 	InsertNotification(ak models.AlertKey, notification string, dueAt time.Time) error
 

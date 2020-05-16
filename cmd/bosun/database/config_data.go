@@ -10,6 +10,7 @@ import (
 	"bosun.org/slog"
 )
 
+// ConfigDataAccess is an interface config database access
 type ConfigDataAccess interface {
 	SaveTempConfig(text string) (hash string, err error)
 	GetTempConfig(hash string) (text string, err error)

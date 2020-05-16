@@ -14,6 +14,7 @@ import (
 
 var schemaKey = "schemaVersion"
 
+// Migration is a database schema migration
 type Migration struct {
 	UID     string
 	Task    func(d *dataAccess) error
@@ -94,14 +95,14 @@ func populatePreviousIncidents(d *dataAccess) error {
 	conn := d.Get()
 	defer conn.Close()
 
-	prevIdCache := make(map[models.AlertKey]*[]int64)
+	prevIDCache := make(map[models.AlertKey]*[]int64)
 
 	for _, id := range ids {
 		incident, err := d.State().GetIncidentState(id)
 		if err != nil {
 			return err
 		}
-		if _, ok := prevIdCache[incident.AlertKey]; !ok {
+		if _, ok := prevIDCache[incident.AlertKey]; !ok {
 			prevList, err := d.State().GetAllIncidentIdsByAlertKey(incident.AlertKey)
 			if err != nil {
 				return err
@@ -109,9 +110,9 @@ func populatePreviousIncidents(d *dataAccess) error {
 			sort.Slice(prevList, func(i, j int) bool {
 				return prevList[i] < prevList[j]
 			})
-			prevIdCache[incident.AlertKey] = &prevList
+			prevIDCache[incident.AlertKey] = &prevList
 		}
-		for _, pid := range *prevIdCache[incident.AlertKey] {
+		for _, pid := range *prevIDCache[incident.AlertKey] {
 			if incident.Id > pid {
 				incident.PreviousIds = append([]int64{pid}, incident.PreviousIds...)
 				continue

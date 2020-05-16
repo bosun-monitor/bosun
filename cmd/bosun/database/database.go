@@ -23,9 +23,10 @@ import (
 	"github.com/captncraig/easyauth/providers/token/redisStore"
 )
 
+// SchemaVersion is the version of the database schema
 var SchemaVersion = int64(2)
 
-// Core data access interface for everything sched needs
+// DataAccess is the core data access interface for everything sched needs
 type DataAccess interface {
 	RedisConnector
 	Metadata() MetadataDataAccess
@@ -38,6 +39,7 @@ type DataAccess interface {
 	Migrate() error
 }
 
+// MetadataDataAccess is the core data access interface for everything around metadata
 type MetadataDataAccess interface {
 	// Insert Metric Metadata. Field must be one of "desc", "rate", or "unit".
 	PutMetricMetadata(metric string, field string, value string) error
@@ -49,6 +51,7 @@ type MetadataDataAccess interface {
 	DeleteTagMetadata(tags opentsdb.TagSet, name string) error
 }
 
+// SearchDataAccess is the core data access interface for everything around search data
 type SearchDataAccess interface {
 	AddMetricForTag(tagK, tagV, metric string, time int64) error
 	GetMetricsForTag(tagK, tagV string) (map[string]int64, error)
@@ -74,7 +77,8 @@ type dataAccess struct {
 	isRedis bool
 }
 
-// Create a new data access object pointed at the specified address. isRedis parameter used to distinguish true redis from ledis in-proc.
+// NewDataAccess creates a new data access object pointed at the specified address.
+// isRedis parameter used to distinguish true Redis from Ledis.
 func NewDataAccess(addr []string, isRedis bool, masterName string, redisDb int, redisPass string) DataAccess {
 	return newDataAccess(addr, isRedis, masterName, redisDb, redisPass)
 }
@@ -86,7 +90,9 @@ func newDataAccess(addr []string, isRedis bool, masterName string, redisDb int, 
 	}
 }
 
-// Start in-process ledis server. Data will go in the specified directory and it will bind to the given port.
+// StartLedis starts the in-process Ledis server
+//
+// Data will go in the specified directory and it will bind to the given port.
 // Return value is a function you can call to stop the server.
 func StartLedis(dataDir string, bind string) (stop func(), err error) {
 	cfg := config.NewConfigDefault()

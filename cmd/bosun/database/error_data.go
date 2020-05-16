@@ -18,6 +18,7 @@ error:{name} = list of json objects for coalesced error events (most recent firs
 
 */
 
+// ErrorDataAccess is the core data access interface for everything around errors
 type ErrorDataAccess interface {
 	MarkAlertSuccess(name string) error
 	MarkAlertFailure(name string, msg string) error
