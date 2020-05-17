@@ -21,15 +21,19 @@ type Request struct {
 	URL     *url.URL
 }
 
+// Response is a Graphite response
 type Response []Series
 
+// Series is a Graphite time series
 type Series struct {
 	Datapoints []DataPoint
 	Target     string
 }
 
+// DataPoint is a Graphite data point
 type DataPoint []json.Number
 
+// CacheKey returns a cache key for the request
 func (r *Request) CacheKey() string {
 	targets, _ := json.Marshal(r.Targets)
 	return fmt.Sprintf("graphite-%d-%d-%s", r.Start.Unix(), r.End.Unix(), targets)
@@ -134,11 +138,13 @@ func (h Host) Query(r *Request) (Response, error) {
 	return r.Query(string(h), nil)
 }
 
+// HostHeader contains a Graphite host and an HTTP header
 type HostHeader struct {
 	Host   string
 	Header http.Header
 }
 
+// Query queries a Graphite server
 func (h HostHeader) Query(r *Request) (Response, error) {
 	return r.Query(h.Host, h.Header)
 }
