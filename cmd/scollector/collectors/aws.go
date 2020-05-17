@@ -37,6 +37,7 @@ const (
 
 var aws_period = int64(60)
 
+// AWS collects data from Amazon Web Services
 func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath string, purgeDays int) error {
 	if accessKey == "" || secretKey == "" || region == "" {
 		return fmt.Errorf("empty AccessKey, SecretKey, or Region in AWS")

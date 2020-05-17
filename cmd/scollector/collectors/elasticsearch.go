@@ -126,6 +126,7 @@ var (
 	elasticIndexFiltersInc = make([]*regexp.Regexp, 0)
 )
 
+// AddElasticIndexFilter adds the given filter either as an inclusion or exclusion filter
 func AddElasticIndexFilter(s string, exclude bool) error {
 	re, err := regexp.Compile(s)
 	if err != nil {
@@ -277,7 +278,7 @@ func c_elasticsearch(collectIndices bool, instance conf.Elastic) (opentsdb.Multi
 				"red":    0,
 			}
 			for _, index := range clusterHealth.Indices {
-				indexStatusCount[index.Status] += 1
+				indexStatusCount[index.Status]++
 			}
 			for status, count := range indexStatusCount {
 				Add(&md, "elastic.health.cluster.index_status_count", count, opentsdb.TagSet{"status": status}.Merge(ts), metadata.Gauge, metadata.Unit("indices"), "Index counts by status.")
@@ -354,6 +355,7 @@ func esStatsURL(version string) string {
 	return "/_nodes/_local/stats"
 }
 
+// ElasticHealth holds statistics on Elasticsearch's health as returned by `/_cluster/health`
 type ElasticHealth struct {
 	ActivePrimaryShards         int                           `json:"active_primary_shards" desc:"The number of active primary shards. Each document is stored in a single primary shard and then when it is indexed it is copied the replicas of that shard."`
 	ActiveShards                int                           `json:"active_shards" desc:"The number of active shards."`
@@ -373,6 +375,7 @@ type ElasticHealth struct {
 	UnassignedShards            int                           `json:"unassigned_shards" version:"2"` // 2.0 only
 }
 
+// ElasticIndexHealth holds statistics on the health of an Elasticsearch index
 type ElasticIndexHealth struct {
 	ActivePrimaryShards int    `json:"active_primary_shards" desc:"The number of active primary shards. Each document is stored in a single primary shard and then when it is indexed it is copied the replicas of that shard."`
 	ActiveShards        int    `json:"active_shards" desc:"The number of active shards."`
@@ -384,6 +387,7 @@ type ElasticIndexHealth struct {
 	UnassignedShards    int    `json:"unassigned_shards"`
 }
 
+// ElasticIndexStats holds statistics on an Elasticsearch index as returned by `/_stats`
 type ElasticIndexStats struct {
 	All    ElasticIndex `json:"_all"`
 	Shards struct {
@@ -394,11 +398,13 @@ type ElasticIndexStats struct {
 	Indices map[string]ElasticIndex `json:"indices"`
 }
 
+// ElasticIndex groups the stats of all shards belonging to an Elasticsearch index
 type ElasticIndex struct {
 	Primaries ElasticIndexDetails `json:"primaries"`
 	Total     ElasticIndexDetails `json:"total"`
 }
 
+// ElasticIndexDetails holds details on an Elasticsearch shard
 type ElasticIndexDetails struct {
 	Completion struct {
 		SizeInBytes int `json:"size_in_bytes" desc:"Size of the completion index (used for auto-complete functionallity)."`
@@ -531,6 +537,7 @@ type ElasticIndexDetails struct {
 	} `json:"warmer"`
 }
 
+// ElasticStatus holds statistics on Elasticsearch's status as returned by `/`
 type ElasticStatus struct {
 	Status  int    `json:"status"`
 	Name    string `json:"name"`
@@ -539,6 +546,7 @@ type ElasticStatus struct {
 	} `json:"version"`
 }
 
+// ElasticClusterStats holds statistics on Elasticsearch's cluster stats as returned by `/_cluster/stats`
 type ElasticClusterStats struct {
 	ClusterName string `json:"cluster_name"`
 	Nodes       map[string]struct {
@@ -748,6 +756,7 @@ type ElasticClusterStats struct {
 	} `json:"nodes"`
 }
 
+// ElasticThreadPoolStat holds statistics on Elasticsearch's thread pools
 type ElasticThreadPoolStat struct {
 	Active    int `json:"active"`
 	Completed int `json:"completed"`
@@ -757,6 +766,7 @@ type ElasticThreadPoolStat struct {
 	Threads   int `json:"threads"`
 }
 
+// ElasticBreakersStat holds statistics on Elasticsearch's circuit breakers
 type ElasticBreakersStat struct {
 	EstimatedSize        string  `json:"estimated_size"`
 	EstimatedSizeInBytes int     `json:"estimated_size_in_bytes"`
@@ -766,6 +776,7 @@ type ElasticBreakersStat struct {
 	Tripped              int     `json:"tripped"`
 }
 
+// ElasticClusterState holds which node the current master is
 type ElasticClusterState struct {
 	MasterNode string `json:"master_node"`
 }

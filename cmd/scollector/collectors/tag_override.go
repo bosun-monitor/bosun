@@ -7,11 +7,14 @@ import (
 	"bosun.org/opentsdb"
 )
 
+// TagOverride allows to define overrides for tags that are added by scollector
 type TagOverride struct {
+	// FIXME: This looks like a duplicate of conf.TagOverride
 	matchedTags map[string]*regexp.Regexp
 	tags        opentsdb.TagSet
 }
 
+// AddTagOverrides adds tags that will be overridden by scollector
 func (to *TagOverride) AddTagOverrides(sources map[string]string, t opentsdb.TagSet) error {
 	if to.matchedTags == nil {
 		to.matchedTags = make(map[string]*regexp.Regexp)
@@ -33,6 +36,7 @@ func (to *TagOverride) AddTagOverrides(sources map[string]string, t opentsdb.Tag
 	return nil
 }
 
+// ApplyTagOverrides applies the tag overrides
 func (to *TagOverride) ApplyTagOverrides(t opentsdb.TagSet) {
 	namedMatchGroup := make(map[string]string)
 	for tag, re := range to.matchedTags {

@@ -19,6 +19,7 @@ import (
 	"bosun.org/util"
 )
 
+// ProgramCollector is a collector for a command that needs to run periodically
 type ProgramCollector struct {
 	Path     string
 	Interval time.Duration
@@ -26,6 +27,7 @@ type ProgramCollector struct {
 	TagOverride
 }
 
+// InitPrograms initialises collectors found in the given directory
 func InitPrograms(cpath string) {
 	cdir, err := os.Open(cpath)
 	if err != nil {
@@ -86,6 +88,7 @@ func isExecutable(f os.FileInfo) bool {
 	}
 }
 
+// Run runs the collector
 func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan struct{}) {
 	if c.Interval == 0 {
 		for {
@@ -110,6 +113,7 @@ func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan st
 	}
 }
 
+// Init initialises the collector
 func (c *ProgramCollector) Init() {
 }
 
@@ -246,6 +250,7 @@ func parseTcollectorValue(line string) (*opentsdb.DataPoint, error) {
 	return &dp, nil
 }
 
+// Name returns the name of the collector
 func (c *ProgramCollector) Name() string {
 	return c.Path
 }

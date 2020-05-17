@@ -464,6 +464,7 @@ const (
 	localRiakURL string = "http://localhost:8098/stats"
 )
 
+// Riak starts the collector for riak hosts
 func Riak(s string) error {
 	u, err := url.Parse(s)
 	if err != nil {

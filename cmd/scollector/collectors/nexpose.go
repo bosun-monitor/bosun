@@ -241,7 +241,7 @@ func (c *nexposeConnection) xmlRequest(request interface{}, version int) (*apiRe
 	} else if version == 2 {
 		url = c.URLv2
 	} else {
-		return nil, fmt.Errorf("Unsupported API version requested.")
+		return nil, fmt.Errorf("unsupported API version requested")
 	}
 
 	resp, err := c.Client.Post(url, "text/xml", bytes.NewBuffer(buf))
@@ -275,7 +275,7 @@ func (c *nexposeConnection) login() error {
 	}
 
 	if resp.SessionID == "" {
-		return fmt.Errorf("No SessionID in response.")
+		return fmt.Errorf("no SessionID in response")
 	}
 	c.SessionID = resp.SessionID
 

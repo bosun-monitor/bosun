@@ -12,25 +12,27 @@ import (
 	"github.com/StackExchange/httpunit"
 )
 
+// HTTPUnitTOML adds a collector for httpUnit in TOML mode
 func HTTPUnitTOML(filename string, freq time.Duration) error {
 	var plans httpunit.Plans
 	if _, err := toml.DecodeFile(filename, &plans); err != nil {
 		return err
 	}
-	HTTPUnitPlans(filename, &plans, freq)
+	httpUnitPlans(filename, &plans, freq)
 	return nil
 }
 
+// HTTPUnitHiera adds a collector for httpUnit in Hiera mode
 func HTTPUnitHiera(filename string, freq time.Duration) error {
 	plans, err := httpunit.ExtractHiera(filename)
 	if err != nil {
 		return err
 	}
-	HTTPUnitPlans(filename, &httpunit.Plans{Plans: plans}, freq)
+	httpUnitPlans(filename, &httpunit.Plans{Plans: plans}, freq)
 	return nil
 }
 
-func HTTPUnitPlans(name string, plans *httpunit.Plans, freq time.Duration) {
+func httpUnitPlans(name string, plans *httpunit.Plans, freq time.Duration) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return cHTTPUnit(plans)

@@ -356,6 +356,7 @@ type rmqBackingQueueStatus struct {
 	MirrorSenders     int     `json:"mirror_senders"`
 }
 
+// Constants that explain the meaning of the RabbitMQ metrics
 const (
 	DescRmqBackingQueueStatusAvgAckEgressRate  = "Rate at which unacknowledged message records leave RAM, e.g. because acks arrive or unacked messages are paged out"
 	DescRmqBackingQueueStatusAvgAckIngressRate = "Rate at which unacknowledged message records enter RAM, e.g. because messages are delivered requiring acknowledgement"

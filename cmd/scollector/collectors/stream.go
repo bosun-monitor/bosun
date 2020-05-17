@@ -10,10 +10,9 @@ import (
 	"bosun.org/util"
 )
 
-/* StreamCollector is useful for collectors that do not produces metrics at a
-   preset interval. Instead it consummes directly from a channel provided by
-   the collector and forwards it internally. */
-
+// StreamCollector is useful for collectors that do not produces metrics at a preset interval
+//
+// Instead it consumes directly from a channel provided by the collector and forwards it internally.
 type StreamCollector struct {
 	F    func() <-chan *opentsdb.MultiDataPoint
 	name string
@@ -22,12 +21,14 @@ type StreamCollector struct {
 	TagOverride
 }
 
+// Init initialises the collector
 func (s *StreamCollector) Init() {
 	if s.init != nil {
 		s.init()
 	}
 }
 
+// Run runs the collector
 func (s *StreamCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan struct{}) {
 	inputChan := s.F()
 	count := 0
@@ -53,10 +54,12 @@ func (s *StreamCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan str
 	}
 }
 
+// Enabled returns whether the collector is enabled
 func (s *StreamCollector) Enabled() bool {
 	return true
 }
 
+// Name returns the name of the collector
 func (s *StreamCollector) Name() string {
 	if s.name != "" {
 		return s.name

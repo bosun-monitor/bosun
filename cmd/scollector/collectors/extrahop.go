@@ -25,7 +25,7 @@ var extraHopCertificateActivityGroup int
 // ExtraHop collection registration
 func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []string, certMatch string, certActivityGroup int) error {
 	if host == "" || apikey == "" {
-		return fmt.Errorf("Empty host or API key for ExtraHop.")
+		return fmt.Errorf("empty host or API key for ExtraHop")
 	}
 
 	extraHopAdditionalMetrics = customMetrics
@@ -37,14 +37,14 @@ func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []
 		if filterpercent > 0 && filterpercent < 100 {
 			extraHopTopProtoPerc = filterpercent
 		} else {
-			return fmt.Errorf("Invalid ExtraHop FilterPercent value (%d). Number should be between 1 and 99.", filterpercent)
+			return fmt.Errorf("invalid ExtraHop FilterPercent value (%d). Number should be between 1 and 99", filterpercent)
 		}
 	case "namedprotocols":
 		extraHopL7Description = "Only named protocols are logged. Any unnamed protocol (A protocol name starting with tcp, udp or ssl) is tagged as proto=unnamed"
 		extraHopOtherProtoName = "unnamed"
 	//There is also case "none", but in that case the options we need to keep as default, so there's actually nothing to do here.
 	default:
-		return fmt.Errorf("Invalid ExtraHop FilterBy option (%s). Valid options are namedprotocols, toppercent or none.", filterby)
+		return fmt.Errorf("invalid ExtraHop FilterBy option (%s). Valid options are namedprotocols, toppercent or none", filterby)
 
 	}
 	//Add the metadata for the L7 types, as now we have enough information to know what they're going to be
@@ -330,6 +330,7 @@ var l7types = map[string]L7Stats{
 	"pkts":  {Rate: metadata.Gauge, Unit: metadata.Counter, Description: "The number of packets transmitted on this network. You can drill down by server, network, vlan and protocol for further investigations."},
 }
 
+// L7Stats describes layer 7 stats to collect
 type L7Stats struct {
 	Rate        metadata.RateType
 	Unit        metadata.Unit

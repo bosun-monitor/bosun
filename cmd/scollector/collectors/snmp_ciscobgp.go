@@ -12,6 +12,7 @@ import (
 	"bosun.org/snmp"
 )
 
+// SNMPCiscoBGP adds the collector for BGP health data from Cisco devices
 func SNMPCiscoBGP(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {

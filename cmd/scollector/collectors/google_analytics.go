@@ -80,9 +80,8 @@ func c_google_analytics(clientid string, secret string, tokenstr string, jsonTok
 
 	if len(mErr) == 0 {
 		return md, nil
-	} else {
-		return md, mErr
 	}
+	return md, mErr
 }
 
 type kv struct {

@@ -28,6 +28,7 @@ var builtInSNMPs = map[string]func(cfg conf.SNMP){
 	"lag":      SNMPLag,
 }
 
+// SNMP adds the SNMP collectors
 func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 	if cfg.Host == "" {
 		return fmt.Errorf("empty SNMP hostname")
@@ -155,6 +156,7 @@ func combineOids(oid, base string) string {
 	return oid
 }
 
+// GenericSnmp makes a generic SNMP request
 func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 	md := opentsdb.MultiDataPoint{}
 	baseOid := mib.BaseOid

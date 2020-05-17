@@ -11,6 +11,7 @@ import (
 	"bosun.org/util"
 )
 
+// MetricSet is a set of metrics
 type MetricSet map[string]string
 
 func init() {

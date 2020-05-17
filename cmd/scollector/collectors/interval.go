@@ -17,6 +17,7 @@ import (
 	"bosun.org/slog"
 )
 
+// IntervalCollector calls a collector in regular intervals
 type IntervalCollector struct {
 	F        func() (opentsdb.MultiDataPoint, error)
 	Interval time.Duration // defaults to DefaultFreq if unspecified
@@ -31,12 +32,14 @@ type IntervalCollector struct {
 	TagOverride
 }
 
+// Init initialises the collector
 func (c *IntervalCollector) Init() {
 	if c.init != nil {
 		c.init()
 	}
 }
 
+// Run runs the collector
 func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan struct{}) {
 	if c.Enable != nil {
 		go func() {
@@ -84,6 +87,7 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan s
 	}
 }
 
+// Enabled returns whether the collector is enabled
 func (c *IntervalCollector) Enabled() bool {
 	if c.Enable == nil {
 		return true
@@ -93,6 +97,7 @@ func (c *IntervalCollector) Enabled() bool {
 	return c.enabled
 }
 
+// Name returns the name of the collector
 func (c *IntervalCollector) Name() string {
 	if c.name != "" {
 		return c.name

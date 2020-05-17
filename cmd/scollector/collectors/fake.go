@@ -8,6 +8,7 @@ import (
 	"bosun.org/opentsdb"
 )
 
+// InitFake initialises the fake collector
 func InitFake(fake int) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {

@@ -21,9 +21,8 @@ func init() {
 					F: func() (opentsdb.MultiDataPoint, error) {
 						if ii.User != "" {
 							return haproxyFetch(ii.User, ii.Password, ii.Tier, ii.URL)
-						} else {
-							return haproxyFetch(h.User, h.Password, ii.Tier, ii.URL)
 						}
+						return haproxyFetch(h.User, h.Password, ii.Tier, ii.URL)
 					},
 					name: fmt.Sprintf("haproxy-%s-%s", ii.Tier, ii.URL),
 				})

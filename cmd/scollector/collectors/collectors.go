@@ -25,11 +25,17 @@ import (
 
 var collectors []Collector
 
+// Collector is an interface for collectors that can be run by scollector
 type Collector interface {
+	// Run runs the collector
 	Run(chan<- *opentsdb.DataPoint, <-chan struct{})
+	// Name returns the name of the collector
 	Name() string
+	// Init initialises the collector
 	Init()
+	// AddTagOverrides adds tags that will be overridden by scollector
 	AddTagOverrides(map[string]string, opentsdb.TagSet) error
+	// ApplyTagOverrides applies the tag overrides
 	ApplyTagOverrides(opentsdb.TagSet)
 }
 
@@ -111,20 +117,25 @@ var (
 
 	timestamp = time.Now().Unix()
 	tlock     sync.Mutex
-	AddTags   opentsdb.TagSet
+	// AddTags holds tags that are always added
+	AddTags opentsdb.TagSet
 
 	metricFilters = make([]*regexp.Regexp, 0)
 
+	// AddProcessDotNetConfig is not implemented on Mac OS
 	AddProcessDotNetConfig = func(params conf.ProcessDotNet) error {
 		return fmt.Errorf("process_dotnet watching not implemented on this platform")
 	}
+	// WatchProcessesDotNet is a watcher for .NET processes. Only implemented on Windows.
 	WatchProcessesDotNet = func() {}
 
+	// KeepalivedCommunity is a collector for keepalived routers on Linux
 	KeepalivedCommunity = ""
 
-	//TotalScollectorMemory stores the total memory used by Scollector (including CGO and WMI)
+	// TotalScollectorMemoryMB stores the total memory used by Scollector (including CGO and WMI)
 	TotalScollectorMemoryMB uint64
 
+	// MetricPrefix is a prefix used for all metrics
 	MetricPrefix = ""
 )
 
@@ -187,7 +198,7 @@ func Search(s []string) []Collector {
 	return r
 }
 
-// Adds configured tag overrides to all matching collectors
+// AddTagOverrides adds configured tag overrides to all matching collectors
 func AddTagOverrides(s []Collector, tagOverride []conf.TagOverride) error {
 	for _, to := range tagOverride {
 		re := regexp.MustCompile(to.CollectorExpr)
@@ -225,6 +236,7 @@ func registerInit(i initFunc) {
 	inits = append(inits, i)
 }
 
+// Init is an initialiser for the collectors
 func Init(c *conf.Conf) {
 	if c.MetricPrefix != "" {
 		MetricPrefix = c.MetricPrefix
@@ -234,6 +246,7 @@ func Init(c *conf.Conf) {
 	}
 }
 
+// MetricMeta holds metadata for a metric
 type MetricMeta struct {
 	Metric   string
 	TagSet   opentsdb.TagSet
@@ -355,6 +368,12 @@ func IsAlNum(s string) bool {
 	return true
 }
 
+// TSys100NStoEpoch converts a Windows FILETIME timestamp to Unix
+//
+// Windows represents time as the number of 100-nanosecond intervals since January 1, 1601 (UTC), where the epoch in
+// Unixoid systems is January 1, 1970.
+// 116444736000000000 intervals of 100ns correspond to 134774 days, exactly the difference between 01/01/1601 and
+// 01/01/1970.
 func TSys100NStoEpoch(nsec uint64) int64 {
 	nsec -= 116444736000000000
 	seconds := nsec / 1e7

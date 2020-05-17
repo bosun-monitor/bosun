@@ -5,6 +5,7 @@ import (
 	"bosun.org/opentsdb"
 )
 
+// Conf is scollector's config
 type Conf struct {
 	// Host is the OpenTSDB or Bosun host to send data.
 	Host string
@@ -101,12 +102,14 @@ type Conf struct {
 	Fastly                 []Fastly
 }
 
+// HAProxy holds connection details for multiple HAProxy instances
 type HAProxy struct {
 	User      string
 	Password  string
 	Instances []HAProxyInstance
 }
 
+// HAProxyInstance holds connection details for an HAProxy instance
 type HAProxyInstance struct {
 	User     string
 	Password string
@@ -114,6 +117,7 @@ type HAProxyInstance struct {
 	URL      string
 }
 
+// Nexpose holds connection details for Nexpose
 type Nexpose struct {
 	Username string
 	Password string
@@ -121,6 +125,7 @@ type Nexpose struct {
 	Insecure bool
 }
 
+// GoogleAnalytics holds connection details for Google Analytics
 type GoogleAnalytics struct {
 	ClientID  string
 	Secret    string
@@ -129,6 +134,7 @@ type GoogleAnalytics struct {
 	Sites     []GoogleAnalyticsSite
 }
 
+// GoogleWebmaster holds connection details for Google Webmasters
 type GoogleWebmaster struct {
 	ClientID  string
 	Secret    string
@@ -136,11 +142,13 @@ type GoogleWebmaster struct {
 	JSONToken string
 }
 
+// Fastly holds connection details for Fastly
 type Fastly struct {
 	Key            string
 	StatusBaseAddr string
 }
 
+// GoogleAnalyticsSite holds connection details for Google Analytics
 type GoogleAnalyticsSite struct {
 	Name     string
 	Profile  string
@@ -148,16 +156,19 @@ type GoogleAnalyticsSite struct {
 	Detailed bool
 }
 
+// ICMP holds connection details for ICMP (Internet Control Message Protocol)
 type ICMP struct {
 	Host string
 }
 
+// Vsphere holds connection details for Vsphere
 type Vsphere struct {
 	Host     string
 	User     string
 	Password string
 }
 
+// AWS holds connection details for Amazon Web Services
 type AWS struct {
 	AccessKey                string
 	SecretKey                string
@@ -168,6 +179,7 @@ type AWS struct {
 	BillingPurgeDays         int
 }
 
+// AzureEA holds connection details for Microsoft Azure
 type AzureEA struct {
 	EANumber           uint32
 	APIKey             string
@@ -176,18 +188,21 @@ type AzureEA struct {
 	LogExtraTags       bool
 }
 
+// SNMP holds connection details for SNMP (Simple Network Management Protocol)
 type SNMP struct {
 	Community string
 	Host      string
 	MIBs      []string
 }
 
+// MIB represents a Management Information Base within SNMP
 type MIB struct {
 	BaseOid string
 	Metrics []MIBMetric // single key metrics
 	Trees   []MIBTree   // tagged array metrics
 }
 
+// MIBMetric is a metric within MIB
 type MIBMetric struct {
 	Metric      string
 	Oid         string
@@ -199,51 +214,61 @@ type MIBMetric struct {
 	Scale       float64
 }
 
+// MIBTag is a tag within MIB
 type MIBTag struct {
 	Key string
 	Oid string // If present will load from this oid. Use "idx" to populate with index of row instead of another oid.
 }
 
+// MIBTree is a tree within MIB
 type MIBTree struct {
 	BaseOid string
 	Tags    []MIBTag
 	Metrics []MIBMetric
 }
 
+// ProcessDotNet holds details on a .NET process
 type ProcessDotNet struct {
 	Name string
 }
 
+// HTTPUnit holds files to monitor (see https://github.com/StackExchange/httpunit)
 type HTTPUnit struct {
 	TOML  string
 	Hiera string
 	Freq  string
 }
 
+// Riak holds connection details for a Riak database
 type Riak struct {
 	URL string
 }
 
+// RabbitMQ holds connection details for RabbitMQ
 type RabbitMQ struct {
 	URL string
 }
 
+// Github holds Github credentials for a repository
 type Github struct {
 	Repo  string
 	Token string
 }
 
+// Cadvisor holds connection details for Google's cAdvisor
 type Cadvisor struct {
 	URL         string
 	PerCpuUsage bool
 	IsRemote    bool
 }
 
+// RedisCounters holds data on a Redis sub-database
 type RedisCounters struct {
 	Server   string
 	Database int
 }
 
+// ExtraHop holds connection details for ExtraHop hosts
 type ExtraHop struct {
 	Host                     string
 	APIKey                   string
@@ -254,23 +279,26 @@ type ExtraHop struct {
 	CertificateActivityGroup int
 }
 
+// TagOverride allows to define overrides for tags that are added by scollector
 type TagOverride struct {
 	CollectorExpr string
 	MatchedTags   map[string]string
 	Tags          map[string]string
 }
 
+// Oracle holds the config for an Oracle cluster
 type Oracle struct {
 	ClusterName string
 	Instances   []OracleInstance
 }
 
+// OracleInstance holds connection details for Oracle
 type OracleInstance struct {
 	ConnectionString string
 	Role             string
 }
 
-// Optional Elastic instance configuration - if omitted then the defaults are used
+// Elastic is an optional Elastic instance configuration - if omitted then the defaults are used
 // You can also define multiple instances where more than one node is running
 type Elastic struct {
 	Host            string // default is localhost
