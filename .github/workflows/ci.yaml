@@ -74,4 +74,4 @@ jobs:
         with:
           go-version: "^1.13"
       - name: Build ${{ matrix.os }} binary
-        run: make bosun-${{ matrix.os }}
+        run: make build-${{ matrix.os }}
