@@ -25,6 +25,7 @@ func main() {
 	http.ListenAndServe(":8888", nil)
 }
 
+// TestMib is the handler for the /test endpoint
 func TestMib(w http.ResponseWriter, r *http.Request) {
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -60,6 +61,7 @@ func TestMib(w http.ResponseWriter, r *http.Request) {
 	w.Write(mdJson)
 }
 
+// Toml is the handler for the /toml endpoint
 func Toml(w http.ResponseWriter, r *http.Request) {
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
