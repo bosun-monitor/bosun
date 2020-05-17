@@ -36,6 +36,7 @@ func init() {
 	metadata.AddMetricMeta("bosun.search.dropped", metadata.Counter, metadata.Count, "Number of datapoints discarded without being saved to redis")
 }
 
+// NewSearch creates a new search
 func NewSearch(data database.DataAccess, skipLast bool) *Search {
 	s := Search{
 		DataAccess: data,
@@ -65,6 +66,7 @@ func NewSearch(data database.DataAccess, skipLast bool) *Search {
 	return &s
 }
 
+// Index sends every data point of a multi-datapoint to a queue for indexing into Redis
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 	for _, dp := range mdp {
 		s.Lock()
@@ -124,7 +126,7 @@ func (s *Search) redisIndex(c <-chan *opentsdb.DataPoint) {
 				}
 			})
 			updateIfTime(fmt.Sprintf("kv:%s:%s", k, v), func() {
-				if err := s.DataAccess.Search().AddTagValue(database.Search_All, k, v, now); err != nil {
+				if err := s.DataAccess.Search().AddTagValue(database.SearchAll, k, v, now); err != nil {
 					slog.Error(err)
 				}
 			})
@@ -226,6 +228,7 @@ func (s *Search) backupLoop() {
 	}
 }
 
+// BackupLast backups the last search info
 func (s *Search) BackupLast() error {
 	s.RLock()
 	copyL := make(map[string]map[string]*database.LastInfo, len(s.last))
@@ -244,6 +247,9 @@ func (s *Search) BackupLast() error {
 	return s.DataAccess.Search().BackupLastInfos(copyL)
 }
 
+// Expand expands wildcards in tags in OpenTSDB queries
+//
+// Expands partial wildcards in tags, such as `host=node-*` to all known values of that tag
 func (s *Search) Expand(q *opentsdb.Query) error {
 	for k, ov := range q.Tags {
 		var nvs []string
@@ -289,10 +295,12 @@ func (s *Search) UniqueMetrics(epochFilter int64) ([]string, error) {
 	return metrics, nil
 }
 
-func (s *Search) TagValuesByTagKey(Tagk string, since time.Duration) ([]string, error) {
-	return s.TagValuesByMetricTagKey(database.Search_All, Tagk, since)
+// TagValuesByTagKey finds all metrics with a given tag key seen more recently than the given time ago
+func (s *Search) TagValuesByTagKey(tagk string, since time.Duration) ([]string, error) {
+	return s.TagValuesByMetricTagKey(database.SearchAll, tagk, since)
 }
 
+// MetricsByTagPair finds all metrics with the given tag seen more recently than the given time ago
 func (s *Search) MetricsByTagPair(tagk, tagv string, since time.Duration) ([]string, error) {
 	var t int64
 	if since > 0 {
@@ -302,7 +310,7 @@ func (s *Search) MetricsByTagPair(tagk, tagv string, since time.Duration) ([]str
 	if err != nil {
 		return nil, err
 	}
-	r := []string{}
+	r := make([]string, 0)
 	for k, ts := range metrics {
 		if t <= ts {
 			r = append(r, k)
@@ -312,6 +320,7 @@ func (s *Search) MetricsByTagPair(tagk, tagv string, since time.Duration) ([]str
 	return r, nil
 }
 
+// TagKeysByMetric returns all known tags for the given metric
 func (s *Search) TagKeysByMetric(metric string) ([]string, error) {
 	keys, err := s.DataAccess.Search().GetTagKeysForMetric(metric)
 	if err != nil {
@@ -325,6 +334,7 @@ func (s *Search) TagKeysByMetric(metric string) ([]string, error) {
 	return r, nil
 }
 
+// TagValuesByMetricTagKey finds all values for a tag of a metric seen more recently than the given time ago
 func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duration) ([]string, error) {
 	var t int64
 	if since > 0 {
@@ -334,7 +344,7 @@ func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duratio
 	if err != nil {
 		return nil, err
 	}
-	r := []string{}
+	r := make([]string, 0)
 	for k, ts := range vals {
 		if t <= ts {
 			r = append(r, k)
@@ -344,12 +354,14 @@ func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duratio
 	return r, nil
 }
 
+// FilteredTagSets finds all time series with the given name and tags that have been seen more recently than the given
+// time ago
 func (s *Search) FilteredTagSets(metric string, tags opentsdb.TagSet, since int64) ([]opentsdb.TagSet, error) {
 	sets, err := s.DataAccess.Search().GetMetricTagSets(metric, tags)
 	if err != nil {
 		return nil, err
 	}
-	r := []opentsdb.TagSet{}
+	r := make([]opentsdb.TagSet, 0)
 	for k, lastSeen := range sets {
 		ts, err := opentsdb.ParseTags(k)
 		if err != nil {
