@@ -18,7 +18,10 @@ jobs:
         with:
           # Disabling shallow clone is recommended for improving relevancy of reporting
           fetch-depth: 0
-      - name: generate
+      - name: Install dependencies
+        # Need to install Typescript which is required by SonarCloud ro tun its checks
+        run: make deps testdeps
+      - name: Generate coverage report
         run: make test-coverprofile
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
