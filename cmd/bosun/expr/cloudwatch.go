@@ -1,16 +1,17 @@
 package expr
 
 import (
-	"bosun.org/cloudwatch"
-	"bosun.org/cmd/bosun/expr/parse"
-	"bosun.org/models"
-	"bosun.org/opentsdb"
 	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"bosun.org/cloudwatch"
+	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/models"
+	"bosun.org/opentsdb"
 )
 
 // cloudwatch defines functions for use with amazon cloudwatch api
@@ -140,7 +141,7 @@ func CloudWatchQuery(prefix string, e *State, region, namespace, metric, period,
 			data, err := getCloudwatchData(e, &req)
 			if err == nil {
 				res, err = parseCloudWatchResponse(&req, &data, len(regions) > 1)
-				resCh <- &Results{Results: res,}
+				resCh <- &Results{Results: res}
 			}
 			errCh <- err
 		}

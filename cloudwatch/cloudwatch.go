@@ -2,18 +2,19 @@
 package cloudwatch // import "bosun.org/cloudwatch"
 
 import (
-	"bosun.org/opentsdb"
-	"bosun.org/slog"
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
+	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	cw "github.com/aws/aws-sdk-go/service/cloudwatch"
 	cwi "github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/ryanuber/go-glob"
-	"strings"
-	"sync"
-	"time"
 )
 
 var (
@@ -255,7 +256,7 @@ func buildTags(dims []Dimension) opentsdb.TagSet {
 }
 
 // Query performs a CloudWatch request to aws.
-func (c cloudWatchContext) Query(r *Request) (Response, error) {
+func (c *cloudWatchContext) Query(r *Request) (Response, error) {
 	var response Response
 	var dqs []*cw.MetricDataQuery
 	var tagSet = make(map[string]opentsdb.TagSet)
@@ -359,7 +360,7 @@ func filterDimensions(metrics []*cw.Metric, wildcard Wildcards, ds DimensionSet,
 }
 
 // Query performs a CloudWatch request to aws.
-func (c cloudWatchContext) LookupDimensions(lr *LookupRequest) ([][]Dimension, error) {
+func (c *cloudWatchContext) LookupDimensions(lr *LookupRequest) ([][]Dimension, error) {
 	api := c.getProfile(lr.Profile, lr.Region)
 	var metrics []*cw.Metric
 	var literal []*cw.DimensionFilter
