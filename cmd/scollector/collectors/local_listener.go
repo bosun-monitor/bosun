@@ -63,34 +63,34 @@ func (pm *putMetric) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		bodyReader = r.Body
 	}
 
-	body, err := ioutil.ReadAll(bodyReader)
-	if err != nil {
+	if body, err := ioutil.ReadAll(bodyReader); err != nil {
 		w.WriteHeader(500)
 		return
-	}
-	bodyReader.Close()
-
-	var (
-		dp  *opentsdb.DataPoint
-		mdp opentsdb.MultiDataPoint
-	)
-
-	if err := json.Unmarshal(body, &mdp); err == nil {
-	} else if err = json.Unmarshal(body, &dp); err == nil {
-		mdp = opentsdb.MultiDataPoint{dp}
 	} else {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("Unable to decode OpenTSDB json: %s\n", err)))
-		return
+		bodyReader.Close()
+
+		var (
+			dp  *opentsdb.DataPoint
+			mdp opentsdb.MultiDataPoint
+		)
+
+		if err := json.Unmarshal(body, &mdp); err == nil {
+		} else if err = json.Unmarshal(body, &dp); err == nil {
+			mdp = opentsdb.MultiDataPoint{dp}
+		} else {
+			w.WriteHeader(500)
+			w.Write([]byte(fmt.Sprintf("Unable to decode OpenTSDB json: %s\n", err)))
+			return
+		}
+
+		for _, dp := range mdp {
+			dp.Tags = AddTags.Copy().Merge(dp.Tags)
+		}
+
+		pm.localMetrics <- &mdp
+
+		w.WriteHeader(204)
 	}
-
-	for _, dp := range mdp {
-		dp.Tags = AddTags.Copy().Merge(dp.Tags)
-	}
-
-	pm.localMetrics <- &mdp
-
-	w.WriteHeader(204)
 }
 
 func putMetadata(w http.ResponseWriter, r *http.Request) {

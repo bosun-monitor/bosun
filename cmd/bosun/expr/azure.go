@@ -171,7 +171,7 @@ func azureTimeSpan(e *State, sdur, edur string) (span string, err error) {
 }
 
 // azureQuery queries Azure metrics for time series data based on the resourceUri
-func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur string) (r *Results, err error) {
+func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resourceUri, agtype, interval, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
@@ -210,9 +210,9 @@ func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resou
 	if err != nil {
 		return
 	}
-	cacheKey := strings.Join([]string{metric, filter, resourceURI, aggLong, interval, timespan}, ":")
+	cacheKey := strings.Join([]string{metric, filter, resourceUri, aggLong, interval, timespan}, ":")
 	getFn := func() (interface{}, error) {
-		req, err := c.ListPreparer(context.Background(), resourceURI,
+		req, err := c.ListPreparer(context.Background(), resourceUri,
 			timespan,
 			tg,
 			metric,

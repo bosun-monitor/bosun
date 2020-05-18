@@ -95,14 +95,14 @@ func populatePreviousIncidents(d *dataAccess) error {
 	conn := d.Get()
 	defer conn.Close()
 
-	prevIDCache := make(map[models.AlertKey]*[]int64)
+	prevIdCache := make(map[models.AlertKey]*[]int64)
 
 	for _, id := range ids {
 		incident, err := d.State().GetIncidentState(id)
 		if err != nil {
 			return err
 		}
-		if _, ok := prevIDCache[incident.AlertKey]; !ok {
+		if _, ok := prevIdCache[incident.AlertKey]; !ok {
 			prevList, err := d.State().GetAllIncidentIdsByAlertKey(incident.AlertKey)
 			if err != nil {
 				return err
@@ -110,9 +110,9 @@ func populatePreviousIncidents(d *dataAccess) error {
 			sort.Slice(prevList, func(i, j int) bool {
 				return prevList[i] < prevList[j]
 			})
-			prevIDCache[incident.AlertKey] = &prevList
+			prevIdCache[incident.AlertKey] = &prevList
 		}
-		for _, pid := range *prevIDCache[incident.AlertKey] {
+		for _, pid := range *prevIdCache[incident.AlertKey] {
 			if incident.Id > pid {
 				incident.PreviousIds = append([]int64{pid}, incident.PreviousIds...)
 				continue

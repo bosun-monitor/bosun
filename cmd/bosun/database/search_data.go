@@ -29,8 +29,8 @@ search:allMetrics -> hash of metric name to timestamp
 search:mts:{metric} -> all tag sets for a metric. Hash with time stamps
 */
 
-// SearchAll is a placeholder for all metrics
-const SearchAll = "__all__"
+// Search_All is a placeholder for all metrics
+const Search_All = "__all__"
 const searchAllMetricsKey = "search:allMetrics"
 
 func searchMetricKey(tagK, tagV string) string {
@@ -173,7 +173,7 @@ func (d *dataAccess) BackupLastInfos(m map[string]map[string]*LastInfo) error {
 	conn := d.Get()
 	defer conn.Close()
 
-	dat, err := util.MarshalGzipJSON(m)
+	dat, err := util.MarshalGzipJson(m)
 	if err != nil {
 		return slog.Wrap(err)
 	}
@@ -190,7 +190,7 @@ func (d *dataAccess) LoadLastInfos() (map[string]map[string]*LastInfo, error) {
 		return nil, slog.Wrap(err)
 	}
 	var m map[string]map[string]*LastInfo
-	err = util.UnmarshalGzipJSON(b, &m)
+	err = util.UnmarshalGzipJson(b, &m)
 	if err != nil {
 		return nil, slog.Wrap(err)
 	}

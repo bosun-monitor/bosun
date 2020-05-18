@@ -32,7 +32,7 @@ func NewElastic5(urls []string, simpleclient bool, index string, clientoptions [
 // GetAnnotations gets annotations filtered by the arguments
 func (e *Elastic5) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFilter) (annotate.Annotations, error) {
 	if !e.initialized {
-		return nil, errUnInit
+		return nil, unInitErr
 	}
 	annotations := annotate.Annotations{}
 	filters := []elastic.Query{}
@@ -87,7 +87,7 @@ func (e *Elastic5) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFi
 // GetFieldValues gets the values for a given field
 func (e *Elastic5) GetFieldValues(field string) ([]string, error) {
 	if !e.initialized {
-		return nil, errUnInit
+		return nil, unInitErr
 	}
 	terms := []string{}
 	switch field {
@@ -175,7 +175,7 @@ func (e *Elastic5) InitBackend() error {
 // InsertAnnotation inserts an annotation
 func (e *Elastic5) InsertAnnotation(a *annotate.Annotation) error {
 	if !e.initialized {
-		return errUnInit
+		return unInitErr
 	}
 	_, err := e.Index().Index(e.index).BodyJson(a).Id(a.Id).Type(docType).Do(context.Background())
 	return err
@@ -184,7 +184,7 @@ func (e *Elastic5) InsertAnnotation(a *annotate.Annotation) error {
 // GetAnnotation gets the annotation with the given ID
 func (e *Elastic5) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
 	if !e.initialized {
-		return nil, false, errUnInit
+		return nil, false, unInitErr
 	}
 	a := annotate.Annotation{}
 	if id == "" {
@@ -207,7 +207,7 @@ func (e *Elastic5) GetAnnotation(id string) (*annotate.Annotation, bool, error) 
 // DeleteAnnotation deletes the annotation with the given ID
 func (e *Elastic5) DeleteAnnotation(id string) error {
 	if !e.initialized {
-		return errUnInit
+		return unInitErr
 	}
 	_, err := e.Delete().Index(e.index).Type(docType).Id(id).Do(context.Background())
 	if err != nil {

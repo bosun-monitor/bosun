@@ -324,7 +324,7 @@ func newSystemConf() *SystemConf {
 			ResponseLimit: 1 << 20, // 1MB
 			Version:       opentsdb.Version2_1,
 		},
-		SearchSince:      Duration{time.Hour * 24 * 3},
+		SearchSince:      Duration{time.Duration(opentsdb.Day) * 3},
 		UnknownThreshold: 5,
 	}
 }

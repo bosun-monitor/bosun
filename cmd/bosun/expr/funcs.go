@@ -161,13 +161,13 @@ var builtins = map[string]parse.Func{
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return: models.TypeNumberSet,
 		Tags:   tagFirst,
-		F:      ForecastLr,
+		F:      Forecast_lr,
 	},
 	"linelr": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
 		Return: models.TypeSeriesSet,
 		Tags:   tagFirst,
-		F:      LineLr,
+		F:      Line_lr,
 	},
 	"last": {
 		Args:   []models.FuncType{models.TypeSeriesSet},
@@ -802,7 +802,7 @@ func Sort(e *State, series *Results, order string) (*Results, error) {
 // Limit returns the first count (scalar) items of the set.
 func Limit(e *State, set *Results, v float64) (*Results, error) {
 	if v < 0 {
-		return nil, fmt.Errorf("limit can't be negative value. We have received value %f as limit", v)
+		return nil, errors.New(fmt.Sprintf("Limit can't be negative value. We have received value %f as limit", v))
 	}
 	i := int(v)
 	if len(set.Results) > i {
@@ -1004,7 +1004,8 @@ func ToDuration(e *State, sec float64) (*Results, error) {
 	}, nil
 }
 
-func dropValues(e *State, series *Results, threshold *Results, dropFunction func(float64, float64) bool) (*Results, error) {
+// DropValues drops values that match the passed function
+func DropValues(e *State, series *Results, threshold *Results, dropFunction func(float64, float64) bool) (*Results, error) {
 	f := func(res *Results, s *Result, floats []float64) error {
 		nv := make(Series)
 		for k, v := range s.Value.Value().(Series) {
@@ -1027,26 +1028,26 @@ func dropValues(e *State, series *Results, threshold *Results, dropFunction func
 // Will error if this operation results in an empty series
 func DropGe(e *State, series *Results, threshold *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value >= threshold }
-	return dropValues(e, series, threshold, dropFunction)
+	return DropValues(e, series, threshold, dropFunction)
 }
 
 // DropG removes any values greater than number from a series. Will error if this operation results in an empty series
 func DropG(e *State, series *Results, threshold *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value > threshold }
-	return dropValues(e, series, threshold, dropFunction)
+	return DropValues(e, series, threshold, dropFunction)
 }
 
 // DropLe removes any values lower than or equal to number from a series.
 // Will error if this operation results in an empty series
 func DropLe(e *State, series *Results, threshold *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value <= threshold }
-	return dropValues(e, series, threshold, dropFunction)
+	return DropValues(e, series, threshold, dropFunction)
 }
 
 // DropL removes any values lower than number from a series. Will error if this operation results in an empty series
 func DropL(e *State, series *Results, threshold *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value < threshold }
-	return dropValues(e, series, threshold, dropFunction)
+	return DropValues(e, series, threshold, dropFunction)
 }
 
 // DropNA removes any NaN or Inf values from a series. Will error if this operation results in an empty series
@@ -1054,7 +1055,7 @@ func DropNA(e *State, series *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool {
 		return math.IsNaN(float64(value)) || math.IsInf(float64(value), 0)
 	}
-	return dropValues(e, series, fromScalar(0), dropFunction)
+	return DropValues(e, series, fromScalar(0), dropFunction)
 }
 
 func fromScalar(f float64) *Results {
@@ -1105,9 +1106,12 @@ func reduce(e *State, series *Results, F func(Series, ...float64) float64, args 
 			res.Results = append(res.Results, s)
 			return nil
 		default:
-			return fmt.Errorf("unsupported type passed to reduce for alarm [%s]. Want: Series, got: %s. "+
-				"It can happen when we can't unjoin values. Please set IgnoreUnjoined and/or "+
-				"IgnoreOtherUnjoined for distiguish this error", e.Origin, reflect.TypeOf(tp).String(),
+			return errors.New(
+				fmt.Sprintf(
+					"Unsupported type passed to reduce for alarm [%s]. Want: Series, got: %s. "+
+						"It can happen when we can't unjoin values. Please set IgnoreUnjoined and/or "+
+						"IgnoreOtherUnjoined for distiguish this error.", e.Origin, reflect.TypeOf(tp).String(),
+				),
 			)
 		}
 
@@ -1116,7 +1120,7 @@ func reduce(e *State, series *Results, F func(Series, ...float64) float64, args 
 }
 
 // Abs returns the absolute value of each value in the set
-func Abs(_ *State, set *Results) *Results {
+func Abs(e *State, set *Results) *Results {
 	for _, s := range set.Results {
 		switch s.Type() {
 		case models.TypeNumberSet:
@@ -1176,7 +1180,7 @@ func cCount(dps Series, args ...float64) (a float64) {
 }
 
 // TimeDelta returns the difference between successive timestamps in a series
-func TimeDelta(_ *State, series *Results) (*Results, error) {
+func TimeDelta(e *State, series *Results) (*Results, error) {
 	for _, res := range series.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
 		newSeries := make(Series)
@@ -1354,14 +1358,14 @@ func (e *State) since(dps Series, args ...float64) (a float64) {
 	return s.Seconds()
 }
 
-// ForecastLr returns the number of seconds until a linear regression of each series will reach `y`
-func ForecastLr(e *State, series *Results, y *Results) (r *Results, err error) {
-	return reduce(e, series, e.forecastLr, y)
+// Forecast_lr returns the number of seconds until a linear regression of each series will reach `y`
+func Forecast_lr(e *State, series *Results, y *Results) (r *Results, err error) {
+	return reduce(e, series, e.forecast_lr, y)
 }
 
 // forecast_lr returns the number of seconds a linear regression predicts the
 // series will take to reach y_val.
-func (e *State) forecastLr(dps Series, args ...float64) float64 {
+func (e *State) forecast_lr(dps Series, args ...float64) float64 {
 	const tenYears = time.Hour * 24 * 365 * 10
 	yVal := args[0]
 	var x []float64
@@ -1392,20 +1396,20 @@ func (e *State) forecastLr(dps Series, args ...float64) float64 {
 	return s.Seconds()
 }
 
-// LineLr generates a series representing the line up to duration in the future.
-func LineLr(_ *State, series *Results, d string) (*Results, error) {
+// Line_lr generates a series representing the line up to duration in the future.
+func Line_lr(e *State, series *Results, d string) (*Results, error) {
 	dur, err := opentsdb.ParseDuration(d)
 	if err != nil {
 		return series, err
 	}
 	for _, res := range series.Results {
-		res.Value = lineLr(res.Value.(Series), time.Duration(dur))
+		res.Value = line_lr(res.Value.(Series), time.Duration(dur))
 		res.Group.Merge(opentsdb.TagSet{"regression": "line"})
 	}
 	return series, nil
 }
 
-func lineLr(dps Series, d time.Duration) Series {
+func line_lr(dps Series, d time.Duration) Series {
 	var x []float64
 	var y []float64
 	sortedDPS := NewSortedSeries(dps)
@@ -1471,7 +1475,7 @@ func percentile(dps Series, args ...float64) (a float64) {
 // Rename accepts a variantSet and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format
 //
 // All data points will have the tag keys renamed according to the spec provided, in order
-func Rename(_ *State, set *Results, s string) (*Results, error) {
+func Rename(e *State, set *Results, s string) (*Results, error) {
 	for _, section := range strings.Split(s, ",") {
 		kv := strings.Split(section, "=")
 		if len(kv) != 2 {
@@ -1495,7 +1499,7 @@ func Rename(_ *State, set *Results, s string) (*Results, error) {
 }
 
 // AddTags accepts a variantSet and a set of tags to add to the variantSet in `Key1=Val1,Key2=Val2` format
-func AddTags(_ *State, set *Results, s string) (*Results, error) {
+func AddTags(e *State, set *Results, s string) (*Results, error) {
 	if s == "" {
 		return set, nil
 	}
@@ -1518,7 +1522,7 @@ func AddTags(_ *State, set *Results, s string) (*Results, error) {
 }
 
 // Ungroup removes groups from the input and returns a scalar
-func Ungroup(_ *State, d *Results) (*Results, error) {
+func Ungroup(e *State, d *Results) (*Results, error) {
 	if len(d.Results) != 1 {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
@@ -1532,7 +1536,7 @@ func Ungroup(_ *State, d *Results) (*Results, error) {
 }
 
 // Transpose transposes N series of length 1 to 1 series of length N
-func Transpose(_ *State, d *Results, gp string) (*Results, error) {
+func Transpose(e *State, d *Results, gp string) (*Results, error) {
 	gps := strings.Split(gp, ",")
 	m := make(map[string]*Result)
 	for _, v := range d.Results {

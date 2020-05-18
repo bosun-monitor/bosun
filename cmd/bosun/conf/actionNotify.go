@@ -56,9 +56,9 @@ type ActionNotificationIncidentState struct {
 }
 
 // IncidentLink creates an HTML link to the incident with the given ID
-func (a ActionNotificationContext) IncidentLink(id int64) string {
+func (a ActionNotificationContext) IncidentLink(i int64) string {
 	return a.makeLink("/incident", &url.Values{
-		"id": []string{fmt.Sprint(id)},
+		"id": []string{fmt.Sprint(i)},
 	})
 }
 
@@ -134,7 +134,7 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, c System
 			return false
 		}
 
-		if !contain(fmt.Sprint(states[i].AlertKey), ak["alert_key"]) {
+		if contain(fmt.Sprint(states[i].AlertKey), ak["alert_key"]) != true {
 			ak["alert_key"] = append(ak["alert_key"], fmt.Sprint(states[i].AlertKey))
 		}
 	}

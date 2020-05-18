@@ -419,7 +419,10 @@ var defaultFuncs = template.FuncMap{
 	// treat things like 0 and false as "not true" just like
 	// nil.
 	"notNil": func(value interface{}) bool {
-		return value != nil
+		if value == nil {
+			return false
+		}
+		return true
 	},
 	"parseDuration": func(s string) *time.Duration {
 		d, err := time.ParseDuration(s)

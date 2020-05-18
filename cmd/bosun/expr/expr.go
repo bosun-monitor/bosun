@@ -78,7 +78,8 @@ type AlertStatusProvider interface {
 	GetUnknownAndUnevaluatedAlertKeys(alertName string) (unknown, unevaluated []models.AlertKey)
 }
 
-var errUnknownOp = fmt.Errorf("expr: unknown op type")
+// ErrUnknownOp is an unknown operation error
+var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
 
 // Expr is an expression of the Bosun expression language
 type Expr struct {
@@ -248,8 +249,8 @@ func (s Series) MarshalJSON() ([]byte, error) {
 }
 
 // Equal returns whether the passed series is equal to the receiver
-func (s Series) Equal(other Series) bool {
-	return reflect.DeepEqual(s, other)
+func (a Series) Equal(b Series) bool {
+	return reflect.DeepEqual(a, b)
 }
 
 // See the elastic#.go files for ESQuery
@@ -311,7 +312,8 @@ func (a AzureApplicationInsightsApps) Type() models.FuncType { return models.Typ
 // Value returns the value
 func (a AzureApplicationInsightsApps) Value() interface{} { return a }
 
-type sortablePoint struct {
+// SortablePoint is a point sortable by time
+type SortablePoint struct {
 	T time.Time
 	V float64
 }
@@ -319,7 +321,7 @@ type sortablePoint struct {
 // SortableSeries is an alternative datastructure for timeseries data,
 // which stores points in a time-ordered fashion instead of a map.
 // see discussion at https://github.com/bosun-monitor/bosun/pull/699
-type SortableSeries []sortablePoint
+type SortableSeries []SortablePoint
 
 func (s SortableSeries) Len() int           { return len(s) }
 func (s SortableSeries) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
@@ -329,7 +331,7 @@ func (s SortableSeries) Less(i, j int) bool { return s[i].T.Before(s[j].T) }
 func NewSortedSeries(dps Series) SortableSeries {
 	series := make(SortableSeries, 0, len(dps))
 	for t, v := range dps {
-		series = append(series, sortablePoint{t, v})
+		series = append(series, SortablePoint{t, v})
 	}
 	sort.Sort(series)
 	return series
@@ -356,20 +358,20 @@ type Results struct {
 // Equal inspects if two results have the same content
 // error will return why they are not equal if they
 // are not equal
-func (r *Results) Equal(b *Results) (bool, error) {
-	if len(r.Results) != len(b.Results) {
-		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(r.Results), len(b.Results))
+func (a *Results) Equal(b *Results) (bool, error) {
+	if len(a.Results) != len(b.Results) {
+		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(a.Results), len(b.Results))
 	}
-	if r.IgnoreUnjoined != b.IgnoreUnjoined {
-		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreUnjoined, b.IgnoreUnjoined)
+	if a.IgnoreUnjoined != b.IgnoreUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreUnjoined, b.IgnoreUnjoined)
 	}
-	if r.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
-		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", r.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
+	if a.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
 	}
-	if r.NaNValue != b.NaNValue {
-		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", r.NaNValue, b.NaNValue)
+	if a.NaNValue != b.NaNValue {
+		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", a.NaNValue, b.NaNValue)
 	}
-	sortedA := ResultSliceByGroup(r.Results)
+	sortedA := ResultSliceByGroup(a.Results)
 	sort.Sort(sortedA)
 	sortedB := ResultSliceByGroup(b.Results)
 	sort.Sort(sortedB)
@@ -416,7 +418,8 @@ func (r *Results) NaN() Number {
 	return Number(math.NaN())
 }
 
-func (r ResultSlice) descByValue() ResultSlice {
+// DescByValue returns a new slice sorted by value
+func (r ResultSlice) DescByValue() ResultSlice {
 	// Fixme: This function looks unused
 	for _, v := range r {
 		if _, ok := v.Value.(Number); !ok {
@@ -447,7 +450,8 @@ func (r ResultSliceByGroup) Len() int           { return len(r) }
 func (r ResultSliceByGroup) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func (r ResultSliceByGroup) Less(i, j int) bool { return r[i].Group.String() < r[j].Group.String() }
 
-func (e *State) addComputation(r *Result, text string, value interface{}) {
+// AddComputation adds a computation to the results
+func (e *State) AddComputation(r *Result, text string, value interface{}) {
 	if !e.enableComputations {
 		return
 	}
@@ -473,7 +477,8 @@ func wrap(v float64) *Results {
 	}
 }
 
-func (u *Union) extendComputations(o *Result) {
+// ExtendComputations extends the computations of the receiver by the ones of the result passed
+func (u *Union) ExtendComputations(o *Result) {
 	u.Computations = append(u.Computations, o.Computations...)
 }
 
@@ -517,8 +522,8 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 				B:     rb.Value,
 				Group: group,
 			}
-			u.extendComputations(ra)
-			u.extendComputations(rb)
+			u.ExtendComputations(ra)
+			u.ExtendComputations(rb)
 			us = append(us, u)
 		}
 	}
@@ -530,8 +535,8 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 					B:     b.NaN(),
 					Group: r.Group,
 				}
-				e.addComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.B))
-				u.extendComputations(r)
+				e.AddComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.B))
+				u.ExtendComputations(r)
 				us = append(us, u)
 			}
 		}
@@ -542,8 +547,8 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 					B:     r.Value,
 					Group: r.Group,
 				}
-				e.addComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.A))
-				u.extendComputations(r)
+				e.AddComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.A))
+				u.ExtendComputations(r)
 				us = append(us, u)
 			}
 		}
@@ -602,11 +607,11 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 				switch bt := v.B.(type) {
 				case Scalar:
 					n := Scalar(operate(node.OpStr, float64(at), float64(bt)))
-					e.addComputation(r, node.String(), Number(n))
+					e.AddComputation(r, node.String(), Number(n))
 					value = n
 				case Number:
 					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					e.addComputation(r, node.String(), n)
+					e.AddComputation(r, node.String(), n)
 					value = n
 				case Series:
 					s := make(Series)
@@ -615,17 +620,17 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 					}
 					value = s
 				default:
-					panic(errUnknownOp)
+					panic(ErrUnknownOp)
 				}
 			case Number:
 				switch bt := v.B.(type) {
 				case Scalar:
 					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					e.addComputation(r, node.String(), Number(n))
+					e.AddComputation(r, node.String(), Number(n))
 					value = n
 				case Number:
 					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					e.addComputation(r, node.String(), n)
+					e.AddComputation(r, node.String(), n)
 					value = n
 				case Series:
 					s := make(Series)
@@ -634,7 +639,7 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 					}
 					value = s
 				default:
-					panic(errUnknownOp)
+					panic(ErrUnknownOp)
 				}
 			case Series:
 				switch bt := v.B.(type) {
@@ -654,10 +659,10 @@ func (e *State) walkBinary(node *parse.BinaryNode) *Results {
 					}
 					value = s
 				default:
-					panic(errUnknownOp)
+					panic(ErrUnknownOp)
 				}
 			default:
-				panic(errUnknownOp)
+				panic(ErrUnknownOp)
 			}
 			r.Value = value
 			res.Results = append(res.Results, r)
@@ -768,7 +773,7 @@ func (e *State) walkUnary(node *parse.UnaryNode) *Results {
 				}
 				r.Value = s
 			default:
-				panic(errUnknownOp)
+				panic(ErrUnknownOp)
 			}
 		}
 	})
@@ -869,7 +874,7 @@ func (e *State) walkFunc(node *parse.FuncNode) *Results {
 		}
 		if node.Return() == models.TypeNumberSet {
 			for _, r := range res.Results {
-				e.addComputation(r, node.String(), r.Value.(Number))
+				e.AddComputation(r, node.String(), r.Value.(Number))
 			}
 		}
 	})

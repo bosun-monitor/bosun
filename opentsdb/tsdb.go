@@ -188,9 +188,9 @@ func (t TagSet) Tags() string {
 	b := &bytes.Buffer{}
 	for i, k := range keys {
 		if i > 0 {
-			b.WriteString(",")
+			fmt.Fprint(b, ",")
 		}
-		b.WriteString(fmt.Sprintf("%s=%s", k, t[k]))
+		fmt.Fprintf(b, "%s=%s", k, t[k])
 	}
 	return b.String()
 }
@@ -207,7 +207,7 @@ func (t TagSet) AllSubsets() []string {
 }
 
 func (t TagSet) allSubsets(base string, start int, keys []string) []string {
-	subs := make([]string, 0)
+	subs := []string{}
 	for i := start; i < len(keys); i++ {
 		part := base
 		if part != "" {
@@ -224,10 +224,10 @@ func (t TagSet) allSubsets(base string, start int, keys []string) []string {
 // Two TagSets overlap if they:
 // 1. Have at least one key/value pair that matches
 // 2. Have no keys in common where the values do not match
-func (t TagSet) Overlaps(other TagSet) bool {
+func (a TagSet) Overlaps(b TagSet) bool {
 	anyMatch := false
-	for k, v := range t {
-		v2, ok := other[k]
+	for k, v := range a {
+		v2, ok := b[k]
 		if !ok {
 			continue
 		}

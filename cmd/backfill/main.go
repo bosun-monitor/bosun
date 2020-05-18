@@ -32,7 +32,7 @@ func main() {
 		flag.PrintDefaults()
 		log.Fatal("host must be supplied")
 	}
-	putURL := (&url.URL{Scheme: "http", Host: *tsdbHost, Path: "api/put"}).String()
+	putUrl := (&url.URL{Scheme: "http", Host: *tsdbHost, Path: "api/put"}).String()
 
 	if *ruleFlag == "" {
 		flag.PrintDefaults()
@@ -83,7 +83,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		dps := make([]*opentsdb.DataPoint, 0)
+		dps := []*opentsdb.DataPoint{}
 		for _, r := range resp {
 			for t, p := range r.DPS {
 
@@ -97,7 +97,7 @@ func main() {
 					Tags:      r.Tags,
 					Value:     p,
 				}
-				err = rule.Convert(dp)
+				err = rule.Translate(dp)
 				if err != nil {
 					return err
 				}
@@ -111,7 +111,7 @@ func main() {
 			if len(dps) > *batchSize {
 				count = *batchSize
 			}
-			putResp, err := collect.SendDataPoints(dps[:count], putURL)
+			putResp, err := collect.SendDataPoints(dps[:count], putUrl)
 			if err != nil {
 				return err
 			}

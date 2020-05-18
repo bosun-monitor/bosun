@@ -88,8 +88,8 @@ func init() {
 }
 
 const (
-	localRelayURL  = "http://localhost:5555/api/put"
-	remoteRelayURL = "http://localhost:6555/api/put"
+	localRelayUrl  = "http://localhost:5555/api/put"
+	remoteRelayUrl = "http://localhost:6555/api/put"
 )
 
 var (
@@ -103,7 +103,7 @@ func main() {
 	// 1. Single data point to local relay
 	dp1 := &opentsdb.DataPoint{Metric: "abc", Tags: opentsdb.TagSet{"host": "h1"}}
 	buf := encodeMdp([]*opentsdb.DataPoint{dp1})
-	resp, err := http.Post(localRelayURL, "application/json", buf)
+	resp, err := http.Post(localRelayUrl, "application/json", buf)
 	if err != nil {
 		fatal(err)
 	}
@@ -119,7 +119,7 @@ func main() {
 	// 2. Single data point to remote relay. Should be denormalized.
 	dp2 := &opentsdb.DataPoint{Metric: "os.cpu", Tags: opentsdb.TagSet{"host": "h1"}}
 	buf = encodeMdp([]*opentsdb.DataPoint{dp2})
-	resp, err = http.Post(remoteRelayURL, "application/json", buf)
+	resp, err = http.Post(remoteRelayUrl, "application/json", buf)
 	if err != nil {
 		fatal(err)
 	}

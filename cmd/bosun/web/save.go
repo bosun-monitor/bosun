@@ -9,7 +9,8 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 )
 
-func saveConfig(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+// SaveConfig is a handler that saves the config
+func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
 		Config  string
 		Diff    string
@@ -35,7 +36,8 @@ func saveConfig(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	return nil, nil
 }
 
-func diffConfig(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+// DiffConfig is a handler that creates a diff between configs
+func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
 		Config  string
 		Message string
@@ -60,7 +62,8 @@ func diffConfig(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	return nil, nil
 }
 
-func configRunningHash(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error) {
+// ConfigRunningHash is a handler that returns the hash of the config
+func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	hash := schedule.RuleConf.GetHash()
 	return struct {
 		Hash string
@@ -69,7 +72,8 @@ func configRunningHash(miniprofiler.Timer, http.ResponseWriter, *http.Request) (
 	}, nil
 }
 
-func bulkEdit(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+// BulkEdit is a handler that handles a bulk edit request
+func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	bulkEdit := conf.BulkEditRequest{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&bulkEdit); err != nil {
@@ -83,6 +87,7 @@ func bulkEdit(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	return nil, nil
 }
 
-func saveEnabled(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error) {
+// SaveEnabled is a handler that returns whether saving is enabled
+func SaveEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.SystemConf.SaveEnabled(), nil
 }

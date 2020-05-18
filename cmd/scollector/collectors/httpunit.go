@@ -18,7 +18,7 @@ func HTTPUnitTOML(filename string, freq time.Duration) error {
 	if _, err := toml.DecodeFile(filename, &plans); err != nil {
 		return err
 	}
-	httpUnitPlans(filename, &plans, freq)
+	HTTPUnitPlans(filename, &plans, freq)
 	return nil
 }
 
@@ -28,11 +28,12 @@ func HTTPUnitHiera(filename string, freq time.Duration) error {
 	if err != nil {
 		return err
 	}
-	httpUnitPlans(filename, &httpunit.Plans{Plans: plans}, freq)
+	HTTPUnitPlans(filename, &httpunit.Plans{Plans: plans}, freq)
 	return nil
 }
 
-func httpUnitPlans(name string, plans *httpunit.Plans, freq time.Duration) {
+// HTTPUnitPlans adds a collector for httpunit with a given plan
+func HTTPUnitPlans(name string, plans *httpunit.Plans, freq time.Duration) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return cHTTPUnit(plans)

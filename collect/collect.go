@@ -46,10 +46,10 @@ var (
 	Tags opentsdb.TagSet
 
 	// UseNtlm stores whether or not to use NTLM authentication
-	UseNtlm = false
+	UseNtlm bool = false
 
 	// DefaultClient can be used to override the HTTP client that will be used to make requests.
-	DefaultClient = http.DefaultClient
+	DefaultClient *http.Client = http.DefaultClient
 
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64
@@ -82,7 +82,7 @@ const (
 	descCollectDiscarded         = "Counter of discarded data points due to being invalid."
 	descCollectDropped           = "Counter of dropped data points due to the queue being full."
 	descCollectGoRoutines        = "Total number of goroutines that currently exist (via runtime.NumGoroutine)."
-	descCollectGcCPUFraction     = "fraction of CPU time used by GC"
+	descCollectGcCpuFraction     = "fraction of CPU time used by GC"
 	descCollectTotalGCPause      = "Total GC Pause time in milliseconds"
 	descCollectPostBad           = "Counter of HTTP POST requests where resp.StatusCode != http.StatusNoContent."
 	descCollectPostBatchSize     = "Number of datapoints included in each batch."
@@ -168,7 +168,7 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	AggregateMeta(metricRoot+"collect.post.duration", metadata.MilliSecond, descCollectPostDuration)
 	metadata.AddMetricMeta(metricRoot+"collect.alloc", metadata.Gauge, metadata.Bytes, descCollectAlloc)
 	metadata.AddMetricMeta(metricRoot+"collect.goroutines", metadata.Gauge, metadata.Count, descCollectGoRoutines)
-	metadata.AddMetricMeta(metricRoot+"collect.gc.cpu_fraction", metadata.Gauge, metadata.Pct, descCollectGcCPUFraction)
+	metadata.AddMetricMeta(metricRoot+"collect.gc.cpu_fraction", metadata.Gauge, metadata.Pct, descCollectGcCpuFraction)
 	metadata.AddMetricMeta(metricRoot+"collect.gc.total_pause", metadata.Counter, metadata.MilliSecond, descCollectTotalGCPause)
 	metadata.AddMetricMeta(metricRoot+"collect.post.bad_status", metadata.Counter, metadata.PerSecond, descCollectPostBad)
 	metadata.AddMetricMeta(metricRoot+"collect.post.count", metadata.Counter, metadata.PerSecond, descCollectPostCount)
@@ -211,7 +211,8 @@ func AggregateMeta(metric string, unit metadata.Unit, desc string) {
 	}
 }
 
-func (am *agMetric) process(now int64) {
+// Process processes an aggregated metric for the passed timestamp
+func (am *agMetric) Process(now int64) {
 	var avg float64
 	for _, v := range am.values {
 		avg += v
@@ -302,7 +303,7 @@ func Sample(metric string, ts opentsdb.TagSet, v float64) error {
 func StartTimer(metric string, ts opentsdb.TagSet) func() {
 	start := time.Now()
 	return func() {
-		d := time.Since(start) / time.Millisecond
+		d := time.Now().Sub(start) / time.Millisecond
 		Sample(metric, ts, float64(d))
 	}
 }
@@ -353,19 +354,19 @@ func Add(metric string, ts opentsdb.TagSet, inc int64) error {
 
 // Get returns the value of a metric
 func Get(metric string, ts opentsdb.TagSet) int64 {
-	var counterValue int64
+	var counter_value int64
 	if err := check(metric, &ts); err != nil {
 		return 0
 	}
 	tss := metric + ts.String()
 	mlock.Lock()
 	if counters[tss] != nil {
-		counterValue = counters[tss].value
+		counter_value = counters[tss].value
 	} else {
-		counterValue = 0
+		counter_value = 0
 	}
 	mlock.Unlock()
-	return counterValue
+	return counter_value
 }
 
 type putMetric struct {
@@ -459,7 +460,7 @@ func flushData() {
 		tchan <- dp
 	}
 	for _, am := range aggs {
-		am.process(now)
+		am.Process(now)
 	}
 	puts = make(map[string]*putMetric)
 	aggs = make(map[string]*agMetric)

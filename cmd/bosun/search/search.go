@@ -126,7 +126,7 @@ func (s *Search) redisIndex(c <-chan *opentsdb.DataPoint) {
 				}
 			})
 			updateIfTime(fmt.Sprintf("kv:%s:%s", k, v), func() {
-				if err := s.DataAccess.Search().AddTagValue(database.SearchAll, k, v, now); err != nil {
+				if err := s.DataAccess.Search().AddTagValue(database.Search_All, k, v, now); err != nil {
 					slog.Error(err)
 				}
 			})
@@ -296,8 +296,8 @@ func (s *Search) UniqueMetrics(epochFilter int64) ([]string, error) {
 }
 
 // TagValuesByTagKey finds all metrics with a given tag key seen more recently than the given time ago
-func (s *Search) TagValuesByTagKey(tagk string, since time.Duration) ([]string, error) {
-	return s.TagValuesByMetricTagKey(database.SearchAll, tagk, since)
+func (s *Search) TagValuesByTagKey(Tagk string, since time.Duration) ([]string, error) {
+	return s.TagValuesByMetricTagKey(database.Search_All, Tagk, since)
 }
 
 // MetricsByTagPair finds all metrics with the given tag seen more recently than the given time ago
@@ -310,7 +310,7 @@ func (s *Search) MetricsByTagPair(tagk, tagv string, since time.Duration) ([]str
 	if err != nil {
 		return nil, err
 	}
-	r := make([]string, 0)
+	r := []string{}
 	for k, ts := range metrics {
 		if t <= ts {
 			r = append(r, k)
@@ -344,7 +344,7 @@ func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duratio
 	if err != nil {
 		return nil, err
 	}
-	r := make([]string, 0)
+	r := []string{}
 	for k, ts := range vals {
 		if t <= ts {
 			r = append(r, k)
@@ -361,7 +361,7 @@ func (s *Search) FilteredTagSets(metric string, tags opentsdb.TagSet, since int6
 	if err != nil {
 		return nil, err
 	}
-	r := make([]opentsdb.TagSet, 0)
+	r := []opentsdb.TagSet{}
 	for k, lastSeen := range sets {
 		ts, err := opentsdb.ParseTags(k)
 		if err != nil {

@@ -25,7 +25,7 @@ type Backend interface {
 
 const docType = "annotation"
 
-var errUnInit = fmt.Errorf("backend has not been initialized")
+var unInitErr = fmt.Errorf("backend has not been initialized")
 
 // FieldFilter is a filter on fields
 type FieldFilter struct {

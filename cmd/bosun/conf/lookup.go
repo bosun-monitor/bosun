@@ -42,15 +42,15 @@ type ExprEntry struct {
 // `Get("main_contact", {"host=lon-bar"})` returns `("it", true)`
 // `Get("chat_contact", {"host=foo"})` returns `("", false)` (`host=*` matches, but doesn't have the target key)
 // `Get("chat_contact", {"foo=bar"})` returns `("", false)` (no entry matches)
-func (lookup *ExprLookup) Get(targetKey string, alertTags opentsdb.TagSet) (value string, ok bool) {
+func (lookup *ExprLookup) Get(key string, tag opentsdb.TagSet) (value string, ok bool) {
 	for _, entry := range lookup.Entries {
-		value, ok = entry.Values[targetKey]
+		value, ok = entry.Values[key]
 		if !ok {
 			continue
 		}
 		match := true
-		for lookupTagKey, lookupTagValue := range entry.AlertKey.Group() {
-			matches, err := search.Match(lookupTagValue, []string{alertTags[lookupTagKey]})
+		for ak, av := range entry.AlertKey.Group() {
+			matches, err := search.Match(av, []string{tag[ak]})
 			if err != nil {
 				return "", false
 			}

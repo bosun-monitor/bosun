@@ -15,8 +15,8 @@ import (
 	"github.com/kylebrandt/boolq"
 )
 
-// AnnotateFuncs contains functions for querying elastic
-var AnnotateFuncs = map[string]parse.Func{
+// Annotate contains functions for querying elastic
+var Annotate = map[string]parse.Func{
 	"ancounts": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
 		Return: models.TypeSeriesSet,

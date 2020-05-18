@@ -103,8 +103,8 @@ func Parse(text string, funcs ...map[string]Func) (t *Tree, err error) {
 	return
 }
 
-// Sub parses a subtree
-func Sub(text string, funcs ...map[string]Func) (t *Tree, err error) {
+// ParseSub parses a subtree
+func ParseSub(text string, funcs ...map[string]Func) (t *Tree, err error) {
 	t = New()
 	t.mapExpr = true
 	t.Text = text
@@ -445,7 +445,7 @@ func (t *Tree) Func() (f *FuncNode) {
 			if err != nil {
 				t.error(err)
 			}
-			n.Tree, err = Sub(n.Text, t.funcs...)
+			n.Tree, err = ParseSub(n.Text, t.funcs...)
 			if err != nil {
 				t.error(err)
 			}

@@ -43,7 +43,7 @@ func init() {
 }
 
 // ESAll creates a match all query
-func ESAll(*State) (*Results, error) {
+func ESAll(e *State) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -63,7 +63,7 @@ func ESAll(*State) (*Results, error) {
 }
 
 // ESAnd creates a combined query that needs to match all passed queries
-func ESAnd(_ *State, esqueries ...ESQuery) (*Results, error) {
+func ESAnd(e *State, esqueries ...ESQuery) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -95,7 +95,7 @@ func ESAnd(_ *State, esqueries ...ESQuery) (*Results, error) {
 }
 
 // ESNot creates a new query that negates the given one
-func ESNot(_ *State, query ESQuery) (*Results, error) {
+func ESNot(e *State, query ESQuery) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -115,7 +115,7 @@ func ESNot(_ *State, query ESQuery) (*Results, error) {
 }
 
 // ESOr creates a combined query that needs to match one of the passed queries
-func ESOr(_ *State, esqueries ...ESQuery) (*Results, error) {
+func ESOr(e *State, esqueries ...ESQuery) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -147,7 +147,7 @@ func ESOr(_ *State, esqueries ...ESQuery) (*Results, error) {
 }
 
 // ESRegexp creates a new regex query
-func ESRegexp(_ *State, key string, regex string) (*Results, error) {
+func ESRegexp(e *State, key string, regex string) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -167,7 +167,7 @@ func ESRegexp(_ *State, key string, regex string) (*Results, error) {
 }
 
 // ESQueryString creates a new query for the given key
-func ESQueryString(_ *State, key string, query string) (*Results, error) {
+func ESQueryString(e *State, key string, query string) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		// Query: qs
@@ -200,7 +200,7 @@ func ESQueryString(_ *State, key string, query string) (*Results, error) {
 }
 
 // ESExists tests if the given fiels exists
-func ESExists(_ *State, field string) (*Results, error) {
+func ESExists(e *State, field string) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -220,17 +220,17 @@ func ESExists(_ *State, field string) (*Results, error) {
 }
 
 // ESGT rests if the value at the given key is greater than the given value
-func ESGT(_ *State, key string, value float64) (*Results, error) {
+func ESGT(e *State, key string, gt float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
 			switch ver {
 			case ESV2:
-				return elastic2.NewRangeQuery(key).Gt(value)
+				return elastic2.NewRangeQuery(key).Gt(gt)
 			case ESV5:
-				return elastic5.NewRangeQuery(key).Gt(value)
+				return elastic5.NewRangeQuery(key).Gt(gt)
 			case ESV6:
-				return elastic6.NewRangeQuery(key).Gt(value)
+				return elastic6.NewRangeQuery(key).Gt(gt)
 			}
 			return nil
 		},
@@ -240,17 +240,17 @@ func ESGT(_ *State, key string, value float64) (*Results, error) {
 }
 
 // ESGTE rests if the value at the given key is greater than or equal to the given value
-func ESGTE(_ *State, key string, value float64) (*Results, error) {
+func ESGTE(e *State, key string, gte float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
 			switch ver {
 			case ESV2:
-				return elastic2.NewRangeQuery(key).Gte(value)
+				return elastic2.NewRangeQuery(key).Gte(gte)
 			case ESV5:
-				return elastic5.NewRangeQuery(key).Gte(value)
+				return elastic5.NewRangeQuery(key).Gte(gte)
 			case ESV6:
-				return elastic6.NewRangeQuery(key).Gte(value)
+				return elastic6.NewRangeQuery(key).Gte(gte)
 			}
 			return nil
 		},
@@ -260,7 +260,7 @@ func ESGTE(_ *State, key string, value float64) (*Results, error) {
 }
 
 // ESLT rests if the value at the given key is less than the given value
-func ESLT(_ *State, key string, lt float64) (*Results, error) {
+func ESLT(e *State, key string, lt float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -280,7 +280,7 @@ func ESLT(_ *State, key string, lt float64) (*Results, error) {
 }
 
 // ESLTE rests if the value at the given key is less than or equal to the given value
-func ESLTE(_ *State, key string, lte float64) (*Results, error) {
+func ESLTE(e *State, key string, lte float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: func(ver ESVersion) interface{} {
@@ -389,8 +389,8 @@ func createVersionedESClient(prefix string, cfg ElasticConfig) error {
 	return err
 }
 
-// ESIndices creates indices with the passed names
-func ESIndices(_ *State, timeField string, literalIndices ...string) *Results {
+// ESIndicies creates indices with the passed names
+func ESIndicies(e *State, timeField string, literalIndices ...string) *Results {
 	var r Results
 	indexer := ESIndexer{}
 	// Don't check for existing indexes in this case, just pass through and let elastic return
@@ -409,7 +409,7 @@ func ESLS(e *State, indexRoot string) (*Results, error) {
 }
 
 // ESDaily creates a daily index
-func ESDaily(_ *State, timeField, indexRoot, layout string) (*Results, error) {
+func ESDaily(e *State, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
@@ -427,7 +427,7 @@ func ESDaily(_ *State, timeField, indexRoot, layout string) (*Results, error) {
 }
 
 // ESMonthly creates a monthly index
-func ESMonthly(_ *State, timeField, indexRoot, layout string) (*Results, error) {
+func ESMonthly(e *State, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField

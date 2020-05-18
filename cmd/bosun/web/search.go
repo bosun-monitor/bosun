@@ -11,8 +11,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// uniqueMetrics returns a sorted list of available metrics.
-func uniqueMetrics(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+// UniqueMetrics returns a sorted list of available metrics
+func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	q := r.URL.Query()
 	var epoch int64
 	if v := q.Get("since"); v != "" {
@@ -39,13 +39,15 @@ func uniqueMetrics(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request)
 	return filtered, nil
 }
 
-func tagKeysByMetric(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// TagKeysByMetric is a handler to get all tag keys for a metric
+func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	return schedule.Search.TagKeysByMetric(metric)
 }
 
-func tagValuesByMetricTagKey(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// TagValuesByMetricTagKey is a handler to get all tag values for a given metric and tag key
+func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
@@ -70,7 +72,9 @@ func getSince(r *http.Request) (time.Duration, error) {
 	return since, nil
 }
 
-func filteredTagsetsByMetric(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// FilteredTagsetsByMetric is a handler to get all time series with the given name and tags that have been seen more
+// recently than some time ago
+func FilteredTagsetsByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagset := opentsdb.TagSet{}
@@ -93,7 +97,8 @@ func filteredTagsetsByMetric(_ miniprofiler.Timer, _ http.ResponseWriter, r *htt
 	return schedule.Search.FilteredTagSets(metric, tagset, since)
 }
 
-func metricsByTagPair(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// MetricsByTagPair is a handler to get all metrics with a given tag key and value
+func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	since, err := getSince(r)
 	if err != nil {
@@ -104,7 +109,8 @@ func metricsByTagPair(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Reque
 	return schedule.Search.MetricsByTagPair(tagk, tagv, since)
 }
 
-func metricsByTagKey(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// MetricsByTagKey is a handler to get all metrics with a given tag key
+func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	since, err := getSince(r)
@@ -127,7 +133,8 @@ func metricsByTagKey(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Reques
 	return tagvMetrics, nil
 }
 
-func tagValuesByTagKey(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// TagValuesByTagKey is a handler to get all tag values for a given tag key
+func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	since, err := getSince(r)

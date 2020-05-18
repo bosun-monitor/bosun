@@ -1867,7 +1867,7 @@ An Event represent a change in the [severity state](/usage#severity-states) with
 
  * `Warn`: A pointer to an [Event Result](definitions#event-result) that the warn expression generated if the event has a warning status.
  * `Crit`: A pointer to an [Event Result](definitions#event-result) if the event has a critical status.
- * `Status`: An integer representing the current severity (normal, warning, critical, unknown). As long as it is printed as a string, one will get the textual representation.
+ * `Status`: An integer representing the current severity (normal, warning, critical, unknown). As long as it is printed as a string, one will get the textual representation. The status field has identification methods: `IsNormal()`, `IsWarning()`, `IsCritical()`, `IsUnknown()`, `IsError()` which return a boolean.
  * `Time`: A [Go time.Time object](https://golang.org/pkg/time/#Time) representing the time of the event. All the methods you find in Go's documentation attached to time.Time are available in the template
  * `Unevaluated`: A boolean value if the alert was unevaluated. Alerts on unevaluated when the current was using the [`depends` alert keyword](/definitions#depends) to depend on another alert, and that other alert was non-normal. 
 

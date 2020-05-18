@@ -53,13 +53,13 @@ type IncidentState struct {
 // SetNotified marks the notification name as "active" for this incident.
 // All future actions and unknown notifications will go to all "active" notifications
 // it returns true if the set was changed (and needs resaving)
-func (is *IncidentState) SetNotified(not string) bool {
-	for _, n := range is.Notifications {
+func (i *IncidentState) SetNotified(not string) bool {
+	for _, n := range i.Notifications {
 		if n == not {
 			return false
 		}
 	}
-	is.Notifications = append(is.Notifications, not)
+	i.Notifications = append(i.Notifications, not)
 	return true
 }
 
@@ -134,27 +134,26 @@ func (r *RenderedTemplates) GetDefault(name string, defaultName string) string {
 }
 
 // Group returns the group of the alert
-func (is *IncidentState) Group() opentsdb.TagSet {
-	return is.AlertKey.Group()
+func (s *IncidentState) Group() opentsdb.TagSet {
+	return s.AlertKey.Group()
 }
 
 // Last returns the most recent event
-func (is *IncidentState) Last() Event {
-	if len(is.Events) == 0 {
+func (s *IncidentState) Last() Event {
+	if len(s.Events) == 0 {
 		return Event{}
 	}
-	return is.Events[len(is.Events)-1]
+	return s.Events[len(s.Events)-1]
 }
 
 // IsActive returns whether the state is worse than normal
-func (is *IncidentState) IsActive() bool {
-	return is.CurrentStatus > StNormal
+func (s *IncidentState) IsActive() bool {
+	return s.CurrentStatus > StNormal
 }
 
 // Event is the result of an evaluation of an alert
 type Event struct {
-	Warn        *Result `json:",omitempty"`
-	Crit        *Result `json:",omitempty"`
+	Warn, Crit  *Result `json:",omitempty"`
 	Status      Status
 	Time        time.Time
 	Unevaluated bool
@@ -312,19 +311,31 @@ func (s *Status) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// IsNormal returns whether the receiver is in the normal state
+func (s Status) IsNormal() bool { return s == StNormal }
+
+// IsWarning returns whether the receiver is in the warning state
+func (s Status) IsWarning() bool { return s == StWarning }
+
+// IsCritical returns whether the receiver is in the critical state
+func (s Status) IsCritical() bool { return s == StCritical }
+
+// IsUnknown returns whether the receiver is in the unknown state
+func (s Status) IsUnknown() bool { return s == StUnknown }
+
 // Action represents an action triggered on the web interface by a user
 //
 // Examples include acknowledging or closing alerts
 type Action struct {
 	// These are available to users via the template language. Changes here
 	// should be reflected in the documentation
-	User      string
-	Message   string
-	Time      time.Time
-	Type      ActionType
-	Deadline  *time.Time `json:",omitempty"`
-	Fulfilled bool
-	Cancelled bool
+	User       string
+	Message    string
+	Time       time.Time
+	Type       ActionType
+	Deadline   *time.Time `json:",omitempty"`
+	Fullfilled bool
+	Cancelled  bool
 }
 
 // ActionType is an enumeration available to users in templates, document changes in Bosun docs

@@ -286,7 +286,7 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	return rt, errs
 }
 
-var errorBody = template.Must(template.New("body_error_template").Parse(`
+var error_body = template.Must(template.New("body_error_template").Parse(`
 	<p>There was a runtime error processing alert {{.State.AlertKey}} using the {{.Alert.Template.Name}} template. The following errors occurred:</p>
 	<ul>
 	{{range .Errors}}
@@ -321,7 +321,7 @@ func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Aler
 		Context: s.Data(rh, st, a, true),
 	}
 	buf := new(bytes.Buffer)
-	errorBody.Execute(buf, c)
+	error_body.Execute(buf, c)
 	return sub, buf.String(), nil
 }
 

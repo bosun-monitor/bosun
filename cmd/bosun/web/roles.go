@@ -2,8 +2,10 @@ package web
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
+	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/captncraig/easyauth"
 )
 
@@ -84,4 +86,8 @@ func parseRole(s string) (easyauth.Role, error) {
 		perms |= this
 	}
 	return perms, nil
+}
+
+func getRoleDefinitions(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return roleDefs, nil
 }

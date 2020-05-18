@@ -62,7 +62,7 @@ func AddRoutesWithMiddleware(router *mux.Router, prefix string, b []backend.Back
 }
 
 // Index is the HTTP handler for /
-func Index(w http.ResponseWriter, _ *http.Request) {
+func Index(w http.ResponseWriter, r *http.Request) {
 	w.Write(indexHTML)
 }
 
@@ -142,6 +142,7 @@ func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
+	return
 }
 
 func format(a *annotate.Annotation, w http.ResponseWriter, epochFmt bool) (e error) {
@@ -186,6 +187,7 @@ func GetAnnotation(w http.ResponseWriter, req *http.Request) {
 		serveError(w, err)
 		return
 	}
+	return
 }
 
 // DeleteAnnotation is the HTTP handler to delete an annotation
@@ -224,6 +226,7 @@ func GetFieldValues(w http.ResponseWriter, req *http.Request) {
 		serveError(w, err)
 		return
 	}
+	return
 }
 
 // GetAnnotations is the HTTP handler to query annotations
@@ -320,6 +323,7 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 		serveError(w, err)
 		return
 	}
+	return
 }
 
 func serveError(w http.ResponseWriter, err error) {

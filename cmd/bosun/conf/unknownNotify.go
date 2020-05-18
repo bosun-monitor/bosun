@@ -97,7 +97,7 @@ func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name st
 			}
 			return false
 		}
-		if !contain(fmt.Sprint(aks[i]), ak["alert_key"]) {
+		if contain(fmt.Sprint(aks[i]), ak["alert_key"]) != true {
 			ak["alert_key"] = append(ak["alert_key"], fmt.Sprint(aks[i]))
 		}
 	}
@@ -182,7 +182,7 @@ func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider
 
 	tks := n.UnknownMultiTemplateKeys
 
-	ak := make([]string, 0)
+	ak := []string{}
 
 	for _, v := range groups {
 		ak = append(ak, fmt.Sprint(v))

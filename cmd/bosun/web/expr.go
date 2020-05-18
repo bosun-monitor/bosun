@@ -31,7 +31,8 @@ import (
 // and then 5m from now you query -10min to -5m you'll get the same cached data, including the incomplete last points
 var cacheObj = cache.New("web", 100)
 
-func expression(t miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (v interface{}, err error) {
+// Expr is the handler for the expression endpoint
+func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v interface{}, err error) {
 	defer func() {
 		if pan := recover(); pan != nil {
 			v = nil
@@ -138,7 +139,13 @@ func getTime(r *http.Request) (now time.Time, err error) {
 	return
 }
 
-func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, templateGroup string, incidentID int) (*ruleResult, error) {
+// Res is a result struct
+type Res struct {
+	*models.Event
+	Key models.AlertKey
+}
+
+func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string, incidentID int) (*ruleResult, error) {
 	s := &sched.Schedule{}
 	s.Search = schedule.Search
 	if err := s.Init("web", schedule.SystemConf, ruleConf, schedule.DataAccess, AnnotateBackend, false, false); err != nil {
@@ -178,8 +185,8 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 
 	if !summary && len(keys) > 0 {
 		var primaryIncident *models.IncidentState
-		if templateGroup != "" {
-			ts, err := opentsdb.ParseTags(templateGroup)
+		if template_group != "" {
+			ts, err := opentsdb.ParseTags(template_group)
 			if err != nil {
 				return nil, err
 			}
@@ -194,8 +201,8 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		if primaryIncident == nil {
 			primaryIncident = sched.NewIncident(keys[0])
 			primaryIncident.Events = []models.Event{*rh.Events[keys[0]]}
-			if templateGroup != "" {
-				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", templateGroup))
+			if template_group != "" {
+				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
 		e := primaryIncident.Events[0]
@@ -308,7 +315,8 @@ type ruleResult struct {
 	Warning             []string
 }
 
-func testHTTPNotification(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// TestHTTPNotification tests a HTTP notification
+func TestHTTPNotification(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	prep := &conf.PreparedHttp{}
 	dec := json.NewDecoder(r.Body)
 	if err := dec.Decode(prep); err != nil {
@@ -325,7 +333,8 @@ func testHTTPNotification(_ miniprofiler.Timer, _ http.ResponseWriter, r *http.R
 	return dat, nil
 }
 
-func ruleTest(t miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// Rule is the rule endpoint handler
+func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var from, to time.Time
 	var err error
 	if f := r.FormValue("from"); len(f) > 0 {

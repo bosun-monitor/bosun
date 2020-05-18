@@ -140,7 +140,7 @@ func (s *Schedule) GetLockStatus() (holder string, since time.Time) {
 
 // PutMetadata writes metadata for the given key to the database
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
-	isCoreMeta := k.Name == "desc" || k.Name == "unit" || k.Name == "rate"
+	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
 
 	if !isCoreMeta {
 		s.DataAccess.Metadata().PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), utcNow())
@@ -571,13 +571,13 @@ func (s *Schedule) ActionByAlertKey(user, message string, t models.ActionType, a
 }
 
 // ActionByIncidentId performs an action on an incident identified by an ID
-func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType, at *time.Time, incidentId int64) (models.AlertKey, error) {
-	st, err := s.DataAccess.State().GetIncidentState(incidentId)
+func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType, at *time.Time, id int64) (models.AlertKey, error) {
+	st, err := s.DataAccess.State().GetIncidentState(id)
 	if err != nil {
 		return "", err
 	}
 	if st == nil {
-		return "", fmt.Errorf("no incident with incidentId: %v", incidentId)
+		return "", fmt.Errorf("no incident with id: %v", id)
 	}
 	return s.action(user, message, t, at, st)
 }
@@ -608,7 +608,7 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 		found := false
 		for i, a := range st.Actions {
 			// Find first delayed close that hasn't already been fulfilled or canceled
-			if a.Type == models.ActionDelayedClose && !(a.Fulfilled || a.Cancelled) {
+			if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
 				found, st.Actions[i].Cancelled = true, true
 				break
 			}
@@ -632,7 +632,7 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 			}
 			// See if there is already a pending delayed close, if there is update the time and return
 			for i, a := range st.Actions {
-				if a.Type == models.ActionDelayedClose && !(a.Fulfilled || a.Cancelled) {
+				if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
 					st.Actions[i].Deadline = &dl
 					_, err := s.DataAccess.State().UpdateIncidentState(st)
 					if err != nil {
@@ -756,7 +756,7 @@ func (s *Schedule) GetCheckFrequency(alertName string) (time.Duration, error) {
 	if runEvery == 0 {
 		runEvery = s.SystemConf.GetDefaultRunEvery()
 	}
-	return time.Duration(runEvery) * s.SystemConf.GetCheckFrequency(), nil
+	return time.Duration(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency()), nil
 
 }
 

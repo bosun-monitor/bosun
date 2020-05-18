@@ -10,7 +10,8 @@ import (
 	"github.com/kylebrandt/boolq"
 )
 
-func listOpenIncidents(t miniprofiler.Timer, _ http.ResponseWriter, r *http.Request) (interface{}, error) {
+// ListOpenIncidents is a handler to list open incidents
+func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	// TODO: Retune this when we no longer store email bodies with incidents
 	list, err := schedule.DataAccess.State().GetAllOpenIncidents()
 	if err != nil {

@@ -79,10 +79,10 @@ func (t *Template) copy(tmpl iface) *Template {
 	}
 }
 
-func (t *Template) text() *ttemplate.Template {
+func (t *Template) t() *ttemplate.Template {
 	return t.inner.(*(ttemplate.Template))
 }
-func (t *Template) html() *htemplate.Template {
+func (t *Template) h() *htemplate.Template {
 	return t.inner.(*htemplate.Template)
 }
 
@@ -97,17 +97,17 @@ func Must(t *Template, err error) *Template {
 // New creates a copy of the receiver and gives it the passed name
 func (t *Template) New(name string) *Template {
 	if t.isHTML {
-		return t.copy(t.html().New(name))
+		return t.copy(t.h().New(name))
 	}
-	return t.copy(t.text().New(name))
+	return t.copy(t.t().New(name))
 }
 
 // Funcs returns the available functions for the templates
 func (t *Template) Funcs(fm FuncMap) *Template {
 	if t.isHTML {
-		return t.copy(t.html().Funcs(htemplate.FuncMap(fm)))
+		return t.copy(t.h().Funcs(htemplate.FuncMap(fm)))
 	}
-	return t.copy(t.text().Funcs(ttemplate.FuncMap(fm)))
+	return t.copy(t.t().Funcs(ttemplate.FuncMap(fm)))
 }
 
 // Parse parses a template from a string
@@ -115,9 +115,9 @@ func (t *Template) Parse(text string) (*Template, error) {
 	var i iface
 	var err error
 	if t.isHTML {
-		i, err = t.html().Parse(text)
+		i, err = t.h().Parse(text)
 	} else {
-		i, err = t.text().Parse(text)
+		i, err = t.t().Parse(text)
 	}
 	return t.copy(i), err
 }

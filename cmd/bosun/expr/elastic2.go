@@ -138,7 +138,7 @@ func timeESRequest2(e *State, req *ElasticRequest2) (resp *elastic.SearchResult,
 // ESDateHistogram2 returns a date histogram from Elasticsearch
 //
 // https://www.elastic.co/guide/en/elasticsearch/reference/2.4/search-aggregations-bucket-datehistogram-aggregation.html
-func ESDateHistogram2(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, statField, rstat string, size int) (r *Results, err error) {
+func ESDateHistogram2(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
 	req, err := ESBaseQuery2(e.now, indexer, filter, sduration, eduration, size, prefix)
 	if err != nil {
@@ -146,8 +146,8 @@ func ESDateHistogram2(prefix string, e *State, indexer ESIndexer, keystring stri
 	}
 	// Extended bounds and min doc count are required to get values back when the bucket value is 0
 	ts := elastic.NewDateHistogramAggregation().Field(indexer.TimeField).Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0).ExtendedBoundsMin(req.Start).ExtendedBoundsMax(req.End).Format(elasticRFC3339)
-	if statField != "" {
-		ts = ts.SubAggregation("stats", elastic.NewExtendedStatsAggregation().Field(statField))
+	if stat_field != "" {
+		ts = ts.SubAggregation("stats", elastic.NewExtendedStatsAggregation().Field(stat_field))
 		switch rstat {
 		case "avg", "min", "max", "sum", "sum_of_squares", "variance", "std_deviation":
 		default:

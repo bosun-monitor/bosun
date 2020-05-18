@@ -278,7 +278,7 @@ func c_elasticsearch(collectIndices bool, instance conf.Elastic) (opentsdb.Multi
 				"red":    0,
 			}
 			for _, index := range clusterHealth.Indices {
-				indexStatusCount[index.Status]++
+				indexStatusCount[index.Status] += 1
 			}
 			for status, count := range indexStatusCount {
 				Add(&md, "elastic.health.cluster.index_status_count", count, opentsdb.TagSet{"status": status}.Merge(ts), metadata.Gauge, metadata.Unit("indices"), "Index counts by status.")

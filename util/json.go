@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 )
 
-// MarshalGzipJSON encodes and GZips the given JSON data into a `[]byte`
-func MarshalGzipJSON(data interface{}) ([]byte, error) {
+// MarshalGzipJson encodes and GZips the given JSON data into a `[]byte`
+func MarshalGzipJson(data interface{}) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	g := gzip.NewWriter(buf)
 	enc := json.NewEncoder(g)
@@ -20,8 +20,8 @@ func MarshalGzipJSON(data interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// UnmarshalGzipJSON unzips and decodes the given JSON data from a `[]byte` into the given struct
-func UnmarshalGzipJSON(b []byte, dst interface{}) error {
+// UnmarshalGzipJson unzips and decodes the given JSON data from a `[]byte` into the given struct
+func UnmarshalGzipJson(b []byte, dst interface{}) error {
 	r := bytes.NewReader(b)
 	g, err := gzip.NewReader(r)
 	if err != nil {

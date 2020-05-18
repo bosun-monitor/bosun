@@ -121,10 +121,7 @@ func TestParseBigInt(t *testing.T) {
 			t.Errorf("#%d: bad result from %x, got %s want %s", i, test.in, ret.String(), test.base10)
 		}
 		fw := newForkableWriter()
-		err := marshalBigInt(fw, ret)
-		if err != nil {
-			t.Errorf("expected no error, got %s", err)
-		}
+		marshalBigInt(fw, ret)
 		result := fw.Bytes()
 		if !bytes.Equal(result, test.in) {
 			t.Errorf("#%d: got %x from marshaling %s, want %x", i, result, ret, test.in)

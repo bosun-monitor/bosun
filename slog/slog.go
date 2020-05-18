@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 )
 
@@ -124,6 +125,12 @@ func Fatalf(format string, v ...interface{}) {
 	os.Exit(1)
 }
 
+// Fatalln logs a fatal message and calls os.Exit(1).
+func Fatalln(v ...interface{}) {
+	outputln(logging.Fatal, v...)
+	os.Exit(1)
+}
+
 func out(f func(string), s string) {
 	if LogLineNumber {
 		if _, filename, line, ok := runtime.Caller(3); ok {
@@ -170,4 +177,12 @@ func Wrap(err error) error {
 		return err
 	}
 	return wrappedError{err, line}
+}
+
+// PanicAsFatal adds defer slog.PanicAsFatal() to the top of a goroutine to recover panics and log them using slog.Fatal
+func PanicAsFatal() {
+	if r := recover(); r != nil {
+		s := string(debug.Stack()[:])
+		Fatalf("panic: %s\nStackTrace:\n\n%s", r, s)
+	}
 }
