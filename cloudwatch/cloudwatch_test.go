@@ -116,7 +116,7 @@ func (c mockCloudWatchClient) ListMetricsPages(li *cloudwatch.ListMetricsInput, 
 		// level and node level values. The below adds a cluster only metric to test this case
 		cn := "Cluster Name"
 		cv := name
-		dimensions := []*cloudwatch.Dimension{&cloudwatch.Dimension{
+		dimensions := []*cloudwatch.Dimension{{
 			Name:  &cn,
 			Value: &cv,
 		}}
