@@ -587,13 +587,12 @@ User agent that Bosun should identify itself as when querying Influx.
 	UnsafeSSL = true
 ```
 
-		 ### CloudWatchConf
+### CloudWatchConf
  Enables querying CloudWatch metrics and exposes the query functions to the expression language.
  This functionality relies on bosun having assumed an iam role with the following capabilities
  ```
  ListMetrics
  GetMetricData
- GetMetricStatistics
  ```
  You can supply credentials using any of the standard methods such as passing an iam role to the ec2 instance bosun is running on, 
  in the aws shared credentials file or via environment variables.
@@ -601,26 +600,24 @@ User agent that Bosun should identify itself as when querying Influx.
   For complete details see the `Specifying Credentials` section of the [aws documentation](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html)
 
  
-  #### Enabled
+#### Enabled
  Should the cloudwatch functionality be loaded.
 
-  #### PagesLimit
+#### PagesLimit
  If wildcards are used in a dimension string bosun must call the [ListMetrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_ListMetrics.html) api to try and find
  matches. This parameter controls how many pages of results bosun will iterate through before giving up and throwing an error.
  1 page corresponds to 500 metrics
  
-  #### ExpansionLimit
+#### ExpansionLimit
  When using wildcards, the expansion limit controls the maximum number of metrics that will be requested using the 
  [getMetricData()](https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html) api.
  For example if you have a large infrastructure which uses spot instances and make a query with a dimension of `InstanceId:*` 
  it would match 1000s of metrics. This will both be slow and expensive as you will be billed for each series you request from
- the cloudwatch API. The PagesLimit and ExpansionLimit act as a safety valves to stop users inadvertently making very large requests
- to the api
+ the cloudwatch API. The PagesLimit and ExpansionLimit act as a safety valves to stop users inadvertently making very large requests.
 
-  #### Concurrency
- The number of simultaneous queries to make to the cloudwatch api. Increasing this number can improve perfomance of queries 
- which contain a large number of metrics but may result in rate limiting if you call the cloudwatch api too frequently.
- #### Example:
+#### Concurrency
+ The number of simultaneous queries to make to the cloudwatch api.
+#### Example:
 
   ```
 [CloudWatchConf]
