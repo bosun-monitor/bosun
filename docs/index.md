@@ -19,9 +19,12 @@ order: 1
 
 <div class="row">
 	<div class="col-md-12">
-		<div class="admonition warning">
-				<p class="admonition-title">Project Status (2019-02)</p>
-				<p>Bosun is now in maintenance/sunsetting status and is looking for new maintainer(s), please see <a href="/call">this notification</a>.</p>
+		<div class="admonition tip">
+				<p class="admonition-title">Project Status (2019-11)</p>
+				<p><a href="https://skyscanner.net">Skyscanner</a> is delighted to announce that as of 18th November 2019, we'll be officially taking over Bosun's ownership and maintainership from <a href="http://stackexchange.com">Stack Exchange</a> (home of stackoverflow.com).</p>
+                <p>We would like to thank StackExchange for their time, ensuring a smooth transition process, and for everyone’s hard work and input towards making this project a success. A special thanks to Kyle Brandt for initiating the Bosun project and leading it for many years.
+                 </p>
+                 <p> We will continue to welcome the open-source community code contributions on this project. Look out for updates on our plans and next steps in the near future.</p>
 		</div>
 	</div>
 </div>

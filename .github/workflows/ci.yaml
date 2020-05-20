@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ master ]
+
+jobs:
+  checks:
+    name: Code style
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.13
+        id: go
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Check suspicious constructs
+        run: make vet
+      - name: Check order of imports
+        run: make goimports-check
+      - name: Check if modules were tidied up
+        run: make tidy-check
+
+  generated:
+    name: Generated code
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.13
+        id: go
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: make deps
+      - name: Check whether go generate has run
+        run: export PATH=$(npm bin):$PATH && make generate
+
+  build_and_test:
+    name: Build and test
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.13
+        id: go
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Compile
+        run: make build
+      - name: Tests
+        run: make test
+      - name: Build bosun binary
+        run: make bosun
+      - name: Test startup
+        run: build/test-startup.sh
+
+  cross-compile:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        os: [ "linux", "darwin", "windows" ]
+    name: Build ${{ matrix.os }} binary
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "^1.13"
+      - name: Build ${{ matrix.os }} binary
+        run: make build-${{ matrix.os }}

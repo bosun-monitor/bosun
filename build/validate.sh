@@ -1,18 +1,13 @@
 #!/bin/bash
-cd $GOPATH/src/bosun.org
-DIRS=`find . -maxdepth 1 -type d -iregex './[^._].*' | grep -v '/vendor'`
-PKGS=`go list bosun.org/... | grep -v /vendor/`
-export GO15VENDOREXPERIMENT=1
+DIRS=`find . -maxdepth 1 -type d -iregex './[^._].*'`
+PKGS=`go list bosun.org/...`
+export GO111MODULE=on
 
 O=bosun-monitor
 R=bosun
 ORIGINALGOOS=$GOOS
 SHA=${TRAVIS_COMMIT}
 BUILDMSG=""
-if [ "$TRAVIS" != '' ]; then
-	setStatus -o $O -r $R -s pending -c bosun -d="Running validation build in travis" -sha=$SHA
-fi
-
 
 echo -e "\nBuilding/..."
 GOBUILDRESULT=0
@@ -69,7 +64,7 @@ fi
 
 echo -e "\nTesting that bosun starts and stops cleanly"
 #TODO: save linux build from above? cant seem to find where it is though.
-cd $GOPATH/src/bosun.org/cmd/bosun
+cd cmd/bosun
 go build .
 echo -e 'RuleFilePath = "rule.conf"' > bosun.toml
 echo "" > rule.conf
@@ -100,10 +95,6 @@ BUILDSTATUS=failure
 if [ "$BUILDMSG" == '' ]; then
 	BUILDMSG="All checks Passed!"
 	BUILDSTATUS=success
-fi
-
-if [ "$TRAVIS" != '' ]; then
-	setStatus -o $O -r $R -s=$BUILDSTATUS -c bosun -d="$BUILDMSG" -sha=$SHA
 fi
 
 let "RESULT = $GOBUILDRESULT | $GOFMTRESULT | $GOVETRESULT | $GOTESTRESULT | $GOGENERATERESULT | $GOGENERATEDIFFRESULT | $RUN_BOSUN"

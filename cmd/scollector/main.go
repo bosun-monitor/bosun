@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_version"
+	version "bosun.org/_version"
 	"bosun.org/cmd/scollector/collectors"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/collect"
@@ -118,14 +118,9 @@ func main() {
 		}()
 	}
 	collectors.AddTags = conf.Tags
-	util.FullHostname = conf.FullHost
-	util.Set()
-	if conf.Hostname != "" {
-		util.Hostname = conf.Hostname
-	}
-	if err := collect.SetHostname(util.Hostname); err != nil {
-		slog.Fatal(err)
-	}
+
+	util.InitHostManager(conf.Hostname, conf.FullHost)
+
 	if conf.ColDir != "" {
 		collectors.InitPrograms(conf.ColDir)
 	}

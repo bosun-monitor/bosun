@@ -43,6 +43,20 @@ func NewSearch(data database.DataAccess, skipLast bool) *Search {
 		indexQueue: make(chan *opentsdb.DataPoint, 300000),
 	}
 	collect.Set("search.index_queue", opentsdb.TagSet{}, func() interface{} { return len(s.indexQueue) })
+	collect.Set("search.last.total", opentsdb.TagSet{}, func() interface{} {
+		s.RLock()
+		defer s.RUnlock()
+		total := 0
+		for _, v := range s.last {
+			total += len(v)
+		}
+		return total
+	})
+	collect.Set("search.last.metrics", opentsdb.TagSet{}, func() interface{} {
+		s.RLock()
+		defer s.RUnlock()
+		return len(s.last)
+	})
 	if !skipLast {
 		s.loadLast()
 		go s.redisIndex(s.indexQueue)
@@ -211,6 +225,7 @@ func (s *Search) backupLoop() {
 		}
 	}
 }
+
 func (s *Search) BackupLast() error {
 	s.RLock()
 	copyL := make(map[string]map[string]*database.LastInfo, len(s.last))
