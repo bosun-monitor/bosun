@@ -30,6 +30,7 @@ var CloudWatch = map[string]parse.Func{
 var PeriodParseError = errors.New("Could not parse the period value")
 var StartParseError = errors.New("Could not parse the start value")
 var EndParseError = errors.New("Could not parse the end value")
+var DimensionParseError = errors.New("dimensions must be in format key:value")
 
 var isNumber = regexp.MustCompile("^\\d+$")
 
@@ -73,21 +74,24 @@ func hasWildcardDimension(dimensions string) bool {
 	return strings.Contains(dimensions, "*")
 }
 
-func parseDimensions(dimensions string) [][]cloudwatch.Dimension {
+func parseDimensions(dimensions string) ([][]cloudwatch.Dimension, error) {
 	dl := make([][]cloudwatch.Dimension, 0)
 	if len(strings.TrimSpace(dimensions)) == 0 {
-		return dl
+		return dl, nil
 	}
 	dims := strings.Split(dimensions, ",")
 
 	l := make([]cloudwatch.Dimension, 0)
 	for _, row := range dims {
 		dim := strings.Split(row, ":")
+		if len(dim) != 2 {
+			return nil, DimensionParseError
+		}
 		l = append(l, cloudwatch.Dimension{Name: dim[0], Value: dim[1]})
 	}
 	dl = append(dl, l)
 
-	return dl
+	return dl, nil
 }
 
 func parseDurations(s, e, p string) (start, end, period opentsdb.Duration, err error) {
@@ -224,7 +228,7 @@ func getCloudwatchData(e *State, req *cloudwatch.Request) (resp cloudwatch.Respo
 	key := req.CacheKey()
 	getFn := func() (interface{}, error) {
 
-		d := parseDimensions(req.DimensionString)
+		d, err := parseDimensions(req.DimensionString)
 
 		if hasWildcardDimension(req.DimensionString) {
 			lr := cloudwatch.LookupRequest{
@@ -239,7 +243,7 @@ func getCloudwatchData(e *State, req *cloudwatch.Request) (resp cloudwatch.Respo
 				return resp, err
 			}
 			if len(d) == 0 {
-				return resp, fmt.Errorf("Wildcard dimension did not match any cloudwatch metrics in region %s", req.Region)
+				return resp, fmt.Errorf("Wildcard dimensionString did not match any cloudwatch metrics in region %s", req.Region)
 			}
 		}
 		req.Dimensions = d

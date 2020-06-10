@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -240,6 +241,33 @@ func TestCloudWatchQueryWithoutDimensions(t *testing.T) {
 		t.Errorf("Dimensions not parsed correctly, expected '%s' , got '%s' ", "{}", results.Results[0].Group.String())
 	}
 }
+
+func TestParseDimensions(t *testing.T) {
+
+	var tests = []struct {
+		dimensionString string
+		dims            [][]cloudwatch.Dimension
+		err             error
+	}{
+		{"foo:bar", [][]cloudwatch.Dimension{{cloudwatch.Dimension{
+			Name:  "foo",
+			Value: "bar",
+		}}}, nil},
+		{"invalid", nil, DimensionParseError},
+	}
+	for _, test := range tests {
+		dims, err := parseDimensions(test.dimensionString)
+		if !reflect.DeepEqual(dims, test.dims) {
+			t.Errorf("Expected %+v, got %+v ", test.dims, dims)
+
+		}
+		if err != test.err {
+			t.Errorf("Expected %s, got %s ", test.err, err)
+		}
+	}
+
+}
+
 func TestCloudWatchTagQuery(t *testing.T) {
 	var tests = []struct {
 		dimensions string
