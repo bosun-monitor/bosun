@@ -18,7 +18,7 @@ require (
 	github.com/alicebob/gopher-json v0.0.0-20180125190556-5a6b3ba71ee6 // indirect
 	github.com/alicebob/miniredis v2.5.0+incompatible // indirect
 	github.com/andybalholm/cascadia v0.0.0-20150730174459-3ad29d1ad1c4 // indirect
-	github.com/aws/aws-sdk-go v1.30.7
+	github.com/aws/aws-sdk-go v1.31.12
 	github.com/aymerick/douceur v0.2.1-0.20150827151352-7176f1467381
 	github.com/bosun-monitor/statusio v0.0.0-20160516160816-ab1583139762
 	github.com/bradfitz/slice v0.0.0-20140430145140-a665b5dbaad5
@@ -33,15 +33,12 @@ require (
 	github.com/facebookgo/httpcontrol v0.0.0-20150708234001-ccde4420e1fe
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
-	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/garyburd/redigo v0.0.0-20151219232044-836b6e58b335
 	github.com/glendc/gopher-json v0.0.0-20170414221815-dc4743023d0c // indirect
 	github.com/gocarina/gocsv v0.0.0-20190927101021-3ecffd272576 // indirect
 	github.com/godbus/dbus v4.0.1-0.20160727174541-7a8c533d28e8+incompatible // indirect
 	github.com/golang/freetype v0.0.0-20150924013838-f29eb116deb3 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
-	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4
-	github.com/golang/protobuf v1.2.1-0.20190109072247-347cf4a86c1c // indirect
+	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/google/cadvisor v0.21.1-0.20160212224345-e9739af18411
 	github.com/google/go-github v0.0.0-20151126072848-44b1ede22d71
@@ -61,11 +58,11 @@ require (
 	github.com/kylebrandt/gohop v0.0.0-20160712175359-f6dbeb38f6df
 	github.com/llgcode/draw2d v0.0.0-20151105134336-9ffe0e7eb54c // indirect
 	github.com/llgcode/ps v0.0.0-20150911083025-f1443b32eedb // indirect
-	github.com/mailru/easyjson v0.0.0-20180323154445-8b799c424f57 // indirect
 	github.com/mhenderson-so/azure-ea-billing v0.0.0-20160829175629-4fd1a790460c
 	github.com/mitchellh/go-homedir v1.0.0 // indirect
 	github.com/mjibson/esc v0.1.0
 	github.com/olivere/elastic v6.1.23-0.20180523141205-33ad30f61610+incompatible
+	github.com/olivere/elastic/v7 v7.0.17
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
@@ -88,11 +85,10 @@ require (
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/image v0.0.0-20150916112557-baddd3465a05 // indirect
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
-	golang.org/x/oauth2 v0.0.0-20160608215109-65a8d08c6292
+	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
-	golang.org/x/sys v0.0.0-20190412213103-97732733099d
+	golang.org/x/sys v0.0.0-20190502145724-3ef323f4f1fd
 	google.golang.org/api v0.0.0-20180506000402-20530fd5d65a
-	google.golang.org/appengine v1.0.1-0.20161115221414-ca59ef35f409 // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20141119150059-9eae18c3681a // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7
