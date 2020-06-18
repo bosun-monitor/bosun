@@ -1134,6 +1134,9 @@ func TimeDelta(e *State, series *Results) (*Results, error) {
 	for _, res := range series.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
 		newSeries := make(Series)
+		if len(sorted) == 0 {
+			continue
+		}
 		if len(sorted) < 2 {
 			newSeries[sorted[0].T] = 0
 			res.Value = newSeries

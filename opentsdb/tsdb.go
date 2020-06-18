@@ -4,7 +4,6 @@ package opentsdb // import "bosun.org/opentsdb"
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,10 +16,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
-	"unicode/utf8"
 
 	"bosun.org/slog"
+	"github.com/pkg/errors"
 )
 
 // ResponseSet is a Multi-Set Response:
@@ -321,40 +319,21 @@ func Clean(s string) (string, error) {
 // tag values and replaces them.
 // See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
 func Replace(s, replacement string) (string, error) {
-	if !needsReplacement(s) {
-		return s, nil
-	}
-	var c string
-	replaced := false
-	for len(s) > 0 {
-		r, size := utf8.DecodeRuneInString(s)
-		if isRuneValid(r) {
-			c += string(r)
-			replaced = false
-		} else if !replaced {
-			//only replace the first occurence of an invalid character.
-			c += replacement
-			replaced = true
-		}
-		s = s[size:]
-	}
-	if len(c) == 0 {
-		return "", fmt.Errorf("clean result is empty")
-	}
-	return c, nil
-}
 
-func needsReplacement(s string) bool {
-	for _, r := range []rune(s) {
-		if !isRuneValid(r) {
-			return true
-		}
+	// constructing a name processor isn't too expensive but we need to refactor this file so that it's possible to
+	// inject instances so that we don't have to keep newing up.
+	// For the moment I prefer to constructing like this to holding onto a global instance
+	val, err := NewOpenTsdbNameProcessor(replacement)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to create name processor")
 	}
-	return false
-}
 
-func isRuneValid(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/'
+	result, err := val.FormatName(s)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to format string")
+	}
+
+	return result, nil
 }
 
 // MustReplace is like Replace, but returns an empty string on error.
@@ -645,15 +624,16 @@ func ParseTags(t string) (TagSet, error) {
 
 // ValidTSDBString returns true if s is a valid metric or tag.
 func ValidTSDBString(s string) bool {
-	if s == "" {
+
+	// constructing a name processor isn't too expensive but we need to refactor this file so that it's possible to
+	// inject instances so that we don't have to keep newing up.
+	// For the moment I prefer to constructing like this to holding onto a global instance
+	val, err := NewOpenTsdbNameProcessor("")
+	if err != nil {
 		return false
 	}
-	for _, c := range s {
-		if !isRuneValid(c) {
-			return false
-		}
-	}
-	return true
+
+	return val.IsValid(s)
 }
 
 var groupRE = regexp.MustCompile("{[^}]+}")

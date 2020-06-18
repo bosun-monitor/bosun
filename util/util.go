@@ -2,39 +2,39 @@
 package util // import "bosun.org/util"
 
 import (
-	"net"
-	"os"
+	"bosun.org/host"
+	"bosun.org/slog"
+
 	"regexp"
-	"strings"
 )
 
-var (
-	// Hostname is the machine's hostname.
-	Hostname string
-	// FullHostname will, if false, uses the hostname upto the first ".". Run Set()
-	// manually after changing.
-	FullHostname bool
-)
+// This is here only until we manage to refactor more of the system, allowing us to pass a host.Manager around
+// the system, rather than holding onto global state
+var hostManager host.Manager
 
-// Clean cleans a hostname based on the current FullHostname setting.
-func Clean(s string) string {
-	if !FullHostname {
-		//only split if string is not an IP address
-		ip := net.ParseIP(s)
-		if ip == nil {
-			s = strings.SplitN(s, ".", 2)[0]
-		}
+func InitHostManager(customHostname string, useFullHostName bool) {
+	var hm host.Manager
+	var err error
+
+	if customHostname != "" {
+		hm, err = host.NewManagerForHostname(customHostname, useFullHostName)
+	} else {
+		hm, err = host.NewManager(useFullHostName)
 	}
-	return strings.ToLower(s)
+
+	if err != nil {
+		slog.Fatalf("couldn't initialise host factory: %v", err)
+	}
+
+	SetHostManager(hm)
 }
 
-// Set sets Hostntame based on the current preferences.
-func Set() {
-	h, err := os.Hostname()
-	if err != nil {
-		h = "unknown"
-	}
-	Hostname = Clean(h)
+func SetHostManager(hm host.Manager) {
+	hostManager = hm
+}
+
+func GetHostManager() host.Manager {
+	return hostManager
 }
 
 func NameMatches(name string, regexes []*regexp.Regexp) bool {
@@ -51,8 +51,4 @@ func Btoi(b bool) int {
 		return 1
 	}
 	return 0
-}
-
-func init() {
-	Set()
 }

@@ -3,10 +3,8 @@ package main
 //go:generate go run ../../build/generate/generate.go
 
 import (
-	"bosun.org/_version"
 	"flag"
 	"fmt"
-	"gopkg.in/fsnotify.v1"
 	"net/http"
 	"net/http/httptest"
 	_ "net/http/pprof"
@@ -17,6 +15,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	version "bosun.org/_version"
+	"gopkg.in/fsnotify.v1"
 
 	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/conf"
@@ -48,7 +49,7 @@ func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", t.UserAgent)
 	}
-	req.Header.Add("X-Bosun-Server", util.Hostname)
+	req.Header.Add("X-Bosun-Server", util.GetHostManager().GetHostName())
 	return t.RoundTripper.RoundTrip(req)
 }
 
@@ -114,6 +115,8 @@ func main() {
 	if err != nil {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
+
+	util.InitHostManager(systemConf.Hostname, false)
 
 	// Check if ES version is set by getting configs on start-up.
 	// Because the current APIs don't return error so calling slog.Fatalf

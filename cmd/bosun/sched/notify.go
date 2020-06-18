@@ -24,6 +24,9 @@ func (s *Schedule) dispatchNotifications() {
 	nextAt(utcNow())
 	for {
 		select {
+		case <-s.runnerContext.Done():
+			slog.Infoln("Stopping notification dispatcher")
+			return
 		case <-next:
 			nextAt(s.CheckNotifications())
 		case <-s.nc:

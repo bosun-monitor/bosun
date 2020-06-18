@@ -1,0 +1,30 @@
+name: sonarcloud
+
+on:
+  push:
+    branches: [ master ]
+jobs:
+  sonarcloud:
+    name: Sonar static analysis
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.13
+        id: go
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          # Disabling shallow clone is recommended for improving relevancy of reporting
+          fetch-depth: 0
+      - name: Install dependencies
+        # Need to install Typescript which is required by SonarCloud ro tun its checks
+        run: make deps testdeps
+      - name: Generate coverage report
+        run: make test-coverprofile
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
