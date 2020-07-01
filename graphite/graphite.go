@@ -58,7 +58,7 @@ func (r *Request) Query(host string, header http.Header) (Response, error) {
 	}
 
 	u, err := url.Parse(host)
-	if err== nil && u.Scheme != "" && u.Host != "" {
+	if err == nil && u.Scheme != "" && u.Host != "" {
 		r.URL.Scheme = u.Scheme
 		r.URL.Host = u.Host
 		if u.Path != "" {
