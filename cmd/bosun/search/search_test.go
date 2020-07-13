@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"bosun.org/host"
+	"bosun.org/util"
+
 	"bosun.org/cmd/bosun/database/test"
 	"bosun.org/opentsdb"
 )
@@ -13,6 +16,12 @@ import (
 var testSearch *Search
 
 func TestMain(m *testing.M) {
+	hm, err := host.NewManager(false)
+	if err != nil {
+		panic(err)
+	}
+	util.SetHostManager(hm)
+
 	testData, closeF := dbtest.StartTestRedis(9990)
 	testSearch = NewSearch(testData, false)
 	status := m.Run()

@@ -45,9 +45,15 @@ notifications.
 ## Keys
 
 ### Hostname
-The hostname that Bosun uses to construct its links. The common use case
-is in any [template functions](/definitions#template-functions) that
-construct links.
+Bosun records state in a Redis store and much of this state is associated with particular host names.  This works 
+well when Bosun is run on a dedicated machine however if it's run within a container orchestration platform, 
+where instance names can change very frequently then it can lead to a low quality recording of state and 
+excessive disk and memory use (as a new copy of this state is created every time the hostname changes).  To overcome 
+this issue you can define a custom hostname and this will mean that even when a container instance is recreated Bosun 
+will continue to use the previously known state.
+
+This setting will also be used during the construction of links in any 
+[template functions](/definitions#template-functions) that need them.
 
 Example:
 `Hostname = "bosun.example.com"`
@@ -580,6 +586,46 @@ User agent that Bosun should identify itself as when querying Influx.
 	Timeout = "5m"
 	UnsafeSSL = true
 ```
+
+### CloudWatchConf
+ Enables querying CloudWatch metrics and exposes the query functions to the expression language.
+ This functionality relies on bosun having assumed an iam role with the following capabilities
+ ```
+ ListMetrics
+ GetMetricData
+ ```
+ You can supply credentials using any of the standard methods such as passing an iam role to the ec2 instance bosun is running on, 
+ in the aws shared credentials file or via environment variables.
+
+  For complete details see the `Specifying Credentials` section of the [aws documentation](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html)
+
+ 
+#### Enabled
+ Should the cloudwatch functionality be loaded.
+
+#### PagesLimit
+ If wildcards are used in a dimension string bosun must call the [ListMetrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_ListMetrics.html) api to try and find
+ matches. This parameter controls how many pages of results bosun will iterate through before giving up and throwing an error.
+ 1 page corresponds to 500 metrics
+ 
+#### ExpansionLimit
+ When using wildcards, the expansion limit controls the maximum number of metrics that will be requested using the 
+ [getMetricData()](https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html) api.
+ For example if you have a large infrastructure which uses spot instances and make a query with a dimension of `InstanceId:*` 
+ it would match 1000s of metrics. This will both be slow and expensive as you will be billed for each series you request from
+ the cloudwatch API. The PagesLimit and ExpansionLimit act as a safety valves to stop users inadvertently making very large requests.
+
+#### Concurrency
+ The number of simultaneous queries to make to the cloudwatch api.
+#### Example:
+
+  ```
+[CloudWatchConf]
+       Enabled = true
+       PagesLimit = 10
+       ExpansionLimit = 500
+       Concurrency = 2
+ ```
 
 ### AuthConf
 Bosun authentication settings. If not specified, your instance will have

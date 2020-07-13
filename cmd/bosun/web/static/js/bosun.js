@@ -2713,8 +2713,8 @@ var Version = (function () {
     return Version;
 }());
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', 'authService', function ($scope, $http, $location, $route, $timeout, auth) {
-        $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
-        $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+        $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "mimmax"];
+        $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "mimmax"];
         $scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
         if ($scope.version.Major >= 2 && $scope.version.Minor >= 2) {
             $scope.filterSupport = true;

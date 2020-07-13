@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"bosun.org/host"
+	"bosun.org/util"
+
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/models"
@@ -16,6 +19,12 @@ import (
 )
 
 func TestCheckFlapping(t *testing.T) {
+	hm, err := host.NewManager(false)
+	if err != nil {
+		t.Error(err)
+	}
+	util.SetHostManager(hm)
+
 	defer setup()()
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		template t {

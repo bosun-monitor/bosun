@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
-	"github.com/garyburd/redigo/redis"
 	"log"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 var (

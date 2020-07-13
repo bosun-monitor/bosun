@@ -45,7 +45,7 @@ func init() {
 		F:        c_mssql_replica_votes,
 		Interval: time.Minute * 5,
 	}
-	c_replica_votes.init = wmiInitNamespace(c_replica_votes, func() interface{} { return &[]MSCluster_Node{} }, fmt.Sprintf("WHERE Name = '%s'", util.Hostname), &sqlAGVotes, rootMSCluster)
+	c_replica_votes.init = wmiInitNamespace(c_replica_votes, func() interface{} { return &[]MSCluster_Node{} }, fmt.Sprintf("WHERE Name = '%s'", util.GetHostManager().GetHostName()), &sqlAGVotes, rootMSCluster)
 	collectors = append(collectors, c_replica_votes)
 
 	c_replica_resources := &IntervalCollector{
@@ -515,7 +515,7 @@ type MSCluster_Cluster struct {
 func c_mssql_replica_resources() (opentsdb.MultiDataPoint, error) {
 	var dst []MSCluster_Resource
 	//Only report metrics for resources owned by this node
-	q := wmi.CreateQuery(&dst, fmt.Sprintf("WHERE OwnerNode = '%s'", util.Hostname))
+	q := wmi.CreateQuery(&dst, fmt.Sprintf("WHERE OwnerNode = '%s'", util.GetHostManager().GetHostName()))
 	if err := queryWmiNamespace(q, &dst, rootMSCluster); err != nil {
 		return nil, slog.Wrap(err)
 	}
