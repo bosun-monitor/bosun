@@ -1449,6 +1449,79 @@ See the [main lookup example](/definitions#main-lookup-example) for example usag
 
 If there is an error generating the shortlink an empty string is returned and `.Errors` is appended to.
 
+##### .SlackAttachment() (slack.Attachment)
+{: .func}
+
+`.SlackAttachment` returns an object that represents a [Slack Message Attachment](https://api.slack.com/docs/message-attachments) which can be used to build Slack notifications.
+
+When this function is called the Attachment will have the following properties set:
+
+  * `color`: Sets the slack color based on the Status of the alert: Normal: `good`, Warning: `warning`, Critical: `danger`, and Unknown: `#439FE0`.
+  * `ts`: Sets the timestamp to the .LastAbnormalTime for the alert.
+
+The Attachment has the following methods in order to set the values of its fields:
+
+  * `.AddActions(...interface{})`: Adds one or more objects to the Actions field of the Attachment. Generally one would use the [global template function `slackLinkButton`](/definitions#slacklinkbuttontext-url-style-string-slackaction) to create the objects that are beeing added.
+  * `.AddFields(...interface{})`: Adds one or more objects to the Fields field of the Attachment. Generally one would use the [global template function `slackField`](/definitions#slackfieldtitle-string-value-interface-short-bool-slackfield) to create the objects that are beeing added.
+  * `.SetColor(color string)`: Sets the Color property.
+  * `.SetFallback(fallback string)`: Sets the Fallback property.
+  * `.SetAuthorID(authorID string)`: Sets the AuthorID property.
+  * `.SetAuthorName(authorName string)`: Sets the AuthorName property.
+  * `.SetAuthorSubname(authorSubname string)`: Sets the AuthorSubname property.
+  * `.SetAuthorLink(authorLink string)`: Sets the SetAuthorLink property.
+  * `.SetAuthorIcon(authorIcon string)`: Sets AuthorIco, the property.
+  * `.SetTitle(title string)`: Sets the Title property.
+  * `.SetTitleLink(titleLink string)`: Sets the TitleLink property.
+  * `.SetPretext(pretext string)`: Sets the Pretext property.
+  * `.SetText(text string)`: Sets the Text property.
+  * `.SetImageURL(url string)`: Sets the ImageURL property.
+  * `.SetThumbURL(url string)`: Sets the ThumbURL property.
+  * `.SetFooter(footer string)`: Sets the Footer property.
+  * `.SetFooterIcon(footerIcon string)`: Sets the FooterIcon property.
+  * `.SetTs(ts int64)`: Sets the Ts property (unix timestamp).
+
+Example:
+
+```
+alert slack.example.alert {
+    $avgQ = avg(series("host=foo", 0, 1))
+    warn = $avgQ
+    template = slack.example.template
+    warnNotification =  slack.example.notification
+}
+
+template slack.example.template {
+    body = `This text will be body of <a href="http://bosun.example.com/">Bosun's dashboard</a>`
+    subject = ``
+    slack = `
+    {{- $a := .SlackAttachment -}}
+
+    {{- $a.SetTitle "Better Check your alert!" -}}
+    {{- $a.SetTitleLink .Incident -}}
+
+    {{- $exampleButton := slackLinkButton "Go To Example.com" "http://example.com" "" -}}
+    {{- $ruleButton    := slackLinkButton "Alert Configuration" .Rule "" -}}
+    {{- $ackButton     := slackLinkButton "Ack Alert" .Ack "" -}}
+
+    {{- $a.AddActions $exampleButton $ruleButton $ackButton -}}
+
+    {{- $avgQ := .Eval .Alert.Vars.avgQ -}}
+
+    {{- $exampleField := slackField "A Number" $avgQ true -}}
+    {{- $utcField := slackField "UTC Time" (.LastAbnormalTime.Format "2006-01-02T15:04:05") true -}}
+    {{- $a.AddFields $exampleField $utcField -}}
+
+    {{- $a.SetText (printf "%v: avg for host %v is %v" .Last.Status .Group.host $avgQ) -}}
+
+    {{- makeMap "attachments" (makeSlice $a) | json -}}`
+}
+
+notification slack.example.notification {
+    post = http://localhost
+    bodyTemplate = slack
+}
+```
+
 #### Global Functions
 
 ##### append: append(a []interface{}, b interface{}) interface{}
@@ -1694,6 +1767,46 @@ alert replace {
 {: .func}
 
 `short` Trims the string to everything before the first period. Useful for turning a FQDN into a shortname. For example: `{{short "foo.baz.com"}}` in a template will return `foo`
+
+##### slackLinkButton(text, url, style string) slack.Action
+{: .func}
+
+The `slackLinkButton` function creates a Slack Action with the type set to "button" and the text, url, and style fields as provided as arguments. This is can be used with [the SlackAttachment function](/definitions#slackattachment-slackattachment) and `.AddActions` method for the slack.Attachment.
+
+Example:
+
+```
+{{- $a := .SlackAttachment -}}
+
+{{- $exampleButton := slackLinkButton "Go To Example.com" "http://example.com" "" -}}
+{{- $ruleButton    := slackLinkButton "Alert Configuration" .Rule "" -}}
+{{- $ackButton     := slackLinkButton "Ack Alert" .Ack "" -}}
+
+{{- $a.AddActions $exampleButton $ruleButton $ackButton -}}
+
+
+{{- makeMap "attachments" (makeSlice $a) | json -}}`
+```
+
+##### slackField(title string, value interface{}, short bool) slack.Field
+{: .func}
+
+The `slackField` function creates a Slack Field objects based on the arguments. This is can be used with [the SlackAttachment function](/definitions#slackattachment-slackattachment) and `.AddFields` method for the slack.Attachment.
+
+Example:
+
+```
+{{- $a := .SlackAttachment -}}
+
+{{- $avgQ := .Eval .Alert.Vars.avgQ -}}
+
+{{- $exampleField := slackField "A Number" $avgQ true -}}
+{{- $utcField := slackField "UTC Time" (.LastAbnormalTime.Format "2006-01-02T15:04:05") true -}}
+{{- $a.AddFields $exampleField $utcField -}}
+
+
+{{- makeMap "attachments" (makeSlice $a) | json -}}`
+```
 
 ##### V(string) (string)
 {: .func}

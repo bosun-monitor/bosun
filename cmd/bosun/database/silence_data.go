@@ -2,10 +2,10 @@ package database
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 
 	"bosun.org/models"
+	"bosun.org/slog"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -48,7 +48,7 @@ func (d *dataAccess) GetActiveSilences() ([]*models.Silence, error) {
 	if len(vals) == 0 {
 		return nil, nil
 	}
-	silences, err := getSilences(vals, conn)
+	silences, err := d.getSilences(vals, conn)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (d *dataAccess) GetActiveSilences() ([]*models.Silence, error) {
 	return filtered, nil
 }
 
-func getSilences(ids []string, conn redis.Conn) ([]*models.Silence, error) {
+func (d *dataAccess) getSilences(ids []string, conn redis.Conn) ([]*models.Silence, error) {
 	args := make([]interface{}, len(ids)+1)
 	args[0] = silenceHash
 	for i := range ids {
@@ -70,14 +70,19 @@ func getSilences(ids []string, conn redis.Conn) ([]*models.Silence, error) {
 	}
 	jsons, err := redis.Strings(conn.Do("HMGET", args...))
 	if err != nil {
-		log.Fatal(err, args)
+		slog.Error(err, args)
 		return nil, err
 	}
 	silences := make([]*models.Silence, 0, len(jsons))
-	for _, j := range jsons {
+	for idx, j := range jsons {
 		s := &models.Silence{}
 		if err := json.Unmarshal([]byte(j), s); err != nil {
-			return nil, err
+			slog.Errorf("Incorrect silence data for %s. We are going to delete this silence rule", ids[idx])
+			deleteErr := d.DeleteSilence(ids[idx])
+			if deleteErr != nil {
+				slog.Errorf("Error while delete silence %s: %s", ids[idx], deleteErr.Error())
+				return nil, err
+			}
 		}
 		silences = append(silences, s)
 	}
@@ -123,7 +128,7 @@ func (d *dataAccess) ListSilences(endingAfter int64) (map[string]*models.Silence
 	if len(ids) == 0 {
 		return map[string]*models.Silence{}, nil
 	}
-	silences, err := getSilences(ids, conn)
+	silences, err := d.getSilences(ids, conn)
 	if err != nil {
 		return nil, err
 	}

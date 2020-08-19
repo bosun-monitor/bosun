@@ -3,6 +3,9 @@ package collectors
 import (
 	"testing"
 
+	"bosun.org/host"
+	"bosun.org/util"
+
 	"bosun.org/opentsdb"
 )
 
@@ -22,6 +25,13 @@ func TestIsDigit(t *testing.T) {
 }
 
 func TestAddTS_Invalid(t *testing.T) {
+	hm, err := host.NewManager(false)
+	if err != nil {
+		t.Error(err)
+	}
+
+	util.SetHostManager(hm)
+
 	mdp := &opentsdb.MultiDataPoint{}
 	ts := opentsdb.TagSet{"srv": "%%%"}
 	Add(mdp, "aaaa", 42, ts, "", "", "") //don't have a good way to tesst this automatically, but I look for a log message with this line number in it.

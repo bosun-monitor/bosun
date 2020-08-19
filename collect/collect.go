@@ -9,12 +9,13 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"bosun.org/util"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -64,7 +65,6 @@ var (
 
 	tchan               chan *opentsdb.DataPoint
 	tsdbURL             string
-	osHostname          string
 	metricRoot          string
 	queue               []*opentsdb.DataPoint
 	qlock, mlock, slock sync.Mutex // Locks for queues, maps, stats.
@@ -191,26 +191,6 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 // sets up the basename for all metrics.
 func Init(tsdbhost *url.URL, root string) error {
 	return InitChan(tsdbhost, root, make(chan *opentsdb.DataPoint))
-}
-
-func SetHostname(host string) error {
-	if err := checkClean(host, "host tag"); err != nil {
-		return err
-	}
-	osHostname = host
-	return nil
-}
-
-func setHostName() error {
-	h, err := os.Hostname()
-	if err != nil {
-		return err
-	}
-	osHostname = strings.ToLower(strings.SplitN(h, ".", 2)[0])
-	if err := checkClean(osHostname, "host tag"); err != nil {
-		return err
-	}
-	return nil
 }
 
 type agMetric struct {
@@ -416,16 +396,12 @@ func check(metric string, ts *opentsdb.TagSet) error {
 			return err
 		}
 	}
-	if osHostname == "" {
-		if err := setHostName(); err != nil {
-			return err
-		}
-	}
+
 	if *ts == nil {
 		*ts = make(opentsdb.TagSet)
 	}
 	if host, present := (*ts)["host"]; !present {
-		(*ts)["host"] = osHostname
+		(*ts)["host"] = util.GetHostManager().GetHostName()
 	} else if host == "" {
 		delete(*ts, "host")
 	}

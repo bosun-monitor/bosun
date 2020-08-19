@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -345,6 +346,12 @@ var builtins = map[string]parse.Func{
 		VariantReturn: true,
 		Tags:          tagFirst,
 		F:             Limit,
+	},
+	"isnan": {
+		Args:   []models.FuncType{models.TypeNumberSet},
+		F:      IsNaN,
+		Return: models.TypeNumberSet,
+		Tags:   tagFirst,
 	},
 	"nv": {
 		Args:   []models.FuncType{models.TypeNumberSet, models.TypeScalar},
@@ -719,6 +726,17 @@ func Epoch(e *State) (*Results, error) {
 	}, nil
 }
 
+func IsNaN(e *State, nSet *Results) (*Results, error) {
+	for _, res := range nSet.Results {
+		if math.IsNaN(float64(res.Value.Value().(Number))) {
+			res.Value = Number(1)
+			continue
+		}
+		res.Value = Number(0)
+	}
+	return nSet, nil
+}
+
 func Month(e *State, offset float64, startEnd string) (*Results, error) {
 	if startEnd != "start" && startEnd != "end" {
 		return nil, fmt.Errorf("last parameter for mtod must be 'start' or 'end'")
@@ -764,6 +782,9 @@ func Sort(e *State, series *Results, order string) (*Results, error) {
 }
 
 func Limit(e *State, set *Results, v float64) (*Results, error) {
+	if v < 0 {
+		return nil, errors.New(fmt.Sprintf("Limit can't be negative value. We have received value %f as limit", v))
+	}
 	i := int(v)
 	if len(set.Results) > i {
 		set.Results = set.Results[:i]
@@ -1031,13 +1052,25 @@ func match(f func(res *Results, series *Result, floats []float64) error, series 
 
 func reduce(e *State, series *Results, F func(Series, ...float64) float64, args ...*Results) (*Results, error) {
 	f := func(res *Results, s *Result, floats []float64) error {
-		t := s.Value.(Series)
-		if len(t) == 0 {
+		switch tp := s.Value.(type) {
+		case Series:
+			t := s.Value.(Series)
+			if len(t) == 0 {
+				return nil
+			}
+			s.Value = Number(F(t, floats...))
+			res.Results = append(res.Results, s)
 			return nil
+		default:
+			return errors.New(
+				fmt.Sprintf(
+					"Unsupported type passed to reduce for alarm [%s]. Want: Series, got: %s. "+
+						"It can happen when we can't unjoin values. Please set IgnoreUnjoined and/or "+
+						"IgnoreOtherUnjoined for distiguish this error.", e.Origin, reflect.TypeOf(tp).String(),
+				),
+			)
 		}
-		s.Value = Number(F(t, floats...))
-		res.Results = append(res.Results, s)
-		return nil
+
 	}
 	return match(f, series, args...)
 }
@@ -1101,6 +1134,9 @@ func TimeDelta(e *State, series *Results) (*Results, error) {
 	for _, res := range series.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
 		newSeries := make(Series)
+		if len(sorted) == 0 {
+			continue
+		}
 		if len(sorted) < 2 {
 			newSeries[sorted[0].T] = 0
 			res.Value = newSeries
@@ -1460,4 +1496,22 @@ func Transpose(e *State, d *Results, gp string) (*Results, error) {
 		r.Results = append(r.Results, res)
 	}
 	return &r, nil
+}
+
+// parseDurationPair is a helper to parse Bosun/OpenTSDB style duration strings that are often
+// the last two arguments of tsdb query functions. It uses the State object's now property
+// and returns absolute start and end times
+func parseDurationPair(e *State, startDuration, endDuration string) (start, end time.Time, err error) {
+	sd, err := opentsdb.ParseDuration(startDuration)
+	if err != nil {
+		return
+	}
+	var ed opentsdb.Duration
+	if endDuration != "" {
+		ed, err = opentsdb.ParseDuration(endDuration)
+		if err != nil {
+			return
+		}
+	}
+	return e.now.Add(time.Duration(-sd)), e.now.Add(time.Duration(-ed)), nil
 }

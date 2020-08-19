@@ -19,6 +19,7 @@ import (
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/cmd/bosun/sched/slack"
 	"bosun.org/opentsdb"
 )
 
@@ -451,6 +452,21 @@ var defaultFuncs = template.FuncMap{
 		}
 		return string(b)
 	},
+	"slackLinkButton": func(text, url, style string) interface{} {
+		return slack.Action{
+			Type:  "button",
+			Text:  text,
+			URL:   url,
+			Style: style,
+		}
+	},
+	"slackField": func(title string, value interface{}, short bool) interface{} {
+		return slack.Field{
+			Title: title,
+			Value: value,
+			Short: short,
+		}
+	},
 }
 
 var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
@@ -663,6 +679,12 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	}
 	if backends.AzureMonitor {
 		merge(expr.AzureMonitor)
+	}
+	if backends.Prom {
+		merge(expr.Prom)
+	}
+	if backends.CloudWatch {
+		merge(expr.CloudWatch)
 	}
 	return funcs
 }

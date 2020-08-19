@@ -16,7 +16,10 @@ title: Resources
 > An introduction to the data model of Bosun’s primary time series backend OpenTSDB. The [first video](https://www.youtube.com/watch?v=DVavDN8tyIc&list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9&index=1) covers time series, metrics and tags, aggregation, rate calculation, and downsampling. The [second video](https://www.youtube.com/watch?v=7NYHOp3HlQc&list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9&index=2) covers data types, functions, operators, and set joins.
 
 ### Docker images
-> There is a [full Bosun](https://hub.docker.com/r/stackexchange/bosun/) image that can be used for testing (Not recommended for production use), and an [OpenTSDB only](https://hub.docker.com/r/petergrace/opentsdb-docker/) image if desired.
+> There is a [full Bosun](https://hub.docker.com/r/stackexchange/bosun/) image that can be used for testing
+> (Not recommended for production use), and an [OpenTSDB only](https://hub.docker.com/r/petergrace/opentsdb-docker/) 
+> image if desired. Newer versions than the published ones can be built with the `docker-compose.yml` file in the 
+> `docker` directory of the repository.
 
 ### Chef Cookbooks by ptqa
 > There is a cookbook for using Chef to deploy [scollector](https://supermarket.chef.io/cookbooks/scollector) and another work in progress for deploying [Bosun](https://github.com/ptqa/chef-bosun).
@@ -82,6 +85,9 @@ _See also the list of built-in collectors included with [scollector](http://bosu
 
 ### [discreet-scollector](https://forge.puppet.com/discreet/scollector) by Chris Pisano
 > Puppet module for installing and configuring the SCollector agent.
+
+### [VS Code Plugin](https://marketplace.visualstudio.com/items?itemName=tbutterwith.bosun) by Tom Butterwith
+> Syntax highlighting, openTSDB metric path completion and config validate extension for [VS Code](https://code.visualstudio.com/).
 
   &nbsp;
 

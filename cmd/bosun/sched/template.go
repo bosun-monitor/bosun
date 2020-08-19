@@ -19,6 +19,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/sched/slack"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -678,6 +679,8 @@ func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurati
 		return c.esQuery5(indexRoot, filter, sduration, eduration, size)
 	case expr.ESV6:
 		return c.esQuery6(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV7:
+		return c.esQuery7(indexRoot, filter, sduration, eduration, size)
 	}
 
 	return nil
@@ -696,6 +699,8 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 		return c.esQueryAll5(indexRoot, filter, sduration, eduration, size)
 	case expr.ESV6:
 		return c.esQueryAll6(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV7:
+		return c.esQueryAll7(indexRoot, filter, sduration, eduration, size)
 	}
 
 	return nil
@@ -754,4 +759,10 @@ func (c *Context) azureSelectResource(prefix, rType, rsg, name string) (expr.Azu
 		return selectedResource, nil
 	}
 	return az, fmt.Errorf("resource with type %s, group %s, and name %s not found", rType, rsg, name)
+}
+
+// SlackAttachment creates a new SlackAttachment with fields initalized
+// from the IncidentState.
+func (c *Context) SlackAttachment() *slack.Attachment {
+	return slack.NewAttachment(c.IncidentState)
 }

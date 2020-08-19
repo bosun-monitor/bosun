@@ -16,7 +16,8 @@ import (
 	"syscall"
 	"time"
 
-	"bosun.org/_version"
+	version "bosun.org/_version"
+	"gopkg.in/fsnotify.v1"
 
 	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/conf"
@@ -34,7 +35,7 @@ import (
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
 	elastic6 "github.com/olivere/elastic"
-	"gopkg.in/fsnotify.v1"
+	elastic7 "github.com/olivere/elastic/v7"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
 )
@@ -48,7 +49,7 @@ func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", t.UserAgent)
 	}
-	req.Header.Add("X-Bosun-Server", util.Hostname)
+	req.Header.Add("X-Bosun-Server", util.GetHostManager().GetHostName())
 	return t.RoundTripper.RoundTrip(req)
 }
 
@@ -115,6 +116,8 @@ func main() {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
 
+	util.InitHostManager(systemConf.Hostname, false)
+
 	// Check if ES version is set by getting configs on start-up.
 	// Because the current APIs don't return error so calling slog.Fatalf
 	// inside these functions (for multiple-es support).
@@ -169,6 +172,8 @@ func main() {
 			annotateBackend = backend.NewElastic5([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic5.ClientOptionFunc))
 		case expr.ESV6:
 			annotateBackend = backend.NewElastic6([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic6.ClientOptionFunc))
+		case expr.ESV7:
+			annotateBackend = backend.NewElastic7([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic7.ClientOptionFunc))
 		}
 		go func() {
 			for {
@@ -318,14 +323,29 @@ func quit() {
 
 func initDataAccess(systemConf conf.SystemConfProvider) (database.DataAccess, error) {
 	var da database.DataAccess
-	if systemConf.GetRedisHost() != "" {
-		da = database.NewDataAccess(systemConf.GetRedisHost(), true, systemConf.GetRedisDb(), systemConf.GetRedisPassword())
+	if len(systemConf.GetRedisHost()) != 0 {
+		da = database.NewDataAccess(
+			systemConf.GetRedisHost(),
+			systemConf.IsRedisClientSetName(),
+			systemConf.GetRedisMasterName(),
+			systemConf.GetRedisDb(),
+			systemConf.GetRedisPassword(),
+		)
 	} else {
-		_, err := database.StartLedis(systemConf.GetLedisDir(), systemConf.GetLedisBindAddr())
+		_, err := database.StartLedis(
+			systemConf.GetLedisDir(),
+			systemConf.GetLedisBindAddr(),
+		)
 		if err != nil {
 			return nil, err
 		}
-		da = database.NewDataAccess(systemConf.GetLedisBindAddr(), false, 0, "")
+		da = database.NewDataAccess(
+			[]string{systemConf.GetLedisBindAddr()},
+			false,
+			"",
+			0,
+			"",
+		)
 	}
 	err := da.Migrate()
 	return da, err

@@ -12,8 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
-
+	"bosun.org/cloudwatch"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
@@ -21,6 +20,7 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 // SystemConfProvider providers all the information about the system configuration.
@@ -42,9 +42,11 @@ type SystemConfProvider interface {
 	GetEmailFrom() string
 	GetLedisDir() string
 	GetLedisBindAddr() string
-	GetRedisHost() string
+	GetRedisHost() []string
+	GetRedisMasterName() string
 	GetRedisDb() int
 	GetRedisPassword() string
+	IsRedisClientSetName() bool
 	GetTimeAndDate() []int
 	GetSearchSince() time.Duration
 
@@ -80,6 +82,8 @@ type SystemConfProvider interface {
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts
 	GetAzureMonitorContext() expr.AzureMonitorClients
+	GetCloudWatchContext() cloudwatch.Context
+	GetPromContext() expr.PromClients
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string

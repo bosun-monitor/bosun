@@ -206,6 +206,9 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	var miniprofilerRoutes = http.StripPrefix(miniprofiler.PATH, http.HandlerFunc(miniprofiler.MiniProfilerHandler))
 	router.PathPrefix(miniprofiler.PATH).Handler(baseChain.Then(miniprofilerRoutes)).Name("miniprofiler")
 
+	//use default mux for pprof
+	router.PathPrefix("/debug/pprof").Handler(http.DefaultServeMux)
+
 	router.PathPrefix("/api").HandlerFunc(http.NotFound)
 	//MUST BE LAST!
 	router.PathPrefix("/").Handler(baseChain.Then(auth.Wrap(JSON(Index), canViewDash))).Name("index")
@@ -686,6 +689,9 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 			state, err = schedule.DataAccess.State().GetLatestIncident(ak)
 			if err != nil {
 				return nil, err
+			}
+			if state == nil {
+				return nil, fmt.Errorf("alert key %v wasn't found", k)
 			}
 		}
 		rt, err := schedule.DataAccess.State().GetRenderedTemplates(state.Id)

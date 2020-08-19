@@ -1004,7 +1004,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             }
             return items;
         }
-        $http.get('/api/config?hash=' + (search.hash || ''))
+        $http.get('/api/config?hash=' + encodeURIComponent(search.hash || ''))
             .success(function (data) {
             $scope.config_text = data;
             $scope.items = parseItems();
@@ -2713,8 +2713,8 @@ var Version = (function () {
     return Version;
 }());
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', 'authService', function ($scope, $http, $location, $route, $timeout, auth) {
-        $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
-        $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+        $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "mimmax"];
+        $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "mimmax"];
         $scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
         if ($scope.version.Major >= 2 && $scope.version.Minor >= 2) {
             $scope.filterSupport = true;
@@ -3885,7 +3885,6 @@ var TokenListController = (function () {
         this.auth = auth;
         this["delete"] = function () {
             _this.status = "Deleting...";
-            _this.deleteTarget = "";
             _this.$http["delete"]("/api/tokens?hash=" + encodeURIComponent(_this.deleteTarget))
                 .then(function () {
                 _this.status = "";

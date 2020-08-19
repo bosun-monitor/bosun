@@ -489,6 +489,230 @@ and those numbers created into a series.
 
 In addition to supporting Bosun's reduction functions that take on argument, percentile operations may be be done by setting `funcName` to p followed by number that is between 0 and 1 (inclusively). For example, `"p.25"` will be the 25th percentile, `"p.999"` will be the 99.9th percentile. `"p0"` and `"p1"` are min and max respectively (However, in these cases it is recommended to use `"min"` and `"max"` for the sake of clarity.
 
+## Prometheus Query Functions
+
+Prometheus query functions query Prometheus TSDB(s) using the using the [Prometheus HTTP v1 API](https://prometheus.io/docs/prometheus/latest/querying/api/). When [`PromConf` in the system configuration](/system_configuration#promconf) is added these functions become available. 
+
+There are currently two types of functions: functions that return time series sets (seriesSet) and information functions that are meant to be used interactively in the expression editor for information about metrics and tags.
+
+### PrefixKey
+The PrefixKey is a quoted string used to query different promthesus backends in [`PromConf` in the system configuration](/system_configuration#promconf). If the PrefixKey is missing (there are no brackets before the function), then "default" is used. For example the prefix in the following is `["it"]`:
+
+```
+["it"]prom("up", "namespace", "", "sum", "5m", "1h", "")
+```
+
+In the case of `promm` and `promratem`, the prefix may have multiple keys separated by commas to allow for querying multiple prom datasources at once, for example:
+
+```
+["it,default"]promm("up", "namespace", "", "sum", "5m", "1h", "")
+```
+
+### Series Removed from Responses
+
+When a Prometheus query is made all time series in the response do not have to have the same set of tag keys. For example, when making a PromQL request that has group `by (host,interface)` results may be included in the response that contain only `host`, only `interface`, or no tag keys at all. Bosun requires that the tag keys be consistent for each series within a seriesSet. Therefore, these results are removed from the responses when using functions like `prom`, `promrate`, `promm`, and `promratem`.
+
+<div class="admonition">
+<p class="admonition-title">Note</p>
+<p>This behavior may change in the future to an alternative design. Instead of dropping these series, the series could be retained but the missing tag keys would be added to the response with some sort of value to represent that the tag is missing.</p>
+</div>
+
+### prom(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+prom queries a Promethesus TSDB for time series data. It accomplishes this by generating a PromQL query from the given arguments.
+
+ * `metric` is the name of the to query. To get a list of available metrics use the `prommetrics()` function.
+ * `groupByTags` is a comma separated list of tag keys to aggregate the response by.
+ * `filter` filters to results using [Prometheus Time Series Selectors](https://prometheus.io/docs/prometheus/latest/querying/basics/#time-series-selectors). This functions analogous to a `WHERE` clause in SQL. For example: `job=~".*",method="get"`. Operators are `=`, `!=`, `=~`, and `!~` for equals, not equals, [RE2](https://github.com/google/re2/wiki/Syntax) match, and not RE2 match respectively. This string is inserted into the generated promQL query directly.
+ * `agType` is the the aggregation function to perform such as `"sum"` or `"avg"`. It can be any [Prometheus Aggregation operator](https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators).
+ * `stepDuration` is Prometheus's evaluation step duration. This is like downsampling, except that takes the datapoint that is most recently before (or matching) the step based on the start time. If there are no samples in that duration, the sample will be repeated. See [Prometheus Docs Issue #699].(https://github.com/prometheus/docs/issues/699).
+ * `startDuration` and `endDuration` determain the start and end time based on the current time (or currently selected time in the expression/rule editor). They are then used to send an absolute time range for the Prometheus request.
+
+Example:
+
+```
+$metric      = "up"
+$groupByTags = "namespace"
+$filter      = ''' service !~ "kubl.*" '''
+$agg         = "sum"
+$step        = "1m"
+
+prom($metric, $groupByTags, $filter, $agg, $step, "1h", "")
+```
+
+The above example would generate a PromQL query of `sum( up { service !~ "kubl.*" } ) by ( namespace )`. The time range and step are sent via HTTP query parameters.
+
+### promrate(metric, groupByTags, filter, agType, rateStepDuration, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+promrate is like `prom` function, except that is for rate per-second calculations on metrics that are counters. It therefore includes the extra `rateStepDuration` argument which is for calculating the step of the rate calculation. The `stepDuration` is then for the step of the aggregation operation that is on top of the calculated rate. This is performed using [the `rate()` function in PromQL](https://prometheus.io/docs/prometheus/latest/querying/functions/#rate).
+
+Example:
+
+```
+$metric      = "container_memory_working_set_bytes"
+$groupByTags = "container_name,namespace"
+$filter      = ''' container_name !~ "pvc-.*$" '''
+$agg         = "sum"
+$rateStep    = "1m"
+$step        = "5m"
+
+promrate($metric, $groupByTags, $filter, $agg, $rateStep, $step, "1h", "")
+```
+
+The above example would generate a PromQL query of `sum(rate( container_memory_working_set_bytes { container_name !~ "pvc-.*$" }  [1m] )) by ( container_name,namespace )`. The time range and step are sent via HTTP query parameters.
+
+### promm(metric, groupByTags, filter, agType, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+promm (Prometheus Multiple) is like the `prom` function, except that it queries multiple Prometheus TSDBs and combines the result into a single seriesSet. A tag key of `bosun_prefix` with the tag value set to the prefix is added to the results to ensure that series are unique in the result.
+
+Example:
+
+```
+$metric      = "container_memory_working_set_bytes"
+$groupByTags = "container_name,namespace"
+$filter      = ''' container_name !~ "pvc-.*$" '''
+$agg         = "sum"
+$step        = "5m"
+
+$q = ["it,default"]promm($metric, $groupByTags, $filter, $agg, $step, "1h", "")
+max($q)
+
+# You could use the aggr function to aggregate across clusters if you like
+# aggr($q, $groupByTags, $agg)
+```
+
+In the above example `$q` will be a seriesSet with the tag keys of `container_name`, `namespace`, and `bosun_prefix`. The values for the `bosun_prefix` key will be either `it` or `default` for each series in the set.
+
+### promratem(metric, groupByTags, filter, agType, rateStepDuration, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+promratem (Prometheus Rate Multiple) is like the `promm` function is to the `prom` function. It allows you to do a per-second rate query against multiple Prometheus TSDBs and combines the result into a single seriesSet -- adding the `bosun_prefix` tag key to the result. It behaves the same as the `promm` function, but like `promrate`, it has the extra `rateStepDuration` argument.
+
+### promras(promql, stepDuration, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+Instead of building a promql query like the `prom` and `promrate` functions, promras (Prometheus Raw Aggregate Series) allows you to query Prometheus using promql with some restrictions:
+
+ 1. The query must return a time series (a Prometheus matrix)
+ 2. The top level function in promql must be an [Prometheus Aggregation Operator](https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators) with a `by` clause.
+
+Example:
+
+```
+promras(''' sum(rate(container_fs_reads_total[1m]) + rate(container_fs_writes_total[1m])) by (namespace) ''', "2m", "2h", "")
+```
+
+### prommras(promql, stepDuration, startDuration, endDuration string) seriestSet
+{: .exprFunc}
+
+prommras (Prometheus Multiple Raw Aggregate Series) is like the `promras` function excepts that it queries multiple prometheus instances and adds the "bosun_prefix" tag to the results like the `promm` and `prommrate` functions.
+
+Example:
+
+```
+# You can still use string interpolation of $variables in promras and prommras
+$step = 1m
+$reads = container_fs_reads_total[$step]
+$writes = container_fs_writes_total[$step]
+["default,it"]prommras(''' sum(rate($reads) + rate($writes)) by (namespace) ''', "2m", "2h", "")
+```
+
+### prommetrics() Info
+{: .exprFunc}
+
+prommetrics returns a list of metrics that are available in the Prometheus TSDB. This is not meant to be used in alerting, it is for use in the expression editor for getting information to build queries. For you example, you might open up another expression tab in bosun and use the output as a reference. This function supports a prefix so examples would be `prommetrics()` and `["it"]prommetrics()`.
+
+It gets the list of metrics by using the [Prometheus Label Values HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values) to get the values for the `__name__` value.
+
+### promtags(metric string, endDuration string, startDuration string) Info
+{: .exprFunc}
+
+promtags returns various tag information for the metric  ("tag" ~= "Label" in Prometheus terminology). It does a raw query (querying the metric only) for the provided duration and returns the tag information for the metric in that given time period. This is not meant to be used in alerting, it is for use in the expression editor for getting information to build queries.
+
+The result has the following Properties:
+
+ * Metric: The name of the metric
+ * Keys: A list of the tag keys available for the metric
+ * KeysToValues: A map/dictionary of tag keys to a list of their unique values
+ * UniqueSets: A list of unique tag key/value combination pairs that represent complete series
+
+ Examples: `promtags("up", "10", "")`, `["it"]promtags("container_memory_working_set_bytes")`.
+
+
+## CloudWatch Query Functions (Beta)
+ These functions are available when cloudwatch is enabled via Bosun's configuration.		 
+ Query syntax is potentially subject to change in later releases
+
+### cw(region, namespace, metric, period, statistic, dimensions, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+The parameters are as follows:
+
+* `region` The amazon region(s) for the service metrics you are interested in. e.g. `eu-west-1,eu-central-1` 
+* `namespace` The [CloudWatch namespace](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/aws-namespaces.html) which the metric you want to query exists under e.g `AWS/S3`
+* `metric` The [CloudWatch metric](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CW_Support_For_AWS.html) you wish to query, e.g. `NumberOfObjects`
+* `dimension` A string containing dimension key value pairs separated by : 
+* `period` size of bucket to use for grouping data-points expressed as a time string e.g. `1m`
+* `statistic` Which [aggregator](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Statistic) to use to combine the datapoints in each bucket. e.g. `Sum`
+* `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details
+
+A complete example returning the counts of infrequent access objects in our s3 bucket over the last hour.
+```
+$region = "eu-west-1"
+$namespace = "AWS/S3"
+$metric = "NumberOfObjects"
+$period = "1m"
+$statistics = "Average"
+$dimensions = "BucketName:my-s3-bucket,StorageType:STANDARD_IA"
+$objectCount = cw($region, $namespace, $metric, $period, $statistics, $dimensions, "1h" ,"")
+```
+
+You can use * as a wildcard character in dimensions to match multiple series 
+```
+$region = "eu-west-1,eu-central-1"
+$namespace = "AWS/ELB"
+$metric = "HealthyHostCount"
+$period = "5m"
+$statistics = "Minimum"
+$dimensions = "LoadBalancerName:web-*,AvailabilityZone:*"
+$cpuUsage = cw($region, $namespace, $metric, $period, $statistics, $dimensions, "7d" ,"")
+```
+
+
+### PrefixKey
+PrefixKey is a quoted string used to query different aws accounts by passing the name of the profile from the amazon credentials file.  If omitted the query will be made using the default credentials chain.
+
+Credentials file example:
+```
+[prod]
+aws_access_key_id=AKIAIOSFODNN7EXAMPLE
+aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+[test]
+aws_access_key_id=BKyfyfIAIDNN7EXAMPLE
+aws_secret_access_key=Ays6tnFEMI/ASD7D6/bPxRfiCYEXAMPLEKEY
+```
+
+Example of querying using multiple accounts
+```
+$region = "eu-west-1"
+$namespace = "AWS/EC2"
+$metric = "CPUUtilization"
+$period = "1m"
+$statistics = "Average"
+
+$prodDim = "InstanceId":"i-1234567890abcdef0"
+$testDim = "InstanceId":"i-0598c7d356eba48d7"
+
+$p = ["prod"]cw($region, $namespace, $metric, $period, $statistics, $prodDim, "1h" ,"")
+$t = ["test"]cw($region, $namespace, $metric, $period, $statistics, $testDim, "1h" ,"")
+```
+
+
+
 # Annotation Query Functions
 These function are available when annotate is enabled via Bosun's configuration.
 
@@ -576,6 +800,7 @@ Returns:
   "2": 64
 }
 ```
+
 
 # Reduction Functions
 

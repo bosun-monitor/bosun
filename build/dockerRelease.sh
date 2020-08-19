@@ -6,9 +6,9 @@ rm -rf buildoutput
 mkdir buildoutput
 
 docker run --rm \
-   -v "$PWD":/go/src/bosun.org \
+   -v "$PWD":/src/bosun.org \
    -v "$PWD"/buildoutput:/output \
-   -w /go/src/bosun.org \
+   -w /src/bosun.org \
    -e OUTPUTDIR=/output/ \
    -e GITHUB_ACCESS_TOKEN=$GITHUB_ACCESS_TOKEN \
-   golang:1.11 /go/src/bosun.org/build/release.sh
+   golang:1.13 /src/bosun.org/build/release.sh /src/bosun.org
