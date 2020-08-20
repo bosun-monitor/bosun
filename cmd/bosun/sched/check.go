@@ -370,7 +370,6 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	// lock while we change notifications.
 	s.Lock("RunHistory")
-	slog.Infof("XXXX shouldNotify=%v, event.Status=%v, incident.WorstStatus=%v", shouldNotify, event.Status, incident.WorstStatus)
 	if shouldNotify {
 		incident.NeedAck = false
 		if err = s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
