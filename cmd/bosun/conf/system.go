@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/cloudwatch"
 	"bosun.org/slog"
 
 	"bosun.org/cmd/bosun/expr"
@@ -16,6 +17,7 @@ import (
 	"bosun.org/opentsdb"
 	ainsightsmgmt "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
 	ainsights "github.com/Azure/azure-sdk-for-go/services/appinsights/v1/insights"
+	"github.com/influxdata/influxdb/client/v2"
 	promapi "github.com/prometheus/client_golang/api"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 
@@ -24,7 +26,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/BurntSushi/toml"
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 // SystemConf contains all the information that bosun needs to run. Outside of the conf package
@@ -64,8 +65,8 @@ type SystemConf struct {
 	ElasticConf      map[string]ElasticConf
 	AzureMonitorConf map[string]AzureMonitorConf
 	PromConf         map[string]PromConf
-
-	AnnotateConf AnnotateConf
+	CloudWatchConf   CloudWatchConf
+	AnnotateConf     AnnotateConf
 
 	AuthConf *AuthConf
 
@@ -89,6 +90,7 @@ type EnabledBackends struct {
 	Elastic      bool
 	Annotate     bool
 	AzureMonitor bool
+	CloudWatch   bool
 	Prom         bool
 }
 
@@ -103,6 +105,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	b.AzureMonitor = len(sc.AzureMonitorConf) != 0
+	b.CloudWatch = sc.CloudWatchConf.Enabled
 	return b
 }
 
@@ -287,6 +290,25 @@ type LDAPGroup struct {
 	Path string
 	// Access to grant members of group Ex: "Admin"
 	Role string
+}
+
+type CloudWatchConf struct {
+	Enabled        bool
+	ExpansionLimit int
+	PagesLimit     int
+	Concurrency    int
+}
+
+func (c CloudWatchConf) Valid() error {
+	// Check Cloudwatch Configuration
+	if c.PagesLimit < 1 {
+		return fmt.Errorf(`error in cloudwatch configuration. PagesLimit must be greater than 0`)
+	}
+
+	if c.ExpansionLimit < 1 {
+		return fmt.Errorf(`error in cloudwatch configuration. ExpansionLimit must be greater than 0`)
+	}
+	return nil
 }
 
 // GetSystemConfProvider returns the SystemConfProvider interface
@@ -655,6 +677,11 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 	if sc.md.IsDefined("InfluxConf", "UnsafeSsl") {
 		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
 	}
+	return c
+}
+
+func (sc *SystemConf) GetCloudWatchContext() cloudwatch.Context {
+	c := cloudwatch.GetContext()
 	return c
 }
 
