@@ -364,10 +364,10 @@ func (b *BinaryNode) Check(t *Tree) error {
 	t1 := b.Args[0].Return()
 	t2 := b.Args[1].Return()
 	if !(t1 == models.TypeSeriesSet || t1 == models.TypeNumberSet || t1 == models.TypeScalar) {
-		return fmt.Errorf("expected NumberSet, SeriesSet, or Scalar, got %v", string(t1))
+		return fmt.Errorf("expected NumberSet, SeriesSet, or Scalar, got %v", t1)
 	}
 	if !(t2 == models.TypeSeriesSet || t2 == models.TypeNumberSet || t2 == models.TypeScalar) {
-		return fmt.Errorf("expected NumberSet, SeriesSet, or Scalar, got %v", string(t1))
+		return fmt.Errorf("expected NumberSet, SeriesSet, or Scalar, got %v", t1)
 	}
 	if err := b.Args[0].Check(t); err != nil {
 		return err
