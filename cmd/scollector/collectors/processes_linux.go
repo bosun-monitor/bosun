@@ -148,7 +148,7 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		if err != nil {
 			return fmt.Errorf("failed to convert process rss memory: %v", err)
 		}
-		if pid == string(os.Getpid()) {
+		if pid == strconv.Itoa(os.Getpid()) {
 			TotalScollectorMemoryMB = uint64(rss) * uint64(osPageSize) / 1024 / 1024
 		}
 		totalRSSMem += rss
