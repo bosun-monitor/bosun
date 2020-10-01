@@ -162,6 +162,49 @@ func TestTagGroupParsing(t *testing.T) {
 	}
 }
 
+func TestParseRateOptions(t *testing.T) {
+	tests := []struct {
+		query string
+		rate  RateOptions
+	}{
+		{"sum:10m-avg:rate{counter,1,2}:test.metric",
+			RateOptions{
+				Counter:    true,
+				CounterMax: 1,
+				ResetValue: 2,
+			},
+		},
+		{"sum:10m-avg:rate{dropcounter}:test.metric",
+			RateOptions{
+				Counter:    true,
+				DropResets: true,
+			},
+		},
+		{"sum:10m-avg:rate{counter,,2}:test.metric",
+			RateOptions{
+				Counter:    true,
+				ResetValue: 2,
+			},
+		},
+		{"sum:10m-avg:rate{counter,1}:test.metric",
+			RateOptions{
+				Counter:    true,
+				CounterMax: 1,
+			},
+		},
+	}
+	for _, q := range tests {
+		parsedQuery, err := ParseQuery(q.query, Version2_2)
+		if err != nil {
+			t.Errorf("error parsing query %s: %s", q.query, err)
+			continue
+		}
+		if q.rate != parsedQuery.RateOptions {
+			t.Errorf("for query %s expected parsed rate options %+v, got: %+v", q.query, q.rate, parsedQuery.RateOptions)
+		}
+	}
+}
+
 func TestParseFilters(t *testing.T) {
 	tests := []struct {
 		query   string
@@ -314,6 +357,18 @@ func TestQueryString(t *testing.T) {
 				},
 			},
 			"avg:test.metric",
+		},
+		{
+			Query{
+				Aggregator: "avg",
+				Metric:     "test.metric",
+				Rate:       true,
+				RateOptions: RateOptions{
+					Counter:    true,
+					DropResets: true,
+				},
+			},
+			"avg:rate{dropcounter}:test.metric",
 		},
 	}
 	for _, q := range tests {
