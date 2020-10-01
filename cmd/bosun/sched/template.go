@@ -679,6 +679,8 @@ func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurati
 		return c.esQuery5(indexRoot, filter, sduration, eduration, size)
 	case expr.ESV6:
 		return c.esQuery6(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV7:
+		return c.esQuery7(indexRoot, filter, sduration, eduration, size)
 	}
 
 	return nil
@@ -697,6 +699,8 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 		return c.esQueryAll5(indexRoot, filter, sduration, eduration, size)
 	case expr.ESV6:
 		return c.esQueryAll6(indexRoot, filter, sduration, eduration, size)
+	case expr.ESV7:
+		return c.esQueryAll7(indexRoot, filter, sduration, eduration, size)
 	}
 
 	return nil

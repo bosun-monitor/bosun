@@ -123,6 +123,15 @@ ExampleExpression = 'avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'
 	Timeout = "5m"
 	UnsafeSSL = true
 
+# Configuration to enable the CloudWatch backend
+[CloudWatchConf]
+       Enabled = true
+       PagesLimit = 10
+       ExpansionLimit = 500
+       Concurrency = 2
+
 [PromConf]
 	[PromConf.default]
 		URL = "http://127.0.0.1:9090"
+
+

@@ -4,7 +4,7 @@ ARG HBASE_VERSION=2.2.4
 ARG GNUPLOT_VERSION=5.2.8
 
 ARG PACKAGES="ca-certificates rsyslog bash openjdk8 curl libgd libpng libjpeg libwebp libjpeg-turbo cairo pango jruby lua supervisor asciidoctor"
-ARG BUILD_PACKAGES="build-base autoconf make automake git python cairo-dev pango-dev gd-dev lua-dev readline-dev libpng-dev libjpeg-turbo-dev libwebp-dev"
+ARG BUILD_PACKAGES="build-base autoconf make automake git python3 cairo-dev pango-dev gd-dev lua-dev readline-dev libpng-dev libjpeg-turbo-dev libwebp-dev"
 
 ARG DOCKER_ROOT="docker"
 ARG HBASE_DIR=/hbase
@@ -18,7 +18,8 @@ ENV PATH="$JAVA_HOME/bin:${PATH}"
 
 # Install dependencies
 RUN apk --update add apk-tools \
-    && apk add ${PACKAGES} ${BUILD_PACKAGES}
+    && apk add ${PACKAGES} ${BUILD_PACKAGES} \
+    && ln -sf python3 /usr/bin/python
 
 WORKDIR /tmp/gnuplot
 RUN cd /tmp \

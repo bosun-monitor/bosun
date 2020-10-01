@@ -641,6 +641,78 @@ The result has the following Properties:
 
  Examples: `promtags("up", "10", "")`, `["it"]promtags("container_memory_working_set_bytes")`.
 
+
+## CloudWatch Query Functions (Beta)
+ These functions are available when cloudwatch is enabled via Bosun's configuration.		 
+ Query syntax is potentially subject to change in later releases
+
+### cw(region, namespace, metric, period, statistic, dimensions, startDuration, endDuration string) seriesSet
+{: .exprFunc}
+
+The parameters are as follows:
+
+* `region` The amazon region(s) for the service metrics you are interested in. e.g. `eu-west-1,eu-central-1` 
+* `namespace` The [CloudWatch namespace](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/aws-namespaces.html) which the metric you want to query exists under e.g `AWS/S3`
+* `metric` The [CloudWatch metric](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CW_Support_For_AWS.html) you wish to query, e.g. `NumberOfObjects`
+* `dimension` A string containing dimension key value pairs separated by : 
+* `period` size of bucket to use for grouping data-points expressed as a time string e.g. `1m`
+* `statistic` Which [aggregator](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Statistic) to use to combine the datapoints in each bucket. e.g. `Sum`
+* `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details
+
+A complete example returning the counts of infrequent access objects in our s3 bucket over the last hour.
+```
+$region = "eu-west-1"
+$namespace = "AWS/S3"
+$metric = "NumberOfObjects"
+$period = "1m"
+$statistics = "Average"
+$dimensions = "BucketName:my-s3-bucket,StorageType:STANDARD_IA"
+$objectCount = cw($region, $namespace, $metric, $period, $statistics, $dimensions, "1h" ,"")
+```
+
+You can use * as a wildcard character in dimensions to match multiple series 
+```
+$region = "eu-west-1,eu-central-1"
+$namespace = "AWS/ELB"
+$metric = "HealthyHostCount"
+$period = "5m"
+$statistics = "Minimum"
+$dimensions = "LoadBalancerName:web-*,AvailabilityZone:*"
+$cpuUsage = cw($region, $namespace, $metric, $period, $statistics, $dimensions, "7d" ,"")
+```
+
+
+### PrefixKey
+PrefixKey is a quoted string used to query different aws accounts by passing the name of the profile from the amazon credentials file.  If omitted the query will be made using the default credentials chain.
+
+Credentials file example:
+```
+[prod]
+aws_access_key_id=AKIAIOSFODNN7EXAMPLE
+aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+[test]
+aws_access_key_id=BKyfyfIAIDNN7EXAMPLE
+aws_secret_access_key=Ays6tnFEMI/ASD7D6/bPxRfiCYEXAMPLEKEY
+```
+
+Example of querying using multiple accounts
+```
+$region = "eu-west-1"
+$namespace = "AWS/EC2"
+$metric = "CPUUtilization"
+$period = "1m"
+$statistics = "Average"
+
+$prodDim = "InstanceId":"i-1234567890abcdef0"
+$testDim = "InstanceId":"i-0598c7d356eba48d7"
+
+$p = ["prod"]cw($region, $namespace, $metric, $period, $statistics, $prodDim, "1h" ,"")
+$t = ["test"]cw($region, $namespace, $metric, $period, $statistics, $testDim, "1h" ,"")
+```
+
+
+
 # Annotation Query Functions
 These function are available when annotate is enabled via Bosun's configuration.
 
@@ -728,6 +800,7 @@ Returns:
   "2": 64
 }
 ```
+
 
 # Reduction Functions
 
