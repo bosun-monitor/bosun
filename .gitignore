@@ -10,3 +10,5 @@ cmd/bosun/bosun.toml
 cmd/bosun/bosunrules.conf
 cmd/scollector/scollector
 buildoutput
+test-report.out
+coverage.out

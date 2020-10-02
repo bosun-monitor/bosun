@@ -192,6 +192,10 @@ func TestTimedelta(t *testing.T) {
 				time.Unix(1466133600, 0): 0,
 			},
 		},
+		{
+			`timedelta(series("foo=bar"))`,
+			Series{},
+		},
 	} {
 
 		err := testExpression(exprInOut{

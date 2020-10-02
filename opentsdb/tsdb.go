@@ -2,11 +2,9 @@
 package opentsdb // import "bosun.org/opentsdb"
 
 import (
-	"bosun.org/slog"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"math"
@@ -18,6 +16,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"bosun.org/slog"
+	"github.com/pkg/errors"
 )
 
 // ResponseSet is a Multi-Set Response:
@@ -432,6 +433,7 @@ type RateOptions struct {
 	Counter    bool  `json:"counter,omitempty"`
 	CounterMax int64 `json:"counterMax,omitempty"`
 	ResetValue int64 `json:"resetValue,omitempty"`
+	DropResets bool  `json:"dropResets,omitempty"`
 }
 
 // ParseRequest parses OpenTSDB requests of the form: start=1h-ago&m=avg:cpu.
@@ -494,7 +496,8 @@ func ParseQuery(query string, version Version) (q *Query, err error) {
 			return
 		}
 		sp := strings.Split(s[1:len(s)-1], ",")
-		q.RateOptions.Counter = sp[0] == "counter"
+		q.RateOptions.Counter = sp[0] == "counter" || sp[0] == "dropcounter"
+		q.RateOptions.DropResets = sp[0] == "dropcounter"
 		if len(sp) > 1 {
 			if sp[1] != "" {
 				if q.RateOptions.CounterMax, err = strconv.ParseInt(sp[1], 10, 64); err != nil {
@@ -663,7 +666,12 @@ func (q Query) String() string {
 	if q.Rate {
 		s += "rate"
 		if q.RateOptions.Counter {
-			s += "{counter"
+			s += "{"
+			if q.RateOptions.DropResets {
+				s += "dropcounter"
+			} else {
+				s += "counter"
+			}
 			if q.RateOptions.CounterMax != 0 {
 				s += ","
 				s += strconv.FormatInt(q.RateOptions.CounterMax, 10)

@@ -1,11 +1,12 @@
 package host
 
 import (
-	"bosun.org/name"
 	"errors"
 	"fmt"
 	"net"
 	"strings"
+
+	"bosun.org/name"
 )
 
 const hostRegexPattern = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`

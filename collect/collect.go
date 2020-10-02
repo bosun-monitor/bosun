@@ -5,7 +5,6 @@
 package collect // import "bosun.org/collect"
 
 import (
-	"bosun.org/util"
 	"fmt"
 	"math"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"bosun.org/util"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"

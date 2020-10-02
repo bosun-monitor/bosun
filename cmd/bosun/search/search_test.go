@@ -1,12 +1,13 @@
 package search
 
 import (
-	"bosun.org/host"
-	"bosun.org/util"
 	"os"
 	"reflect"
 	"testing"
 	"time"
+
+	"bosun.org/host"
+	"bosun.org/util"
 
 	"bosun.org/cmd/bosun/database/test"
 	"bosun.org/opentsdb"

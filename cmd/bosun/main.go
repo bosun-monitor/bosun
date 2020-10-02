@@ -3,11 +3,8 @@ package main
 //go:generate go run ../../build/generate/generate.go
 
 import (
-	"bosun.org/_version"
-	"bosun.org/host"
 	"flag"
 	"fmt"
-	"gopkg.in/fsnotify.v1"
 	"net/http"
 	"net/http/httptest"
 	_ "net/http/pprof"
@@ -18,6 +15,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	version "bosun.org/_version"
+	"gopkg.in/fsnotify.v1"
 
 	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/conf"
@@ -35,6 +35,7 @@ import (
 	"bosun.org/util"
 	"github.com/facebookgo/httpcontrol"
 	elastic6 "github.com/olivere/elastic"
+	elastic7 "github.com/olivere/elastic/v7"
 	elastic2 "gopkg.in/olivere/elastic.v3"
 	elastic5 "gopkg.in/olivere/elastic.v5"
 )
@@ -101,23 +102,6 @@ var (
 	mains []func() // Used to hook up syslog on *nix systems
 )
 
-func initHostManager(customHostname string) {
-	var hm host.Manager
-	var err error
-
-	if customHostname != "" {
-		hm, err = host.NewManagerForHostname(customHostname, false)
-	} else {
-		hm, err = host.NewManager(false)
-	}
-
-	if err != nil {
-		slog.Fatalf("couldn't initialise host factory: %v", err)
-	}
-
-	util.SetHostManager(hm)
-}
-
 func main() {
 	flag.Parse()
 	if *flagVersion {
@@ -132,7 +116,7 @@ func main() {
 		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
 
-	initHostManager(systemConf.Hostname)
+	util.InitHostManager(systemConf.Hostname, false)
 
 	// Check if ES version is set by getting configs on start-up.
 	// Because the current APIs don't return error so calling slog.Fatalf
@@ -188,6 +172,8 @@ func main() {
 			annotateBackend = backend.NewElastic5([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic5.ClientOptionFunc))
 		case expr.ESV6:
 			annotateBackend = backend.NewElastic6([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic6.ClientOptionFunc))
+		case expr.ESV7:
+			annotateBackend = backend.NewElastic7([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs.([]elastic7.ClientOptionFunc))
 		}
 		go func() {
 			for {
