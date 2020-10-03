@@ -907,11 +907,22 @@ var DefaultClient = &http.Client{
 // QueryResponse performs a v2 OpenTSDB request to the given host. host should
 // be of the form hostname:port. A nil client uses DefaultClient.
 func (r *Request) QueryResponse(host string, client *http.Client) (*http.Response, error) {
+
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
 		Path:   "/api/query",
 	}
+
+	pu, err := url.Parse(host)
+	if err == nil && pu.Scheme != "" && pu.Host != "" {
+		u.Scheme = pu.Scheme
+		u.Host = pu.Host
+		if pu.Path != "" {
+			u.Path = pu.Path
+		}
+	}
+
 	b, err := json.Marshal(&r)
 	if err != nil {
 		return nil, err
