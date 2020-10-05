@@ -32,11 +32,14 @@ build()
 }
 
 BOSUN=true
-for GOOS in windows linux darwin; do
+for GOOS in windows linux; do
 	for GOARCH in amd64 386; do
 		build $GOOS $GOARCH
 	done
 done
+# darwin/386 is no longer supported
+build darwin amd64
+
 BOSUN=false
 
 build linux arm 5
