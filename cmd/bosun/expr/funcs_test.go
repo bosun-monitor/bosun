@@ -551,3 +551,75 @@ func TestAggrNaNHandling(t *testing.T) {
 		t.Errorf("got second point = %f, want %f", val1, 2.0)
 	}
 }
+
+func TestDropBool(t *testing.T) {
+	dropBoolTestCases := []struct {
+		name string
+		expr string
+		want Results
+	}{
+		{
+			name: "two SeriesSets with same tagsets, drop datapoints with value 2 in the second SeriesSet",
+			expr: `dropbool(series("foo=bar", 0, 1, 1, 1, 2, 1, 3, 1), series("foo=bar", 0, 1, 1, 2, 2, 3, 3, 2) != 2)`,
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 1,
+							time.Unix(2, 0): 1,
+						},
+						Group: opentsdb.TagSet{"foo": "bar"},
+					},
+				},
+			},
+		},
+		{
+			name: "two SeriesSets with different tagsets (same key but different values), " +
+				"'panic: interface conversion: interface {} is expr.Number, not expr.Series' won't happen" +
+				"and dropbool doesn't drop any datapoints in the first SeriesSet",
+			expr: `dropbool(series("foo=bar", 0, 1, 1, 1, 2, 1, 3, 1), series("foo=baz", 0, 1, 1, 2, 2, 3, 3, 2) != 2)`,
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 1,
+							time.Unix(1, 0): 1,
+							time.Unix(2, 0): 1,
+							time.Unix(3, 0): 1,
+						},
+						Group: opentsdb.TagSet{"foo": "bar"},
+					},
+				},
+			},
+		},
+		{
+			name: "two SeriesSets with different tagsets (different keys), " +
+				"'panic: interface conversion: interface {} is expr.Number, not expr.Series' won't happen" +
+				"and dropbool doesn't drop any datapoints in the first SeriesSet",
+			expr: `dropbool(series("foo=bar", 0, 1, 1, 1, 2, 1, 3, 1), series("host=baz", 0, 1, 1, 2, 2, 3, 3, 2) != 2)`,
+			want: Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 1,
+							time.Unix(1, 0): 1,
+							time.Unix(2, 0): 1,
+							time.Unix(3, 0): 1,
+						},
+						Group: opentsdb.TagSet{"foo": "bar"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range dropBoolTestCases {
+		err := testExpression(exprInOut{
+			expr: tc.expr,
+			out:  tc.want,
+		}, t)
+		if err != nil {
+			t.Errorf("Case %q: Got error: %v", tc.name, err)
+		}
+	}
+}
