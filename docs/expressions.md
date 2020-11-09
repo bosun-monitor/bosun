@@ -1130,7 +1130,7 @@ Remove any NaN or Inf values from a series. Will error if this operation results
 ## dropbool(seriesSet, seriesSet) seriesSet
 {: .exprFunc}
 
-Drop datapoints where the corresponding value in the second series set is non-zero. (See Series Operations for what corresponding means). The following example drops tr_avg (avg response time per bucket) datapoints if the count in that bucket was + or - 100 from the average count over the time period.
+Drop datapoints where the corresponding value in the second series set is zero. (See Series Operations for what corresponding means). The following example drops tr_avg (avg response time per bucket) datapoints if the count in that bucket was + or - 100 from the average count over the time period.
 
 Example:
 
