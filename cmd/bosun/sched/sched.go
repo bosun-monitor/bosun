@@ -598,7 +598,7 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 	case models.ActionClose:
 		// closing effectively acks the incident
 		st.NeedAck = false
-		if st.IsActive() { // Closing an active incident results in delayed close
+		if st.IsActive() || at != nil { // Closing an active incident results in delayed close. Or close a normal state incident DELAY to handle flapping alert
 			var dl time.Time
 			if at != nil {
 				dl = *at

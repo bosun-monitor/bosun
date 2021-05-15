@@ -143,6 +143,23 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		if err != nil {
 			return
 		}
+		if a.DelayCloseNormal >= time.Second && event.Status == models.StNormal {
+			incident.Open = false
+			slog.Infof("Auto delay close when back to normal enabled for %s", ak)
+
+			if event.Status != incident.CurrentStatus {
+				incident.Events = append(incident.Events, *event)
+			}
+			incident.CurrentStatus = event.Status
+			// the defer will update this incident status to normal
+
+			delayCloseDeadline := time.Now().UTC().Add(a.DelayCloseNormal)
+			err = s.ActionByAlertKey("bosun", "Auto delay close when back to normal was enabled", models.ActionClose, &delayCloseDeadline, ak)
+			if err != nil {
+				slog.Errorln(err)
+			}
+			return
+		}
 		for i, action := range incident.Actions {
 			if action.Type == models.ActionDelayedClose && !(action.Fullfilled || action.Cancelled) {
 				if event.Status > incident.WorstStatus {
@@ -302,6 +319,29 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		for _, n := range nots {
 			s.Notify(incident, rt, n)
 			checkNotify = true
+			// check notification.afterAction, autoClose or autoForget or autoPurge
+			if n.AfterAction == "" {
+				continue
+			} else if n.AfterAction == "ForceClose" {
+				incident.Open = false
+				slog.Infof("Auto ForceClose enabled for %s", ak)
+				err = s.ActionByAlertKey("bosun", "Auto force close was enabled", models.ActionForceClose, nil, ak)
+			} else if n.AfterAction == "Forget" {
+				incident.Open = false
+				slog.Infof("Auto Forget enabled for %s", ak)
+				err = s.ActionByAlertKey("bosun", "Auto forget close was enabled", models.ActionForget, nil, ak)
+			} else if n.AfterAction == "Purge" {
+				incident.Open = false
+				slog.Infof("Auto Purge enabled for %s", ak)
+				err = s.ActionByAlertKey("bosun", "Auto purge close was enabled", models.ActionPurge, nil, ak)
+			} else {
+				// this code shall never be reached, see loaders.go:afterAction
+				err2 := fmt.Sprintf("Notification for %s option afterAction=%s is not supported. Ignored", ak, n.AfterAction)
+				slog.Errorf(err2)
+			}
+			if err != nil {
+				slog.Errorln(err)
+			}
 		}
 	}
 

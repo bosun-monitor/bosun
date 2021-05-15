@@ -15,6 +15,7 @@ import (
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 func (c *Conf) loadTemplate(s *parse.SectionNode) {
@@ -223,6 +224,16 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.IgnoreUnknown = true
 		case "unknownIsNormal":
 			a.UnknownsNormal = true
+		case "delayCloseNormal":
+			od, err := opentsdb.ParseDuration(v)
+			if err != nil {
+				c.error(err)
+			}
+			d := time.Duration(od)
+			if d < time.Second {
+				c.errorf("auto delay close normal incidents duartion must be at 1s ( >=conf.CheckFrequency )")
+			}
+			a.DelayCloseNormal = d
 		case "log":
 			a.Log = true
 		case "runEvery":
@@ -414,6 +425,15 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				n.GroupActions = true
 			} else {
 				c.errorf("invalid boolean value %s", v)
+			}
+		case "afterAction":
+			if v == "ForceClose" || v == "Forget" || v == "Purge" {
+				if n.Next != nil {
+					slog.Warningf("afterAction=%s would change the chains of notifications, not use it with next=%s",v, n.NextName)
+				}
+				n.AfterAction = v
+			} else if v != "" {
+				c.errorf("invalid action value %s for afterAction. only ForceClose/Forget/Purge allowed", v)
 			}
 		case "unknownMinGroupSize":
 			i, err := strconv.Atoi(v)

@@ -282,6 +282,7 @@ type Notification struct {
 	ContentType  string
 	RunOnActions string
 	GroupActions bool
+	AfterAction string // what to do with the alert after notfication sends
 
 	UnknownMinGroupSize *int // nil means use global defaults. 0 means no-grouping at all.
 	UnknownThreshold    *int // nil means use global defaults. 0 means no limit
@@ -441,6 +442,7 @@ type Alert struct {
 	MaxLogFrequency  time.Duration
 	IgnoreUnknown    bool
 	UnknownsNormal   bool
+	DelayCloseNormal time.Duration
 	UnjoinedOK       bool `json:",omitempty"`
 	Log              bool
 	RunEvery         int

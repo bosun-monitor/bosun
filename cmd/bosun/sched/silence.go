@@ -36,7 +36,7 @@ func (s *Schedule) Silenced() SilenceTester {
 	}
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]bool, error) {
+func (s *Schedule) AddSilence(start, end time.Time, periodTimeIntStart, periodTimeIntEnd int, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -52,6 +52,8 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 	si := &models.Silence{
 		Start:   start,
 		End:     end,
+		PeriodTimeIntStart: periodTimeIntStart,
+		PeriodTimeIntEnd: periodTimeIntEnd,
 		Alert:   alert,
 		Tags:    make(opentsdb.TagSet),
 		Forget:  forget,
