@@ -701,14 +701,23 @@ func DropBool(e *State, target *Results, filter *Results) (*Results, error) {
 	res := Results{}
 	unions := e.union(target, filter, "dropbool union")
 	for _, union := range unions {
-		aSeries := union.A.Value().(Series)
-		bSeries := union.B.Value().(Series)
+		aSeries, ok := union.A.Value().(Series)
+		if !ok {
+			continue
+		}
+		bSeries, ok := union.B.Value().(Series)
 		newSeries := make(Series)
-		for k, v := range aSeries {
-			if bv, ok := bSeries[k]; ok {
-				if bv != float64(0) {
-					newSeries[k] = v
+		if ok {
+			for k, v := range aSeries {
+				if bv, ok := bSeries[k]; ok {
+					if bv != float64(0) {
+						newSeries[k] = v
+					}
 				}
+			}
+		} else {
+			for k, v := range aSeries {
+				newSeries[k] = v
 			}
 		}
 		if len(newSeries) > 0 {
