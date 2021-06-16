@@ -41,9 +41,14 @@ type Conf struct {
 
 	sysVars map[string]string
 
-	tree            *parse.Tree
-	node            parse.Node
-	unknownTemplate string
+	tree                *parse.Tree
+	node                parse.Node
+	unknownTemplateName string
+	unknownTemplate     *conf.Template
+
+	unknownMultiTemplateName string
+	unknownMultiTemplate     *conf.Template
+
 	bodies          *template.Template
 	subjects        *template.Template
 	customTemplates map[string]*template.Template
@@ -185,14 +190,68 @@ func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]stri
 	loadSections("alert")
 
 	c.genHash()
+	c.configureUnknownTemplates()
 	return
+}
+
+func (c *Conf) configureUnknownTemplates() {
+	if len(c.unknownTemplateName) > 0 {
+		c.unknownTemplate = c.GetTemplate(c.unknownTemplateName)
+		if c.unknownTemplate == nil {
+			c.errorf("unknownTemplate not found")
+		}
+
+	} else {
+
+		c.unknownTemplate = &conf.Template{
+			Body: template.Must(template.New("body").Parse(`
+				<p>Time: {{.Time}}
+				<p>Name: {{.Name}}
+				<p>Alerts:
+				{{range .Group}}
+				<br>{{.}}
+				{{end}}
+			`)),
+			Subject: template.Must(template.New("subject").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
+		}
+	}
+
+	if len(c.unknownMultiTemplateName) > 0 {
+		c.unknownMultiTemplate = c.GetTemplate(c.unknownMultiTemplateName)
+		if c.unknownMultiTemplate == nil {
+			c.errorf("unknownMultiTemplate not found")
+		}
+	} else {
+
+		c.unknownMultiTemplate = &conf.Template{
+			Body: template.Must(template.New("body").Parse(`
+				<p>Threshold of {{ .Threshold }} reached for unknown notifications. The following unknown
+					group emails were not sent.
+				<ul>
+				{{ range $group, $alertKeys := .Groups }}
+				<li>
+					{{ $group }}
+					<ul>
+						{{ range $ak := $alertKeys }}
+						<li>{{ $ak }}</li>
+						{{ end }}
+					</ul>
+				</li>
+				{{ end }}
+				</ul>
+			`)),
+			Subject: template.Must(template.New("subject").Parse(`{{.Groups | len}} unknown alert instances suppressed`)),
+		}
+	}
 }
 
 func (c *Conf) loadGlobal(p *parse.PairNode) {
 	v := c.Expand(p.Val.Text, nil, false)
 	switch k := p.Key.Text; k {
 	case "unknownTemplate":
-		c.unknownTemplate = v
+		c.unknownTemplateName = v
+	case "unknownMultiTemplate":
+		c.unknownMultiTemplateName = v
 	case "squelch":
 		c.squelch = append(c.squelch, v)
 		if err := c.Squelch.Add(v); err != nil {
@@ -785,6 +844,14 @@ func (c *Conf) GetMacro(s string) *conf.Macro {
 
 func (c *Conf) GetLookup(s string) *conf.Lookup {
 	return c.Lookups[s]
+}
+
+func (c *Conf) GetUnknownTemplate() *conf.Template {
+	return c.unknownTemplate
+}
+
+func (c *Conf) GetUnknownMultiTemplate() *conf.Template {
+	return c.unknownMultiTemplate
 }
 
 func (c *Conf) GetSquelches() conf.Squelches {
