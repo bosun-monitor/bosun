@@ -390,6 +390,8 @@ Bosun's UI by using the Expression tab.
 
 #### Host
 OpenTSDB hostname and port to connect to.
+Since 0.9.0 this can be specified with a scheme.
+e.g. https://tsdb-querier:4242
 
 #### Version
 Either 2.1 or 2.2. Default: 2.1. If set to 2.2, certain features that
@@ -407,7 +409,7 @@ This does not cancel the query with OpenTSDB, but Bosun will stop processing the
 
 ```
 [OpenTSDBConf]
-	Host = "ny-tsdb01:4242"
+	Host = "https://ny-tsdb01:4242"
 	Version = 2.2
 	ResponseLimit = 25000000
 ```

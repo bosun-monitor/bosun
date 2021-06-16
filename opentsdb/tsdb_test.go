@@ -1,7 +1,13 @@
 package opentsdb
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClean(t *testing.T) {
@@ -153,6 +159,49 @@ func TestTagGroupParsing(t *testing.T) {
 				t.Errorf("expected group tags %s got %s", q.groups, r.GroupByTags)
 			}
 
+		}
+	}
+}
+
+func TestParseRateOptions(t *testing.T) {
+	tests := []struct {
+		query string
+		rate  RateOptions
+	}{
+		{"sum:10m-avg:rate{counter,1,2}:test.metric",
+			RateOptions{
+				Counter:    true,
+				CounterMax: 1,
+				ResetValue: 2,
+			},
+		},
+		{"sum:10m-avg:rate{dropcounter}:test.metric",
+			RateOptions{
+				Counter:    true,
+				DropResets: true,
+			},
+		},
+		{"sum:10m-avg:rate{counter,,2}:test.metric",
+			RateOptions{
+				Counter:    true,
+				ResetValue: 2,
+			},
+		},
+		{"sum:10m-avg:rate{counter,1}:test.metric",
+			RateOptions{
+				Counter:    true,
+				CounterMax: 1,
+			},
+		},
+	}
+	for _, q := range tests {
+		parsedQuery, err := ParseQuery(q.query, Version2_2)
+		if err != nil {
+			t.Errorf("error parsing query %s: %s", q.query, err)
+			continue
+		}
+		if q.rate != parsedQuery.RateOptions {
+			t.Errorf("for query %s expected parsed rate options %+v, got: %+v", q.query, q.rate, parsedQuery.RateOptions)
 		}
 	}
 }
@@ -310,6 +359,18 @@ func TestQueryString(t *testing.T) {
 			},
 			"avg:test.metric",
 		},
+		{
+			Query{
+				Aggregator: "avg",
+				Metric:     "test.metric",
+				Rate:       true,
+				RateOptions: RateOptions{
+					Counter:    true,
+					DropResets: true,
+				},
+			},
+			"avg:rate{dropcounter}:test.metric",
+		},
 	}
 	for _, q := range tests {
 		s := q.in.String()
@@ -376,6 +437,50 @@ func TestReplace(t *testing.T) {
 			t.Errorf("Test %d: %s != %s", i, out, test.out)
 		}
 	}
+}
+
+// RoundTripFunc .
+type RoundTripFunc func(req *http.Request) *http.Response
+
+// RoundTrip .
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
+
+//NewTestClient returns *http.Client with Transport replaced to avoid making real calls
+func NewTestClient(fn RoundTripFunc) *http.Client {
+	return &http.Client{
+		Transport: RoundTripFunc(fn),
+	}
+}
+
+func TestQueryResponseUrlParsing(t *testing.T) {
+
+	tests := []struct {
+		raw string
+		URL url.URL
+	}{
+		{"localhost:4242", url.URL{Scheme: "http", Host: "localhost:4242", Path: "/api/query"}},
+		{"127.0.0.1:4444", url.URL{Scheme: "http", Host: "127.0.0.1:4444", Path: "/api/query"}},
+		{"https://tsdb.skyscanner.net:4242", url.URL{Scheme: "https", Host: "tsdb.skyscanner.net:4242", Path: "/api/query"}},
+	}
+
+	r := Request{}
+	stockResponse := http.Response{
+		StatusCode: 200,
+		Body:       ioutil.NopCloser(bytes.NewBufferString(`OK`)),
+		Header:     make(http.Header),
+	}
+
+	for _, test := range tests {
+		client := NewTestClient(func(req *http.Request) *http.Response {
+			assert.Equal(t, test.URL, *req.URL)
+			return &stockResponse
+		})
+		_, _ = r.QueryResponse(test.raw, client)
+
+	}
+
 }
 
 func BenchmarkReplace_Noop(b *testing.B) {

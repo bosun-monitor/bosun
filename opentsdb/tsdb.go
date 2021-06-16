@@ -433,6 +433,7 @@ type RateOptions struct {
 	Counter    bool  `json:"counter,omitempty"`
 	CounterMax int64 `json:"counterMax,omitempty"`
 	ResetValue int64 `json:"resetValue,omitempty"`
+	DropResets bool  `json:"dropResets,omitempty"`
 }
 
 // ParseRequest parses OpenTSDB requests of the form: start=1h-ago&m=avg:cpu.
@@ -495,7 +496,8 @@ func ParseQuery(query string, version Version) (q *Query, err error) {
 			return
 		}
 		sp := strings.Split(s[1:len(s)-1], ",")
-		q.RateOptions.Counter = sp[0] == "counter"
+		q.RateOptions.Counter = sp[0] == "counter" || sp[0] == "dropcounter"
+		q.RateOptions.DropResets = sp[0] == "dropcounter"
 		if len(sp) > 1 {
 			if sp[1] != "" {
 				if q.RateOptions.CounterMax, err = strconv.ParseInt(sp[1], 10, 64); err != nil {
@@ -664,7 +666,12 @@ func (q Query) String() string {
 	if q.Rate {
 		s += "rate"
 		if q.RateOptions.Counter {
-			s += "{counter"
+			s += "{"
+			if q.RateOptions.DropResets {
+				s += "dropcounter"
+			} else {
+				s += "counter"
+			}
 			if q.RateOptions.CounterMax != 0 {
 				s += ","
 				s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
@@ -900,11 +907,22 @@ var DefaultClient = &http.Client{
 // QueryResponse performs a v2 OpenTSDB request to the given host. host should
 // be of the form hostname:port. A nil client uses DefaultClient.
 func (r *Request) QueryResponse(host string, client *http.Client) (*http.Response, error) {
+
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
 		Path:   "/api/query",
 	}
+
+	pu, err := url.Parse(host)
+	if err == nil && pu.Scheme != "" && pu.Host != "" {
+		u.Scheme = pu.Scheme
+		u.Host = pu.Host
+		if pu.Path != "" {
+			u.Path = pu.Path
+		}
+	}
+
 	b, err := json.Marshal(&r)
 	if err != nil {
 		return nil, err

@@ -43,7 +43,7 @@ EnableReload = true
 
 # Configuration to enable the OpenTSDB Backend
 [OpenTSDBConf]
-	Host = "opentsdb:4242"
+	Host = "http://opentsdb:4242"
 	# Default is 2.1, certain features like filters are enabled when the version is set to 2.2
 	Version = 2.2
 	# ResponseLimit will make requests error if the response from opentsdb is larger than this setting in bytes. Default of 1MB

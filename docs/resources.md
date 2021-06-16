@@ -89,6 +89,9 @@ _See also the list of built-in collectors included with [scollector](http://bosu
 ### [VS Code Plugin](https://marketplace.visualstudio.com/items?itemName=tbutterwith.bosun) by Tom Butterwith
 > Syntax highlighting, openTSDB metric path completion and config validate extension for [VS Code](https://code.visualstudio.com/).
 
+### [iOS Widget for Bosun Alarms](https://github.com/lukaspustina/bosun_scriptable_widget) by Lukas Pustina
+> This is a quick and dirty JavaScript snippet for the iOS app Scriptable allowing to create a Bosun Alarms overview widget for iOS 14+.
+
   &nbsp;
 
 ## [Screenshots and other Media](/media)

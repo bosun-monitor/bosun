@@ -56,7 +56,9 @@ func (r *Request) Query(host string, header http.Header) (Response, error) {
 		Path:     "/render/",
 		RawQuery: v.Encode(),
 	}
-	if u, _ := url.Parse(host); u.Scheme != "" && u.Host != "" {
+
+	u, err := url.Parse(host)
+	if err == nil && u.Scheme != "" && u.Host != "" {
 		r.URL.Scheme = u.Scheme
 		r.URL.Host = u.Host
 		if u.Path != "" {
