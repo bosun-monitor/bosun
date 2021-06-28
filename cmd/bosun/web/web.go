@@ -138,7 +138,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
 
 	if schedule.SystemConf.ReloadEnabled() {
-		handle("/api/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
+		handle("/api/reload", JSON(Reload), canSaveConfig).Name("reload").Methods(POST)
 	}
 
 	if schedule.SystemConf.SaveEnabled() {
