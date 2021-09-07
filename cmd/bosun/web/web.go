@@ -448,11 +448,14 @@ type Health struct {
 }
 
 type NotificationStats struct {
-	// Post and email notifiaction stats
-	PostNotificationsSuccess  int64
-	PostNotificationsFailed   int64
-	EmailNotificationsSuccess int64
-	EmailNotificationsFailed  int64
+	// Post and email notification stats
+	PostNotificationsSuccess   int64
+	PostNotificationsFailed    int64
+	PostNotificationsFailed3xx int64
+	PostNotificationsFailed4xx int64
+	PostNotificationsFailed5xx int64
+	EmailNotificationsSuccess  int64
+	EmailNotificationsFailed   int64
 }
 
 func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -489,6 +492,9 @@ func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	//notifications stats
 	n.PostNotificationsSuccess = collect.Get("post.sent", nil)
 	n.PostNotificationsFailed = collect.Get("post.sent_failed", nil)
+	n.PostNotificationsFailed3xx = collect.Get("post.sent_failed.3xx", nil)
+	n.PostNotificationsFailed4xx = collect.Get("post.sent_failed.4xx", nil)
+	n.PostNotificationsFailed5xx = collect.Get("post.sent_failed.5xx", nil)
 	n.EmailNotificationsSuccess = collect.Get("email.sent", nil)
 	n.EmailNotificationsFailed = collect.Get("email.sent_failed", nil)
 

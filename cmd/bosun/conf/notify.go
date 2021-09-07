@@ -195,10 +195,19 @@ func (p *PreparedHttp) Send() (int, error) {
 		resp.Body.Close()
 	}
 	if err != nil {
+		collect.Add("post.sent_failed", nil, 1)
 		return 0, err
 	}
 	if resp.StatusCode >= 300 {
 		collect.Add("post.sent_failed", nil, 1)
+		switch {
+		case resp.StatusCode >= 500:
+			collect.Add("post.sent_failed.5xx", nil, 1)
+		case resp.StatusCode >= 400:
+			collect.Add("post.sent_failed.4xx", nil, 1)
+		default:
+			collect.Add("post.sent_failed.3xx", nil, 1)
+		}
 		switch p.Details.NotifyType {
 		case alert:
 			return resp.StatusCode, fmt.Errorf(
