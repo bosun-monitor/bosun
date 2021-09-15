@@ -77,6 +77,9 @@ type SystemConf struct {
 	CommandHookPath string
 	RuleFilePath    string
 	md              toml.MetaData
+
+	ScheduledClearWebCache         bool     // enable scheduled web cache clear task, web cache is `var cacheObj = cache.New("web", 100)`
+	ScheduledClearWebCacheDuration Duration // the frequency of scheduled web cache clear task
 }
 
 // EnabledBackends stores which query backends supported by bosun are enabled
@@ -345,8 +348,10 @@ func newSystemConf() *SystemConf {
 			ResponseLimit: 1 << 20, // 1MB
 			Version:       opentsdb.Version2_1,
 		},
-		SearchSince:      Duration{time.Duration(opentsdb.Day) * 3},
-		UnknownThreshold: 5,
+		SearchSince:                    Duration{time.Duration(opentsdb.Day) * 3},
+		UnknownThreshold:               5,
+		ScheduledClearWebCache:         false,
+		ScheduledClearWebCacheDuration: Duration{Duration: time.Hour * 24},
 	}
 }
 
@@ -747,6 +752,17 @@ func (sc *SystemConf) GetAzureMonitorContext() expr.AzureMonitorClients {
 		allClients[prefix] = cc
 	}
 	return allClients
+}
+
+// GetScheduledClearWebCache returns if the scheduled clear web cache task is enabled or not
+// web cache is `var cacheObj = cache.New("web", 100)`
+func (sc *SystemConf) GetScheduledClearWebCache() bool {
+	return sc.ScheduledClearWebCache
+}
+
+// GetScheduledClearWebCache returns the frequency of the scheduled clear web cache task
+func (sc *SystemConf) GetScheduledClearWebCacheDuration() time.Duration {
+	return sc.ScheduledClearWebCacheDuration.Duration
 }
 
 // azureLogRequest outputs HTTP requests to Azure to the logs

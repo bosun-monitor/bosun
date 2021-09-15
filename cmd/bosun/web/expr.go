@@ -21,6 +21,7 @@ import (
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/bradfitz/slice"
 )
@@ -30,6 +31,16 @@ import (
 // the only risk is that if you query your store for data -5m to now and your store doesn't have the latest points up to date,
 // and then 5m from now you query -10min to -5m you'll get the same cached data, including the incomplete last points
 var cacheObj = cache.New("web", 100)
+
+// ClearWebCache clears web cache by schedule
+func ClearWebCache(t time.Duration) {
+	for {
+		time.Sleep(t)
+		slog.Infof("Start cleaning web cache, the number of entries: %d", cacheObj.Length())
+		cacheObj.Clear()
+		slog.Info("Done cleaning web cache")
+	}
+}
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v interface{}, err error) {
 	defer func() {

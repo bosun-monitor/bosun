@@ -50,3 +50,14 @@ func (c *Cache) Get(key string, getFn func() (interface{}, error)) (i interface{
 	})
 	return
 }
+
+func (c *Cache) Clear() {
+	c.Lock()
+	defer c.Unlock()
+
+	c.lru.Clear()
+}
+
+func (c *Cache) Length() int {
+	return c.lru.Len()
+}
