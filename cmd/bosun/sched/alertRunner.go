@@ -69,9 +69,12 @@ func (s *Schedule) Run() error {
 		}
 		i++
 		time.Sleep(s.SystemConf.GetCheckFrequency())
-		s.Lock("CollectStates")
-		s.CollectStates()
-		s.Unlock()
+
+		if s.SystemConf.GetTSDBHost() != "" {
+			s.Lock("CollectStates")
+			s.CollectStates()
+			s.Unlock()
+		}
 	}
 }
 
