@@ -18,7 +18,7 @@ require (
 	github.com/alicebob/gopher-json v0.0.0-20180125190556-5a6b3ba71ee6 // indirect
 	github.com/alicebob/miniredis v2.5.0+incompatible // indirect
 	github.com/andybalholm/cascadia v0.0.0-20150730174459-3ad29d1ad1c4 // indirect
-	github.com/aws/aws-sdk-go v1.31.12
+	github.com/aws/aws-sdk-go v1.33.0
 	github.com/aymerick/douceur v0.2.1-0.20150827151352-7176f1467381
 	github.com/bosun-monitor/statusio v0.0.0-20160516160816-ab1583139762
 	github.com/bradfitz/slice v0.0.0-20140430145140-a665b5dbaad5
