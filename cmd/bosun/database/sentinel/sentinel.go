@@ -92,7 +92,7 @@ func (ns NoSentinelsAvailable) Error() string {
 	if ns.lastError != nil {
 		return fmt.Sprintf("redigo: no sentinels available; last error: %s", ns.lastError.Error())
 	}
-	return fmt.Sprintf("redigo: no sentinels available")
+	return "redigo: no sentinels available"
 }
 
 // putToTop puts Sentinel address to the top of address list - this means

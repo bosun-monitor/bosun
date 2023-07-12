@@ -269,7 +269,7 @@ func (c *cloudWatchContext) Query(r *Request) (Response, error) {
 	}
 	// custom metrics can have no dimensions
 	if len(r.Dimensions) == 0 {
-		id = fmt.Sprintf("q0")
+		id = "q0"
 		dq := buildQuery(r, id, nil)
 		dqs = append(dqs, &dq)
 		tagSet[id] = buildTags(nil)

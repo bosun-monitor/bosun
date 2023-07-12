@@ -149,7 +149,7 @@ func (c mockCloudWatchClient) GetMetricData(input *cloudwatch.GetMetricDataInput
 	}
 
 	for i := 0; i < 10; i++ {
-		id := fmt.Sprintf("q{i}")
+		id := "q{i}"
 		m := cloudwatch.MetricDataResult{
 			Id:         &id,
 			Label:      nil,
