@@ -112,9 +112,7 @@ func awsGetInstances(ecc ec2.EC2) ([]*ec2.Instance, error) {
 		return nil, fmt.Errorf("unable to describe EC2 Instances")
 	}
 	for _, reservation := range resp.Reservations {
-		for _, instance := range reservation.Instances {
-			instancelist = append(instancelist, instance)
-		}
+		instancelist = append(instancelist, reservation.Instances...)
 	}
 	return instancelist, nil
 }
@@ -125,9 +123,7 @@ func awsGetLoadBalancers(lb elb.ELB) ([]*elb.LoadBalancerDescription, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to describe ELB Balancers")
 	}
-	for _, loadBalancer := range resp.LoadBalancerDescriptions {
-		lbList = append(lbList, loadBalancer)
-	}
+	lbList = append(lbList, resp.LoadBalancerDescriptions...)
 	return lbList, nil
 }
 

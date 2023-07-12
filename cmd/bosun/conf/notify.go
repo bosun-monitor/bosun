@@ -299,9 +299,7 @@ func (p *PreparedEmail) Send(c SystemConfProvider) error {
 
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
-	for _, a := range p.To {
-		e.To = append(e.To, a)
-	}
+	e.To = append(e.To, p.To...)
 	e.Subject = p.Subject
 	e.HTML = []byte(p.Body)
 	for _, a := range p.Attachments {
