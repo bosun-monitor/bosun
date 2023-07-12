@@ -37,9 +37,7 @@ func ParseDenormalizationRules(config string) (map[string]*DenormalizationRule, 
 			return nil, fmt.Errorf("Denormalization rules must have at least one tag name specified.")
 		}
 		rule := &DenormalizationRule{Metric: parts[0]}
-		for _, part := range parts[1:] {
-			rule.TagNames = append(rule.TagNames, part)
-		}
+		rule.TagNames = append(rule.TagNames, parts[1:]...)
 		log.Println("Denormalizing", rule)
 		m[rule.Metric] = rule
 	}
