@@ -52,7 +52,7 @@ func main() {
 	end := time.Now().UTC()
 	if *startFlag != "" {
 		var err error
-		start, err = time.Parse(*startFlag, timeFormat)
+		start, err = time.Parse(timeFormat, *startFlag)
 		if err != nil {
 			log.Fatalf("Failed to parse start time, expecting format like %v, got %v", timeFormat, *startFlag)
 		}
