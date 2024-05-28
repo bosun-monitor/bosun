@@ -13,7 +13,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.13
+          go-version: 1.21
         id: go
       - name: Checkout
         uses: actions/checkout@v2
@@ -31,7 +31,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.13
+          go-version: 1.21
         id: go
       - name: Checkout
         uses: actions/checkout@v2
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.13
+          go-version: 1.21
         id: go
       - name: Checkout
         uses: actions/checkout@v2
@@ -72,6 +72,6 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: "^1.13"
+          go-version: 1.21
       - name: Build ${{ matrix.os }} binary
         run: make build-${{ matrix.os }}

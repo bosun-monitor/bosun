@@ -11,4 +11,4 @@ docker run --rm \
    -w /src/bosun.org \
    -e OUTPUTDIR=/output/ \
    -e GITHUB_ACCESS_TOKEN=$GITHUB_ACCESS_TOKEN \
-   golang:1.13 /src/bosun.org/build/release.sh /src/bosun.org
+   golang:1.21 /src/bosun.org/build/release.sh /src/bosun.org
