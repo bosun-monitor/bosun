@@ -8,7 +8,7 @@ on:
 jobs:
   checks:
     name: Code style
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -26,7 +26,7 @@ jobs:
 
   generated:
     name: Generated code
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -42,7 +42,7 @@ jobs:
 
   build_and_test:
     name: Build and test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -61,7 +61,7 @@ jobs:
         run: build/test-startup.sh
 
   cross-compile:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         os: [ "linux", "darwin", "windows" ]
