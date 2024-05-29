@@ -37,7 +37,7 @@ require (
 	github.com/glendc/gopher-json v0.0.0-20170414221815-dc4743023d0c // indirect
 	github.com/gocarina/gocsv v0.0.0-20190927101021-3ecffd272576 // indirect
 	github.com/godbus/dbus v4.0.1-0.20160727174541-7a8c533d28e8+incompatible // indirect
-	github.com/golang/freetype v0.0.0-20150924013838-f29eb116deb3 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/google/cadvisor v0.21.1-0.20160212224345-e9739af18411
@@ -82,7 +82,7 @@ require (
 	github.com/vdobler/chart v0.0.0-20150914065344-293b01f8b75d
 	github.com/vmware/govmomi v0.16.1-0.20180228032728-a2138329bbd1
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036 // indirect
-	golang.org/x/image v0.10.0 // indirect
+	golang.org/x/image v0.16.0 // indirect
 	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	golang.org/x/sys v0.18.0
