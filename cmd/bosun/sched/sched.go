@@ -305,9 +305,7 @@ func (states States) GroupSets(minGroup int) map[string]models.AlertKeys {
 	for a, aks := range groupedByAlert {
 		if len(aks) >= minGroup {
 			group := models.AlertKeys{}
-			for _, ak := range aks {
-				group = append(group, ak)
-			}
+			group = append(group, aks...)
 			groups[a] = group
 		}
 	}
