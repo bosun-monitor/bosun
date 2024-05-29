@@ -47,7 +47,7 @@ require (
 	github.com/gorilla/css v0.0.0-20150317222238-a80e24ada269 // indirect
 	github.com/gorilla/mux v0.0.0-20160920230813-757bef944d0f
 	github.com/gorilla/securecookie v0.0.0-20161003051601-fa5329f91370 // indirect
-	github.com/influxdata/influxdb v1.6.3
+	github.com/influxdata/influxdb v1.7.6
 	github.com/influxdata/influxql v0.0.0-20180823200743-a7267bff5327
 	github.com/jinzhu/now v0.0.0-20151001141511-ce80572eb55a
 	github.com/jmoiron/jsonq v0.0.0-20150511023944-e874b168d07e
