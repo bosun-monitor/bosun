@@ -82,12 +82,10 @@ require (
 	github.com/vdobler/chart v0.0.0-20150914065344-293b01f8b75d
 	github.com/vmware/govmomi v0.16.1-0.20180228032728-a2138329bbd1
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036 // indirect
-	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/image v0.0.0-20150916112557-baddd3465a05 // indirect
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
-	golang.org/x/sys v0.0.0-20190502145724-3ef323f4f1fd
+	golang.org/x/sys v0.18.0
 	google.golang.org/api v0.0.0-20180506000402-20530fd5d65a
 	gopkg.in/asn1-ber.v1 v1.0.0-20141119150059-9eae18c3681a // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
