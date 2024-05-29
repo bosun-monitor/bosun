@@ -1,4 +1,4 @@
-FROM golang:1.13 AS bosun_builder
+FROM golang:1.21 AS bosun_builder
 
 WORKDIR /bosun
 COPY . /bosun

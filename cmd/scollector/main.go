@@ -303,7 +303,7 @@ func main() {
 			}
 		}
 	}()
-	sChan := make(chan os.Signal)
+	sChan := make(chan os.Signal, 1)
 	signal.Notify(sChan, os.Interrupt)
 	<-sChan
 	close(cquit)

@@ -78,7 +78,7 @@ func init() {
 		fatal("DC3-TSDB", http.ListenAndServe(":6556", dc2TsdbMux))
 	}()
 
-	ch := make(chan os.Signal)
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Kill, os.Interrupt)
 	go func() {
 		<-ch
