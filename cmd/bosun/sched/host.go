@@ -415,9 +415,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 						if err != nil {
 							slog.Errorf("error unmarshalling addresses for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
 						}
-						for _, address := range addresses {
-							iface.IPAddresses = append(iface.IPAddresses, address)
-						}
+						iface.IPAddresses = append(iface.IPAddresses, addresses...)
 					}
 				case "cdpCacheEntries":
 					if iface != nil {

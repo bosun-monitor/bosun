@@ -251,9 +251,7 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 			}
 		} else {
 			incidents := []*models.IncidentState{}
-			for _, state := range states {
-				incidents = append(incidents, state)
-			}
+			incidents = append(incidents, states...)
 			not.NotifyAction(at, groupKey.template, s.SystemConf, incidents, user, message, s.RuleConf)
 		}
 	}
