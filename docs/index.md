@@ -19,10 +19,9 @@ order: 1
 
 <div class="row">
 	<div class="col-md-12">
-		<div class="admonition tip">
-			<p class="admonition-title">Project Status (2024-05)</p>
-			<p>Skyscanner is in the process of migrating from an open source monitoring solution to a SaaS vendor. We are looking for users or contributors interested in becoming maintainers. Please see <a href="https://github.com/bosun-monitor/bosun/issues/2517">this Github issue</a> for more information.
-			</p>
+		<div class="admonition warning">
+			<p class="admonition-title">Project Status (2025-02)</p>
+			<p>Bosun is no longer maintained.</p>
 		</div>
 	</div>
 </div>
